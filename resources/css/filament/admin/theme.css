@@ -1,0 +1,112 @@
+@import '/vendor/filament/filament/resources/css/theme.css';
+
+/* Estilos específicos para el wizard */
+.fi-wizard-container {
+    @apply space-y-6;
+}
+
+.fi-wizard {
+    @apply space-y-6;
+}
+
+.fi-wizard-step {
+    @apply relative;
+}
+
+.fi-wizard-step-indicator {
+    @apply flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-sm font-medium text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400;
+}
+
+.fi-wizard-step-indicator.active {
+    @apply border-primary-600 bg-primary-600 text-white dark:border-primary-500 dark:bg-primary-500;
+}
+
+.fi-wizard-step-indicator.completed {
+    @apply border-green-600 bg-green-600 text-white;
+}
+
+/* Botones de navegación del wizard */
+.fi-wizard-navigation {
+    @apply flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700;
+}
+
+.fi-wizard-actions {
+    @apply flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700;
+}
+
+/* Barra de progreso personalizada */
+.fi-progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700;
+}
+
+.fi-progress-fill {
+    @apply h-2 rounded-full transition-all duration-300 bg-primary-600;
+}
+
+/* Estilos para las acciones de tabla */
+.fi-ta-actions {
+    @apply flex items-center gap-1;
+}
+
+/* Mejoras visuales para el wizard */
+.fi-fo-wizard .fi-fo-wizard-header {
+    @apply mb-6;
+}
+
+.fi-fo-wizard .fi-fo-wizard-steps {
+    @apply flex items-center justify-between mb-8;
+}
+
+.fi-fo-wizard .fi-fo-wizard-step {
+    @apply flex items-center;
+}
+
+.fi-fo-wizard .fi-fo-wizard-step:not(:last-child)::after {
+    @apply content-[''] flex-1 h-0.5 bg-gray-200 dark:bg-gray-700 mx-4;
+}
+
+.fi-fo-wizard .fi-fo-wizard-step.completed::after {
+    @apply bg-green-500;
+}
+
+.fi-fo-wizard .fi-fo-wizard-step.active::after {
+    @apply bg-primary-500;
+}
+
+/* Responsive design para el wizard */
+@media (max-width: 768px) {
+    .fi-wizard-navigation {
+        @apply flex-col space-y-3;
+    }
+    
+    .fi-wizard-actions {
+        @apply flex-col space-y-3 space-x-0;
+    }
+}
+
+/* Animaciones suaves */
+.fi-wizard-step-content {
+    @apply transition-all duration-300 ease-in-out;
+}
+
+/* Estados de loading para el wizard */
+.fi-wizard-loading {
+    @apply opacity-50 pointer-events-none;
+}
+
+/* Estilos para notificaciones del wizard */
+.fi-wizard-notification {
+    @apply rounded-lg p-4 mb-4;
+}
+
+.fi-wizard-notification.success {
+    @apply bg-green-50 border border-green-200 text-green-800;
+}
+
+.fi-wizard-notification.error {
+    @apply bg-red-50 border border-red-200 text-red-800;
+}
+
+.fi-wizard-notification.warning {
+    @apply bg-yellow-50 border border-yellow-200 text-yellow-800;
+}
