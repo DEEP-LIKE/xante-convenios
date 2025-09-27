@@ -19,6 +19,11 @@ use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ConfigurationCalculator;
 use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\TimePicker;
+use Filament\Support\Icons\Heroicon;
+
 use BackedEnum;
 
 
@@ -82,6 +87,12 @@ class CreateAgreementWizard extends Page implements HasForms
                                 ->label('Cliente Seleccionado')
                                 ->options(Client::limit(50)->pluck('name', 'id'))
                                 ->searchable()
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if ($state) {
+                                        $this->preloadClientData($state, $set);
+                                    }
+                                })
                                 ->createOptionForm([
                                     TextInput::make('name')->required(),
                                     TextInput::make('email')->email(),
@@ -98,25 +109,215 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Datos del Cliente')
                         ->icon('heroicon-o-user')
                         ->schema([
-                            Grid::make(2)
+                            // DATOS GENERALES - FASE I
+                            Section::make('DATOS GENERALES "FASE I"')
+                                ->description('Información básica del convenio')
                                 ->schema([
-                                    TextInput::make('client_name')
-                                        ->label('Nombre Completo')
-                                        ->required()
-                                        ->maxLength(255),
-                                    TextInput::make('client_email')
-                                        ->label('Email')
-                                        ->email()
-                                        ->required(),
-                                    TextInput::make('client_phone')
-                                        ->label('Teléfono')
-                                        ->tel()
-                                        ->maxLength(20),
-                                    TextInput::make('client_curp')
-                                        ->label('CURP')
-                                        ->maxLength(18)
-                                        ->minLength(18),
-                                ]),
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('xante_id')
+                                                ->label('ID Xante')
+                                                ->disabled()
+                                                ->dehydrated(false),
+                                            DatePicker::make('fecha_registro')
+                                                ->label('Fecha')
+                                                ->displayFormat('d/m/Y')
+                                                ->disabled()
+                                                ->dehydrated(false)
+                                                ->suffixIcon(Heroicon::Calendar),
+                                        ]),
+                                ])
+                                ->collapsible(),
+                                
+                            // DATOS PERSONALES TITULAR
+                            Section::make('DATOS PERSONALES TITULAR:')
+                                ->schema([
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('holder_name')
+                                                ->label('Nombre Cliente')
+                                                ->required()
+                                                ->maxLength(255),
+                                            TextInput::make('holder_delivery_file')
+                                                ->label('Entrega expediente')
+                                                ->maxLength(100),
+                                            DatePicker::make('holder_birthdate')
+                                                ->native(false)
+                                                ->label('Fecha de Nacimiento')
+                                                ->displayFormat('d/m/Y')
+                                                ->suffixIcon(Heroicon::Calendar),
+                                            Select::make('holder_civil_status')
+                                                ->label('Estado civil')
+                                                ->options([
+                                                    'soltero' => 'Soltero(a)',
+                                                    'casado' => 'Casado(a)',
+                                                    'divorciado' => 'Divorciado(a)',
+                                                    'viudo' => 'Viudo(a)',
+                                                    'union_libre' => 'Unión Libre',
+                                                ]),
+                                            TextInput::make('holder_curp')
+                                                ->label('CURP')
+                                                ->maxLength(18)
+                                                ->minLength(18),
+                                            TextInput::make('holder_regime_type')
+                                                ->label('Bajo ¿qué régimen?')
+                                                ->maxLength(100),
+                                            TextInput::make('holder_rfc')
+                                                ->label('RFC')
+                                                ->maxLength(13),
+                                            TextInput::make('holder_occupation')
+                                                ->label('Ocupación')
+                                                ->maxLength(100),
+                                            TextInput::make('holder_email')
+                                                ->label('Correo electrónico')
+                                                ->email()
+                                                ->required(),
+                                            TextInput::make('holder_office_phone')
+                                                ->label('Tel. oficina')
+                                                ->tel()
+                                                ->maxLength(20),
+                                            TextInput::make('holder_phone')
+                                                ->label('Núm. Celular')
+                                                ->tel()
+                                                ->required()
+                                                ->maxLength(20),
+                                            TextInput::make('holder_additional_contact_phone')
+                                                ->label('Tel. Contacto Adic.')
+                                                ->tel()
+                                                ->maxLength(20),
+                                        ]),
+                                    Grid::make(1)
+                                        ->schema([
+                                            TextInput::make('holder_current_address')
+                                                ->label('Domicilio Actual')
+                                                ->maxLength(500),
+                                        ]),
+                                    Grid::make(3)
+                                        ->schema([
+                                            TextInput::make('holder_neighborhood')
+                                                ->label('Colonia')
+                                                ->maxLength(100),
+                                            TextInput::make('holder_postal_code')
+                                                ->label('C.P.')
+                                                ->maxLength(10),
+                                            TextInput::make('holder_municipality')
+                                                ->label('Municipio - Alcaldía')
+                                                ->maxLength(100),
+                                            TextInput::make('holder_state')
+                                                ->label('Estado')
+                                                ->maxLength(100),
+                                        ]),
+                                ])
+                                ->collapsible(),
+                                
+                            // DATOS PERSONALES COACREDITADO / CÓNYUGE
+                            Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE:')
+                                ->schema([
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('spouse_name')
+                                                ->label('Nombre Cliente')
+                                                ->maxLength(255),
+                                            TextInput::make('spouse_delivery_file')
+                                                ->label('Entrega expediente')
+                                                ->maxLength(100),
+                                            DatePicker::make('spouse_birthdate')
+                                                ->native(false)
+                                                ->label('Fecha de Nacimiento')
+                                                ->displayFormat('d/m/Y')
+                                                ->suffixIcon(Heroicon::Calendar),
+                                            Select::make('spouse_civil_status')
+                                                ->label('Estado civil')
+                                                ->options([
+                                                    'soltero' => 'Soltero(a)',
+                                                    'casado' => 'Casado(a)',
+                                                    'divorciado' => 'Divorciado(a)',
+                                                    'viudo' => 'Viudo(a)',
+                                                    'union_libre' => 'Unión Libre',
+                                                ]),
+                                            TextInput::make('spouse_curp')
+                                                ->label('CURP')
+                                                ->maxLength(18)
+                                                ->minLength(18),
+                                            TextInput::make('spouse_regime_type')
+                                                ->label('Bajo ¿qué régimen?')
+                                                ->maxLength(100),
+                                            TextInput::make('spouse_rfc')
+                                                ->label('RFC')
+                                                ->maxLength(13),
+                                            TextInput::make('spouse_occupation')
+                                                ->label('Ocupación')
+                                                ->maxLength(100),
+                                            TextInput::make('spouse_email')
+                                                ->label('Correo electrónico')
+                                                ->email(),
+                                            TextInput::make('spouse_office_phone')
+                                                ->label('Tel. oficina')
+                                                ->tel()
+                                                ->maxLength(20),
+                                            TextInput::make('spouse_phone')
+                                                ->label('Núm. Celular')
+                                                ->tel()
+                                                ->maxLength(20),
+                                            TextInput::make('spouse_additional_contact_phone')
+                                                ->label('Tel. Contacto Adic.')
+                                                ->tel()
+                                                ->maxLength(20),
+                                        ]),
+                                    Grid::make(1)
+                                        ->schema([
+                                            TextInput::make('spouse_current_address')
+                                                ->label('Domicilio Actual')
+                                                ->maxLength(500),
+                                        ]),
+                                    Grid::make(3)
+                                        ->schema([
+                                            TextInput::make('spouse_neighborhood')
+                                                ->label('Colonia')
+                                                ->maxLength(100),
+                                            TextInput::make('spouse_postal_code')
+                                                ->label('C.P.')
+                                                ->maxLength(10),
+                                            TextInput::make('spouse_municipality')
+                                                ->label('Municipio - Alcaldía')
+                                                ->maxLength(100),
+                                            TextInput::make('spouse_state')
+                                                ->label('Estado')
+                                                ->maxLength(100),
+                                        ]),
+                                ])
+                                ->collapsible(),
+                                
+                            // CONTACTO AC Y/O PRESIDENTE DE PRIVADA
+                            Section::make('CONTACTO AC Y/O PRESIDENTE DE PRIVADA')
+                                ->schema([
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('ac_name')
+                                                ->label('NOMBRE AC')
+                                                ->maxLength(255),
+                                            TextInput::make('private_president_name')
+                                                ->label('PRESIDENTE PRIVADA')
+                                                ->maxLength(255),
+                                            TextInput::make('ac_phone')
+                                                ->label('Núm. Celular')
+                                                ->tel()
+                                                ->maxLength(20),
+                                            TextInput::make('private_president_phone')
+                                                ->label('Núm. Celular')
+                                                ->tel()
+                                                ->maxLength(20),
+                                            TextInput::make('ac_quota')
+                                                ->label('CUOTA')
+                                                ->numeric()
+                                                ->prefix('$'),
+                                            TextInput::make('private_president_quota')
+                                                ->label('CUOTA')
+                                                ->numeric()
+                                                ->prefix('$'),
+                                        ]),
+                                ])
+                                ->collapsible(),
                         ])
                         ->afterValidation(function () {
                             $this->saveStepData(2);
@@ -387,6 +588,86 @@ class CreateAgreementWizard extends Page implements HasForms
                 'wizard_data' => $this->data,
                 'completion_percentage' => ($step / 4) * 100,
             ]);
+            
+            // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
+            if ($step === 2 && isset($this->data['client_id']) && $this->data['client_id']) {
+                $this->updateClientData($this->data['client_id']);
+            }
+        }
+    }
+    
+    public function updateClientData(int $clientId): void
+    {
+        $client = Client::find($clientId);
+        
+        if ($client) {
+            $updateData = [];
+            
+            // Mapear campos del wizard a campos del cliente
+            $fieldMapping = [
+                // Datos personales titular
+                'name' => 'holder_name',
+                'birthdate' => 'holder_birthdate',
+                'curp' => 'holder_curp',
+                'rfc' => 'holder_rfc',
+                'email' => 'holder_email',
+                'phone' => 'holder_phone',
+                'delivery_file' => 'holder_delivery_file',
+                'civil_status' => 'holder_civil_status',
+                'regime_type' => 'holder_regime_type',
+                'occupation' => 'holder_occupation',
+                'office_phone' => 'holder_office_phone',
+                'additional_contact_phone' => 'holder_additional_contact_phone',
+                'current_address' => 'holder_current_address',
+                'neighborhood' => 'holder_neighborhood',
+                'postal_code' => 'holder_postal_code',
+                'municipality' => 'holder_municipality',
+                'state' => 'holder_state',
+                
+                // Datos cónyuge
+                'spouse_name' => 'spouse_name',
+                'spouse_birthdate' => 'spouse_birthdate',
+                'spouse_curp' => 'spouse_curp',
+                'spouse_rfc' => 'spouse_rfc',
+                'spouse_email' => 'spouse_email',
+                'spouse_phone' => 'spouse_phone',
+                'spouse_delivery_file' => 'spouse_delivery_file',
+                'spouse_civil_status' => 'spouse_civil_status',
+                'spouse_regime_type' => 'spouse_regime_type',
+                'spouse_occupation' => 'spouse_occupation',
+                'spouse_office_phone' => 'spouse_office_phone',
+                'spouse_additional_contact_phone' => 'spouse_additional_contact_phone',
+                'spouse_current_address' => 'spouse_current_address',
+                'spouse_neighborhood' => 'spouse_neighborhood',
+                'spouse_postal_code' => 'spouse_postal_code',
+                'spouse_municipality' => 'spouse_municipality',
+                'spouse_state' => 'spouse_state',
+                
+                // Contactos AC/Presidente
+                'ac_name' => 'ac_name',
+                'ac_phone' => 'ac_phone',
+                'ac_quota' => 'ac_quota',
+                'private_president_name' => 'private_president_name',
+                'private_president_phone' => 'private_president_phone',
+                'private_president_quota' => 'private_president_quota',
+            ];
+            
+            // Solo actualizar campos que han cambiado
+            foreach ($fieldMapping as $clientField => $wizardField) {
+                if (isset($this->data[$wizardField]) && $this->data[$wizardField] !== null) {
+                    $updateData[$clientField] = $this->data[$wizardField];
+                }
+            }
+            
+            if (!empty($updateData)) {
+                $client->update($updateData);
+                
+                Notification::make()
+                    ->title('Cliente actualizado')
+                    ->body('Los datos del cliente han sido actualizados exitosamente.')
+                    ->success()
+                    ->send();
+            }
         }
     }
 
@@ -403,15 +684,18 @@ class CreateAgreementWizard extends Page implements HasForms
                 ->get();
             
             if ($clients->count() > 0) {
-                // Si encontramos clientes, auto-llenar con el primero
+                // Si encontramos clientes, auto-seleccionar el primero
                 $firstClient = $clients->first();
-                $this->data['client_name'] = $firstClient->name;
-                $this->data['client_email'] = $firstClient->email;
-                $this->data['client_phone'] = $firstClient->phone ?? '';
+                $this->data['client_id'] = $firstClient->id;
+                
+                // Precargar todos los datos del cliente
+                $this->preloadClientData($firstClient->id, function($field, $value) {
+                    $this->data[$field] = $value;
+                });
                 
                 Notification::make()
-                    ->title('Cliente encontrado')
-                    ->body("Se encontró: {$firstClient->name}")
+                    ->title('Cliente encontrado y precargado')
+                    ->body("Se encontró: {$firstClient->name}. Los datos han sido precargados en el paso 2.")
                     ->success()
                     ->send();
             } else {
@@ -421,6 +705,68 @@ class CreateAgreementWizard extends Page implements HasForms
                     ->warning()
                     ->send();
             }
+        }
+    }
+    
+    public function preloadClientData(int $clientId, callable $set): void
+    {
+        $client = Client::find($clientId);
+        
+        if ($client) {
+            // Datos generales
+            $set('xante_id', $client->xante_id);
+            
+            // Datos personales titular
+            $set('holder_name', $client->name);
+            $set('holder_birthdate', $client->birthdate);
+            $set('holder_curp', $client->curp);
+            $set('holder_rfc', $client->rfc);
+            $set('holder_email', $client->email);
+            $set('holder_phone', $client->phone);
+            $set('holder_delivery_file', $client->delivery_file);
+            $set('holder_civil_status', $client->civil_status);
+            $set('holder_regime_type', $client->regime_type);
+            $set('holder_occupation', $client->occupation);
+            $set('holder_office_phone', $client->office_phone);
+            $set('holder_additional_contact_phone', $client->additional_contact_phone);
+            $set('holder_current_address', $client->current_address);
+            $set('holder_neighborhood', $client->neighborhood);
+            $set('holder_postal_code', $client->postal_code);
+            $set('holder_municipality', $client->municipality);
+            $set('holder_state', $client->state);
+            
+            // Datos cónyuge
+            $set('spouse_name', $client->spouse_name);
+            $set('spouse_birthdate', $client->spouse_birthdate);
+            $set('spouse_curp', $client->spouse_curp);
+            $set('spouse_rfc', $client->spouse_rfc);
+            $set('spouse_email', $client->spouse_email);
+            $set('spouse_phone', $client->spouse_phone);
+            $set('spouse_delivery_file', $client->spouse_delivery_file);
+            $set('spouse_civil_status', $client->spouse_civil_status);
+            $set('spouse_regime_type', $client->spouse_regime_type);
+            $set('spouse_occupation', $client->spouse_occupation);
+            $set('spouse_office_phone', $client->spouse_office_phone);
+            $set('spouse_additional_contact_phone', $client->spouse_additional_contact_phone);
+            $set('spouse_current_address', $client->spouse_current_address);
+            $set('spouse_neighborhood', $client->spouse_neighborhood);
+            $set('spouse_postal_code', $client->spouse_postal_code);
+            $set('spouse_municipality', $client->spouse_municipality);
+            $set('spouse_state', $client->spouse_state);
+            
+            // Contactos AC/Presidente
+            $set('ac_name', $client->ac_name);
+            $set('ac_phone', $client->ac_phone);
+            $set('ac_quota', $client->ac_quota);
+            $set('private_president_name', $client->private_president_name);
+            $set('private_president_phone', $client->private_president_phone);
+            $set('private_president_quota', $client->private_president_quota);
+            
+            Notification::make()
+                ->title('Datos precargados')
+                ->body('La información del cliente ha sido precargada. Puede editarla en el paso 2 si es necesario.')
+                ->success()
+                ->send();
         }
     }
 
