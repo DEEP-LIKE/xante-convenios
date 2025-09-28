@@ -148,40 +148,14 @@ class WizardResource extends Resource
                     }),
             ])
             ->actions([
-                // CORREGIDO: Botones con estilos Filament 4 unificados
                 Action::make('continue')
                     ->label('Continuar')
                     ->icon('heroicon-o-play')
                     ->color('success')
                     ->url(fn (Agreement $record): string => 
-                        \App\Filament\Pages\CreateAgreementWizard::getUrl(['agreement' => $record->id])
+                        "/admin/create-agreement-wizard?agreement={$record->id}"
                     )
                     ->visible(fn (Agreement $record): bool => $record->status !== 'expediente_completo'),
-
-                Action::make('view_summary')
-                    ->label('Resumen')
-                    ->icon('heroicon-o-eye')
-                    ->color('primary')
-                    ->modalContent(fn (Agreement $record) => view('filament.modals.wizard-summary', [
-                        'agreement' => $record,
-                        'summary' => app(\App\Services\WizardService::class)->getWizardSummary($record->id)
-                    ]))
-                    ->modalHeading(fn (Agreement $record) => "Resumen del Convenio #{$record->id}")
-                    ->modalWidth('4xl'),
-
-                Action::make('clone')
-                    ->label('Clonar')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->action(function (Agreement $record) {
-                        $wizardService = app(\App\Services\WizardService::class);
-                        $newAgreement = $wizardService->cloneAgreement($record->id);
-                        
-                        return redirect(\App\Filament\Pages\CreateAgreementWizard::getUrl(['agreement' => $newAgreement->id]));
-                    })
-                    ->requiresConfirmation()
-                    ->modalHeading('Clonar Convenio')
-                    ->modalDescription('¿Está seguro de que desea clonar este convenio? Se creará una nueva instancia con los mismos datos.'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -194,7 +168,7 @@ class WizardResource extends Resource
                     ->label('Crear Primer Convenio')
                     ->icon('heroicon-o-plus')
                     ->color('primary')
-                    ->url(fn (): string => \App\Filament\Pages\CreateAgreementWizard::getUrl())
+                    ->url('/admin/create-agreement-wizard')
             ])
             ->defaultSort('created_at', 'desc')
             ->poll('30s') // Auto-refresh cada 30 segundos

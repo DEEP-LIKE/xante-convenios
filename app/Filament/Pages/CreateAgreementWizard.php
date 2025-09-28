@@ -45,19 +45,31 @@ class CreateAgreementWizard extends Page implements HasForms
 
     public function mount(?int $agreement = null): void
     {
-        if ($agreement) {
-            $this->agreementId = $agreement;
-            $agreementModel = Agreement::findOrFail($agreement);
+        // Intentar obtener el agreement desde parámetro o query string
+        $agreementId = $agreement ?? request()->get('agreement');
+        
+        if ($agreementId) {
+            $this->agreementId = $agreementId;
+            $agreementModel = Agreement::findOrFail($agreementId);
+            
+            // Cargar datos del wizard_data
             $this->data = $agreementModel->wizard_data ?? [];
+            
+            // Pre-cargar valores de configuración ANTES de llenar el formulario
+            $this->loadCalculatorDefaults();
             
             // Cargar el paso actual donde se quedó el usuario
             $this->currentStep = $agreementModel->current_step ?? 1;
+            
+            // Llenar el formulario con los datos cargados
+            $this->form->fill($this->data);
             
             // Notificar al usuario que se cargaron los datos
             Notification::make()
                 ->title('Datos cargados')
                 ->body("Continuando desde el paso {$this->currentStep}: " . $agreementModel->getCurrentStepName())
                 ->success()
+                ->duration(5000)
                 ->send();
         } else {
             // Crear nuevo convenio
@@ -69,13 +81,13 @@ class CreateAgreementWizard extends Page implements HasForms
             $this->agreementId = $newAgreement->id;
             $this->data = [];
             $this->currentStep = 1;
+            
+            // Pre-cargar valores de configuración
+            $this->loadCalculatorDefaults();
+            
+            // Llenar el formulario con los datos
+            $this->form->fill($this->data);
         }
-        
-        // Pre-cargar valores de configuración
-        $this->loadCalculatorDefaults();
-        
-        // Llenar el formulario con los datos
-        $this->form->fill($this->data);
     }
 
     protected function getFormSchema(): array
@@ -714,6 +726,7 @@ class CreateAgreementWizard extends Page implements HasForms
         // NO precargar valores calculados - estos se calcularán solo cuando se ingrese el valor_convenio
         // Los campos calculados permanecerán vacíos hasta que el usuario ingrese el Valor Convenio
 
+        // Solo aplicar defaults si no hay datos existentes (para no sobrescribir datos cargados)
         $this->data = array_merge($defaults, $this->data);
     }
 
@@ -786,34 +799,36 @@ class CreateAgreementWizard extends Page implements HasForms
         if ($this->agreementId) {
             $agreement = Agreement::find($this->agreementId);
             
-            // Actualizar datos del convenio
-            $agreement->update([
-                'current_step' => $step,
-                'wizard_data' => $this->data,
-            ]);
-            
-            // Calcular porcentaje de completitud usando el método del modelo
-            $agreement->calculateCompletionPercentage();
-            
-            // Guardar automáticamente a partir del paso 2
-            if ($step >= 2) {
-                // Mostrar notificación de guardado automático
-                Notification::make()
-                    ->title('Progreso guardado')
-                    ->body("Paso {$step} guardado automáticamente: " . $agreement->getCurrentStepName())
-                    ->success()
-                    ->duration(3000)
-                    ->send();
-            }
-            
-            // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
-            if ($step === 2 && isset($this->data['client_id']) && $this->data['client_id']) {
-                $this->updateClientData($this->data['client_id']);
-            }
-            
-            // Si estamos llegando al paso 4 (Calculadora), precargar datos de propiedad
-            if ($step === 3) {
-                $this->preloadPropertyDataForCalculator();
+            if ($agreement) {
+                // Actualizar datos del convenio
+                $agreement->update([
+                    'current_step' => $step,
+                    'wizard_data' => $this->data,
+                ]);
+                
+                // Calcular porcentaje de completitud usando el método del modelo
+                $agreement->calculateCompletionPercentage();
+                
+                // Guardar automáticamente a partir del paso 2
+                if ($step >= 2) {
+                    // Mostrar notificación de guardado automático
+                    Notification::make()
+                        ->title('Progreso guardado')
+                        ->body("Paso {$step} guardado automáticamente: " . $agreement->getCurrentStepName())
+                        ->success()
+                        ->duration(3000)
+                        ->send();
+                }
+                
+                // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
+                if ($step === 2 && isset($this->data['client_id']) && $this->data['client_id']) {
+                    $this->updateClientData($this->data['client_id']);
+                }
+                
+                // Si estamos llegando al paso 4 (Calculadora), precargar datos de propiedad
+                if ($step === 3) {
+                    $this->preloadPropertyDataForCalculator();
+                }
             }
         }
     }
