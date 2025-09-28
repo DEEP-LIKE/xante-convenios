@@ -53,9 +53,10 @@ class WizardResource extends Resource
                     ->badge()
                     ->color(fn ($state) => match($state) {
                         1 => 'gray',
-                        2, 3 => 'blue',
-                        4, 5 => 'yellow',
-                        6 => 'green',
+                        2 => 'blue',
+                        3 => 'info',
+                        4 => 'yellow',
+                        5 => 'green',
                         default => 'gray'
                     }),
                     
@@ -107,12 +108,11 @@ class WizardResource extends Resource
                 SelectFilter::make('current_step')
                     ->label('Paso Actual')
                     ->options([
-                        1 => 'Paso 1: Búsqueda',
-                        2 => 'Paso 2: Cliente Titular',
-                        3 => 'Paso 3: Cónyuge',
-                        4 => 'Paso 4: Propiedad',
-                        5 => 'Paso 5: Calculadora',
-                        6 => 'Paso 6: Documentos',
+                        1 => 'Paso 1: Búsqueda e Identificación',
+                        2 => 'Paso 2: Datos del Cliente',
+                        3 => 'Paso 3: Datos de la propiedad',
+                        4 => 'Paso 4: Calculadora Financiera',
+                        5 => 'Paso 5: Envio de documentación',
                     ]),
                     
                 SelectFilter::make('status')

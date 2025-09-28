@@ -170,11 +170,10 @@ class Agreement extends Model
     {
         return [
             1 => 'Búsqueda e Identificación',
-            2 => 'Datos del Cliente Titular',
-            3 => 'Datos del Cónyuge/Coacreditado',
-            4 => 'Información de la Propiedad',
-            5 => 'Calculadora de Convenio',
-            6 => 'Documentación y Cierre',
+            2 => 'Datos del Cliente',
+            3 => 'Datos de la propiedad',
+            4 => 'Calculadora Financiera',
+            5 => 'Envio de documentación',
         ];
     }
 
@@ -233,10 +232,11 @@ class Agreement extends Model
 
     public function calculateCompletionPercentage(): void
     {
-        $totalSteps = count($this->getWizardSteps());
-        $completedSteps = $this->wizardProgress()->where('is_completed', true)->count();
+        $totalSteps = count($this->getWizardSteps()); // 5 pasos
+        $currentStep = $this->current_step;
         
-        $percentage = $totalSteps > 0 ? round(($completedSteps / $totalSteps) * 100) : 0;
+        // Calcular porcentaje basado en el paso actual
+        $percentage = $totalSteps > 0 ? round(($currentStep / $totalSteps) * 100) : 0;
         
         $this->update(['completion_percentage' => $percentage]);
     }
