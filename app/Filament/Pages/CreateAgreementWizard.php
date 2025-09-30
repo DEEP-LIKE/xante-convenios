@@ -23,6 +23,9 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Support\Icons\Heroicon;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Checkbox;
+use App\Jobs\GenerateAgreementDocumentsJob;
 
 use BackedEnum;
 
@@ -662,35 +665,96 @@ class CreateAgreementWizard extends Page implements HasForms
                             $this->saveStepData(4);
                         }),
 
-                    Step::make('Envio de documentación')
-                        ->icon('heroicon-o-document-check')
+                    Step::make('Resumen y Validación')
+                        ->icon('heroicon-o-clipboard-document-check')
                         ->schema([
-                            CheckboxList::make('documents_required')
-                                ->label('Documentos Requeridos')
-                                ->options([
-                                    'ine' => 'INE o Identificación Oficial',
-                                    'curp' => 'CURP',
-                                    'rfc' => 'RFC',
-                                    'comprobante_ingresos' => 'Comprobante de Ingresos',
-                                    'escrituras' => 'Escrituras de la Propiedad',
-                                    'avaluo' => 'Avalúo Actualizado',
+                            // SECCIÓN 1: DATOS DEL CLIENTE
+                            Section::make('📋 DATOS DEL CLIENTE')
+                                ->description('Información capturada en Paso 2')
+                                ->schema([
+                                    Placeholder::make('client_summary')
+                                        ->content(function () {
+                                            return $this->renderClientSummary($this->data);
+                                        })
+                                        ->html(),
                                 ])
-                                ->columns(2)
-                                ->gridDirection('row'),
+                                ->collapsible(),
+
+                            // SECCIÓN 2: DATOS DE LA PROPIEDAD
+                            Section::make('🏠 DATOS DE LA PROPIEDAD')
+                                ->description('Información capturada en Paso 3')
+                                ->schema([
+                                    Placeholder::make('property_summary')
+                                        ->content(function () {
+                                            return $this->renderPropertySummary($this->data);
+                                        })
+                                        ->html(),
+                                ])
+                                ->collapsible(),
+
+                            // SECCIÓN 3: CALCULADORA FINANCIERA
+                            Section::make('💰 RESUMEN FINANCIERO')
+                                ->description('Cálculos realizados en Paso 4')
+                                ->schema([
+                                    Placeholder::make('financial_summary')
+                                        ->content(function () {
+                                            return $this->renderFinancialSummary($this->data);
+                                        })
+                                        ->html(),
+                                ])
+                                ->collapsible(),
+
+                            // ADVERTENCIA CRÍTICA
+                            Section::make('⚠️ ADVERTENCIA IMPORTANTE')
+                                ->schema([
+                                    Placeholder::make('warning')
+                                        ->content('
+                                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                                                <div class="flex">
+                                                    <div class="flex-shrink-0">
+                                                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="ml-3">
+                                                        <h3 class="text-sm font-medium text-yellow-800">
+                                                            Una vez que genere los documentos, NO PODRÁ modificar esta información
+                                                        </h3>
+                                                        <div class="mt-2 text-sm text-yellow-700">
+                                                            <p>Los documentos PDF se generarán con la información que aparece arriba. Revise cuidadosamente antes de continuar.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ')
+                                        ->html(),
+                                ]),
+
+                            // CHECKBOX DE CONFIRMACIÓN
+                            Checkbox::make('confirm_data_correct')
+                                ->label('Confirmo que he revisado toda la información y es correcta')
+                                ->required()
+                                ->accepted()
+                                ->validationMessages([
+                                    'accepted' => 'Debe confirmar que la información es correcta para continuar.',
+                                ]),
                         ])
                         ->afterValidation(function () {
-                            $this->saveStepData(4);
+                            $this->saveStepData(5);
                         }),
                 ])
                 ->submitAction(Action::make('submit')
-                    ->label('Finalizar Convenio')
-                    ->icon('heroicon-o-check')
-                    ->color('success')
-                    ->action('submit'))
+                    ->label('Validar y Generar Documentos')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Confirmación Final')
+                    ->modalDescription('Está a punto de generar los documentos oficiales del convenio. Esta acción es IRREVERSIBLE. ¿Confirma que desea continuar?')
+                    ->modalSubmitActionLabel('Sí, Generar Documentos')
+                    ->action('generateDocumentsAndProceed'))
                 ->nextAction(fn (Action $action) => $action->label('Siguiente'))
                 ->previousAction(fn (Action $action) => $action->label('Anterior'))
-                ->cancelAction('cancelar', '/admin/wizard')
-                // ->cancelAction(fn (Action $action) => $action->label('Cancelar')->url('/admin/wizards'))
+                ->cancelAction('Cancelar')
                 ->persistStepInQueryString()
                 ->startOnStep($this->currentStep)
         ];
@@ -1025,25 +1089,137 @@ class CreateAgreementWizard extends Page implements HasForms
         }
     }
 
-    public function submit(): void
+    /**
+     * Genera los documentos y procede al Wizard 2
+     */
+    public function generateDocumentsAndProceed(): void
     {
-        if ($this->agreementId) {
-            $agreement = Agreement::find($this->agreementId);
-            $agreement->update([
-                'status' => 'expediente_completo',
-                'current_step' => 5, // Paso final
-                'completion_percentage' => 100,
-                'completed_at' => now(),
-                'wizard_data' => $this->data,
-            ]);
+        // Validar que el checkbox esté marcado
+        if (!($this->data['confirm_data_correct'] ?? false)) {
+            Notification::make()
+                ->title('Confirmación requerida')
+                ->body('Debe confirmar que ha revisado toda la información antes de continuar.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        if (!$this->agreementId) {
+            Notification::make()
+                ->title('Error')
+                ->body('No se encontró el convenio.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $agreement = Agreement::find($this->agreementId);
+        
+        if (!$agreement) {
+            Notification::make()
+                ->title('Error')
+                ->body('No se encontró el convenio.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Actualizar estado y cambiar a Wizard 2
+        $agreement->update([
+            'status' => 'pending_validation',
+            'current_step' => 5,
+            'current_wizard' => 2,
+            'wizard2_current_step' => 1,
+            'completion_percentage' => 100,
+            'wizard_data' => $this->data,
+            'can_return_to_wizard1' => false, // Ya no puede regresar al Wizard 1
+        ]);
+
+        // Disparar el job asíncrono para generar documentos
+        GenerateAgreementDocumentsJob::dispatch($agreement, Auth::id());
+
+        Notification::make()
+            ->title('Documentos en Proceso')
+            ->body('Los documentos se están generando. Será redirigido al proceso de envío cuando estén listos.')
+            ->success()
+            ->duration(5000)
+            ->send();
+
+        // Redirigir al Wizard 2
+        $this->redirect("/admin/manage-agreement-documents/{$agreement->id}");
+    }
+
+    /**
+     * Renderiza el resumen de datos del cliente
+     */
+    protected function renderClientSummary(array $data): string
+    {
+        $html = '<div class="space-y-3">';
+        
+        if (!empty($data['holder_name'])) {
+            $html .= '<div class="bg-blue-50 p-3 rounded"><strong>Titular:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Email:</strong> ' . ($data['holder_email'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Teléfono:</strong> ' . ($data['holder_phone'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>CURP:</strong> ' . ($data['holder_curp'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>RFC:</strong> ' . ($data['holder_rfc'] ?? 'N/A') . '</div>';
         }
         
-        Notification::make()
-            ->title('Convenio creado exitosamente')
-            ->body('El convenio ha sido completado y guardado.')
-            ->success()
-            ->send();
+        if (!empty($data['spouse_name'])) {
+            $html .= '<div class="bg-green-50 p-3 rounded mt-3"><strong>Cónyuge:</strong> ' . $data['spouse_name'] . '</div>';
+        }
         
-        $this->redirect('/admin/wizard');
+        $html .= '</div>';
+        return $html;
+    }
+
+    /**
+     * Renderiza el resumen de datos de la propiedad
+     */
+    protected function renderPropertySummary(array $data): string
+    {
+        $html = '<div class="space-y-3">';
+        
+        $html .= '<div><strong>Domicilio:</strong> ' . ($data['domicilio_convenio'] ?? 'N/A') . '</div>';
+        $html .= '<div><strong>Comunidad:</strong> ' . ($data['comunidad'] ?? 'N/A') . '</div>';
+        $html .= '<div><strong>Tipo de Vivienda:</strong> ' . ($data['tipo_vivienda'] ?? 'N/A') . '</div>';
+        $html .= '<div><strong>Prototipo:</strong> ' . ($data['prototipo'] ?? 'N/A') . '</div>';
+        
+        if (!empty($data['lote']) || !empty($data['manzana']) || !empty($data['etapa'])) {
+            $html .= '<div><strong>Ubicación:</strong> ';
+            if (!empty($data['lote'])) $html .= 'Lote ' . $data['lote'] . ' ';
+            if (!empty($data['manzana'])) $html .= 'Manzana ' . $data['manzana'] . ' ';
+            if (!empty($data['etapa'])) $html .= 'Etapa ' . $data['etapa'];
+            $html .= '</div>';
+        }
+        
+        $html .= '</div>';
+        return $html;
+    }
+
+    /**
+     * Renderiza el resumen financiero
+     */
+    protected function renderFinancialSummary(array $data): string
+    {
+        $valorConvenio = floatval(str_replace(',', '', $data['valor_convenio'] ?? 0));
+        $precioPromocion = floatval(str_replace(',', '', $data['precio_promocion'] ?? 0));
+        $comisionTotal = floatval(str_replace(',', '', $data['comision_total_pagar'] ?? 0));
+        $gananciaFinal = floatval(str_replace(',', '', $data['ganancia_final'] ?? 0));
+        
+        $html = '<div class="bg-gray-50 p-4 rounded-lg space-y-2">';
+        $html .= '<div class="flex justify-between"><span><strong>Valor del Convenio:</strong></span><span class="font-bold text-blue-600">$' . number_format($valorConvenio, 2) . '</span></div>';
+        $html .= '<div class="flex justify-between"><span><strong>Precio de Promoción:</strong></span><span class="font-bold text-green-600">$' . number_format($precioPromocion, 2) . '</span></div>';
+        $html .= '<div class="flex justify-between"><span><strong>Comisión Total:</strong></span><span class="font-bold text-orange-600">$' . number_format($comisionTotal, 2) . '</span></div>';
+        $html .= '<hr class="my-2">';
+        $html .= '<div class="flex justify-between text-lg"><span><strong>Ganancia Final:</strong></span><span class="font-bold text-green-700">$' . number_format($gananciaFinal, 2) . '</span></div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+
+    public function submit(): void
+    {
+        // Método legacy - redirigir al nuevo método
+        $this->generateDocumentsAndProceed();
     }
 }

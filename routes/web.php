@@ -21,7 +21,13 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('password.edit');
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
     
-    // ELIMINADO: Rutas de wizard público - Ahora todo es nativo de Filament 4
+    // Rutas para el sistema de dos wizards
+    Route::get('/admin/manage-agreement-documents/{agreement}', \App\Filament\Pages\ManageAgreementDocuments::class)
+        ->name('manage-agreement-documents');
+    
+    // Ruta para descargar documentos generados
+    Route::get('/documents/{document}/download', [App\Http\Controllers\DocumentDownloadController::class, 'download'])
+        ->name('documents.download');
 });
 
 require __DIR__.'/auth.php';

@@ -78,20 +78,26 @@ class WizardResource extends Resource
                     ->label('Estado')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
+                        // Estados originales
                         'sin_convenio' => 'gray',
                         'expediente_incompleto' => 'warning',
                         'expediente_completo' => 'success',
                         'convenio_proceso' => 'info',
                         'convenio_firmado' => 'success',
+                        // Nuevos estados del sistema de dos wizards
+                        'draft' => 'gray',
+                        'pending_validation' => 'warning',
+                        'documents_generating' => 'info',
+                        'documents_generated' => 'success',
+                        'documents_sent' => 'info',
+                        'awaiting_client_docs' => 'warning',
+                        'documents_complete' => 'success',
+                        'completed' => 'success',
+                        'error_generating_documents' => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'sin_convenio' => 'Sin Convenio',
-                        'expediente_incompleto' => 'Expediente Incompleto',
-                        'expediente_completo' => 'Expediente Completo',
-                        'convenio_proceso' => 'Convenio en Proceso',
-                        'convenio_firmado' => 'Convenio Firmado',
-                        default => $state,
+                    ->formatStateUsing(function (string $state, Agreement $record): string {
+                        return $record->status_label;
                     }),
                     
                 TextColumn::make('created_at')
@@ -112,17 +118,35 @@ class WizardResource extends Resource
                         2 => 'Paso 2: Datos del Cliente',
                         3 => 'Paso 3: Datos de la propiedad',
                         4 => 'Paso 4: Calculadora Financiera',
-                        5 => 'Paso 5: Envio de documentación',
+                        5 => 'Paso 5: Resumen y Validación',
+                    ]),
+                    
+                SelectFilter::make('current_wizard')
+                    ->label('Wizard Actual')
+                    ->options([
+                        1 => 'Wizard 1: Captura de Información',
+                        2 => 'Wizard 2: Gestión Documental',
                     ]),
                     
                 SelectFilter::make('status')
                     ->label('Estado')
                     ->options([
+                        // Estados originales
                         'sin_convenio' => 'Sin Convenio',
                         'expediente_incompleto' => 'Expediente Incompleto',
                         'expediente_completo' => 'Expediente Completo',
                         'convenio_proceso' => 'Convenio en Proceso',
                         'convenio_firmado' => 'Convenio Firmado',
+                        // Nuevos estados del sistema de dos wizards
+                        'draft' => 'Borrador',
+                        'pending_validation' => 'Pendiente de Validación',
+                        'documents_generating' => 'Generando Documentos',
+                        'documents_generated' => 'Documentos Generados',
+                        'documents_sent' => 'Documentos Enviados',
+                        'awaiting_client_docs' => 'Esperando Documentos del Cliente',
+                        'documents_complete' => 'Documentos Completos',
+                        'completed' => 'Completado',
+                        'error_generating_documents' => 'Error al Generar Documentos',
                     ]),
                     
                 SelectFilter::make('completion_percentage')
@@ -148,14 +172,41 @@ class WizardResource extends Resource
                     }),
             ])
             ->actions([
-                Action::make('continue')
-                    ->label('Continuar')
+                // Botón para Wizard 1
+                Action::make('continue_wizard1')
+                    ->label('Continuar Wizard 1')
                     ->icon('heroicon-o-play')
                     ->color('success')
                     ->url(fn (Agreement $record): string => 
                         "/admin/create-agreement-wizard?agreement={$record->id}"
                     )
-                    ->visible(fn (Agreement $record): bool => $record->status !== 'expediente_completo'),
+                    ->visible(fn (Agreement $record): bool => 
+                        $record->current_wizard === 1 && $record->can_return_to_wizard1 === true
+                    ),
+                    
+                // Botón para Wizard 2
+                Action::make('continue_wizard2')
+                    ->label('Gestionar Documentos')
+                    ->icon('heroicon-o-document-check')
+                    ->color('info')
+                    ->url(fn (Agreement $record): string => 
+                        "/admin/manage-agreement-documents/{$record->id}"
+                    )
+                    ->visible(fn (Agreement $record): bool => 
+                        $record->current_wizard === 2 || $record->status === 'documents_generated'
+                    ),
+                    
+                // Botón de Ver Resumen (solo para completados)
+                Action::make('view_summary')
+                    ->label('Ver Resumen')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->url(fn (Agreement $record): string => 
+                        "/admin/manage-agreement-documents/{$record->id}"
+                    )
+                    ->visible(fn (Agreement $record): bool => 
+                        $record->status === 'completed'
+                    ),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -184,7 +235,8 @@ class WizardResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('completion_percentage', '<', 100)->count();
+        $incomplete = static::getModel()::whereNotIn('status', ['completed'])->count();
+        return $incomplete > 0 ? (string) $incomplete : null;
     }
 
     public static function getNavigationBadgeColor(): ?string

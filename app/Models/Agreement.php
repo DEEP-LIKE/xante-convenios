@@ -87,6 +87,12 @@ class Agreement extends Model
         'cancelacion_hipoteca',
         'total_gastos_fi',
         'indicador_ganancia',
+        // Nuevos campos para sistema de dos wizards
+        'documents_generated_at',
+        'documents_sent_at',
+        'can_return_to_wizard1',
+        'current_wizard',
+        'wizard2_current_step',
     ];
 
     protected function casts(): array
@@ -102,6 +108,12 @@ class Agreement extends Model
             'completion_percentage' => 'integer',
             'completed_at' => 'datetime',
             'current_step' => 'integer',
+            // Nuevos casts para sistema de dos wizards
+            'documents_generated_at' => 'datetime',
+            'documents_sent_at' => 'datetime',
+            'can_return_to_wizard1' => 'boolean',
+            'current_wizard' => 'integer',
+            'wizard2_current_step' => 'integer',
         ];
     }
 
@@ -131,6 +143,17 @@ class Agreement extends Model
         return $this->hasMany(DocumentManager::class);
     }
 
+    // Nuevas relaciones para sistema de documentos
+    public function generatedDocuments(): HasMany
+    {
+        return $this->hasMany(GeneratedDocument::class);
+    }
+
+    public function clientDocuments(): HasMany
+    {
+        return $this->hasMany(ClientDocument::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -144,11 +167,22 @@ class Agreement extends Model
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
+            // Estados originales
             'sin_convenio' => 'Sin Convenio',
             'expediente_incompleto' => 'Expediente Incompleto',
             'expediente_completo' => 'Expediente Completo',
             'convenio_proceso' => 'Convenio en Proceso',
             'convenio_firmado' => 'Convenio Firmado',
+            // Nuevos estados del sistema de dos wizards
+            'draft' => 'Borrador',
+            'pending_validation' => 'Pendiente de Validación',
+            'documents_generating' => 'Generando Documentos',
+            'documents_generated' => 'Documentos Generados',
+            'documents_sent' => 'Documentos Enviados',
+            'awaiting_client_docs' => 'Esperando Documentos del Cliente',
+            'documents_complete' => 'Documentos Completos',
+            'completed' => 'Completado',
+            'error_generating_documents' => 'Error al Generar Documentos',
             default => $this->status,
         };
     }
@@ -156,11 +190,22 @@ class Agreement extends Model
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
+            // Estados originales
             'sin_convenio' => 'gray',
             'expediente_incompleto' => 'warning',
             'expediente_completo' => 'success',
             'convenio_proceso' => 'info',
             'convenio_firmado' => 'success',
+            // Nuevos estados del sistema de dos wizards
+            'draft' => 'gray',
+            'pending_validation' => 'warning',
+            'documents_generating' => 'info',
+            'documents_generated' => 'success',
+            'documents_sent' => 'info',
+            'awaiting_client_docs' => 'warning',
+            'documents_complete' => 'success',
+            'completed' => 'success',
+            'error_generating_documents' => 'danger',
             default => 'gray',
         };
     }
@@ -173,7 +218,16 @@ class Agreement extends Model
             2 => 'Datos del Cliente',
             3 => 'Datos de la propiedad',
             4 => 'Calculadora Financiera',
-            5 => 'Envio de documentación',
+            5 => 'Resumen y Validación',
+        ];
+    }
+
+    public function getWizard2Steps(): array
+    {
+        return [
+            1 => 'Envío de Documentos',
+            2 => 'Recepción de Documentos',
+            3 => 'Cierre Exitoso',
         ];
     }
 
