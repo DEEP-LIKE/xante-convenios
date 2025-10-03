@@ -26,6 +26,9 @@ class PropertyResource extends Resource
     protected static ?string $pluralModelLabel = 'Propiedades';
     
     protected static ?int $navigationSort = 3;
+    
+    // Ocultar del menú principal - solo accesible vía wizard
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Schema $schema): Schema
     {

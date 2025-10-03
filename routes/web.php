@@ -25,7 +25,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/manage-agreement-documents/{agreement}', \App\Filament\Pages\ManageAgreementDocuments::class)
         ->name('manage-agreement-documents');
     
-    // Ruta para descargar documentos generados
+    // Rutas seguras para documentos
+    Route::get('/secure/generated/{document}', [App\Http\Controllers\SecureDocumentController::class, 'serveGeneratedDocument'])
+        ->name('secure.generated.document');
+    
+    Route::get('/secure/client/{document}', [App\Http\Controllers\SecureDocumentController::class, 'serveClientDocument'])
+        ->name('secure.client.document');
+    
+    // Ruta para descargar documentos generados (mantener compatibilidad)
     Route::get('/documents/{document}/download', [App\Http\Controllers\DocumentDownloadController::class, 'download'])
         ->name('documents.download');
 });

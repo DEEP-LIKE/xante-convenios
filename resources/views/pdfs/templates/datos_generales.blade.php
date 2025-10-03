@@ -1,268 +1,456 @@
+{{-- resources/views/pdfs/templates/datos_generales.blade.php --}}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Datos Generales - Fase I</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            font-size: 10pt; 
-            line-height: 1.3;
-            margin: 15px;
+        @page {
+            size: letter;
+            margin: 1.5cm 2cm;
         }
-        .header { 
-            text-align: center; 
-            margin-bottom: 20px; 
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 15px;
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+        
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9pt;
+            line-height: 1.2;
+            color: #000;
+        }
+        
+        .page-container {
+            width: 100%;
+            max-width: 21.59cm;
+            margin: 0 auto;
+        }
+        
+        /* HEADER CON LOGO */
+        .header {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .logo-container {
+            display: table-cell;
+            width: 120px;
+            vertical-align: middle;
+        }
+        
         .logo {
-            font-size: 20px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 8px;
+            width: 100px;
+            height: auto;
         }
-        .title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 8px;
+        
+        .header-info {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: right;
         }
-        .section { 
-            margin-bottom: 15px; 
+        
+        .header-box {
+            display: inline-block;
+            border: 1px solid #000;
+            padding: 3px 8px;
+            margin-left: 5px;
+            min-width: 80px;
+        }
+        
+        .header-label {
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        
+        .header-value {
+            font-size: 9pt;
+            border-bottom: 1px solid #000;
+            min-height: 16px;
+            display: block;
+            margin-top: 2px;
+        }
+        
+        /* TÍTULO PRINCIPAL */
+        .main-title {
+            text-align: center;
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        /* SECCIONES */
+        .section {
+            margin-bottom: 18px;
             page-break-inside: avoid;
         }
+        
         .section-title {
-            font-size: 12px;
+            background-color: #A8D08D;
             font-weight: bold;
-            color: #007bff;
+            font-size: 9pt;
+            padding: 4px 8px;
             margin-bottom: 8px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 3px;
+            text-transform: uppercase;
+            border: 1px solid #000;
         }
-        .info-grid {
-            display: table;
+        
+        /* TABLA DE DATOS */
+        .data-table {
             width: 100%;
+            border-collapse: collapse;
             margin-bottom: 10px;
         }
-        .info-row {
-            display: table-row;
+        
+        .data-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            vertical-align: middle;
+            font-size: 8.5pt;
         }
-        .info-label {
-            display: table-cell;
+        
+        .data-label {
             font-weight: bold;
-            width: 35%;
-            padding: 4px 8px 4px 0;
-            vertical-align: top;
-            border-bottom: 1px dotted #ccc;
+            background-color: #f5f5f5;
+            width: 28%;
+            white-space: nowrap;
         }
-        .info-value {
+        
+        .data-value {
+            width: 72%;
+            min-height: 18px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        /* Para valores largos que necesitan ajustarse */
+        .data-value-long {
+            font-size: 7.5pt;
+            line-height: 1.3;
+        }
+        
+        /* GRID DE 2 COLUMNAS */
+        .two-column-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .column-50 {
             display: table-cell;
-            padding: 4px 0;
+            width: 50%;
+            padding-right: 4px;
             vertical-align: top;
-            border-bottom: 1px dotted #ccc;
         }
-        .two-column {
+        
+        .column-50:last-child {
+            padding-right: 0;
+            padding-left: 4px;
+        }
+        
+        /* SECCIÓN DE CONTACTOS */
+        .contact-section {
+            margin-bottom: 18px;
+        }
+        
+        .contact-grid {
             display: table;
             width: 100%;
         }
-        .column {
+        
+        .contact-column {
             display: table-cell;
-            width: 48%;
-            padding-right: 2%;
+            width: 50%;
+            border: 1px solid #000;
+            padding: 6px;
             vertical-align: top;
         }
-        .footer {
-            margin-top: 30px;
+        
+        .contact-column:first-child {
+            border-right: none;
+        }
+        
+        .contact-field {
+            margin-bottom: 6px;
+        }
+        
+        .contact-label {
+            font-weight: bold;
+            font-size: 8pt;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .contact-value {
+            border-bottom: 1px solid #000;
+            min-height: 16px;
+            display: block;
+            padding: 2px 0;
+        }
+        
+        /* FIRMA */
+        .signature-section {
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #000;
+            width: 60%;
+            margin: 50px auto 8px auto;
+        }
+        
+        .signature-label {
             text-align: center;
             font-size: 8pt;
-            color: #666;
-            border-top: 1px solid #ddd;
-            padding-top: 15px;
+            font-weight: bold;
+        }
+        
+        /* UTILIDADES */
+        .text-uppercase {
+            text-transform: uppercase;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .font-bold {
+            font-weight: bold;
+        }
+        
+        /* Ajuste para textos muy largos */
+        .truncate-text {
+            display: block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">XANTE.MX</div>
-        <div class="title">DATOS GENERALES - FASE I</div>
-        <p>ID Xante: {{ $xante_id }} | Fecha: {{ $fecha_actual }}</p>
-    </div>
-
-    <div class="section">
-        <div class="section-title">DATOS PERSONALES DEL TITULAR</div>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Nombre Completo:</div>
-                <div class="info-value">{{ $holder_name }}</div>
+    <div class="page-container">
+        
+        {{-- HEADER CON LOGO --}}
+        <div class="header">
+            <div class="logo-container">
+                <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
             </div>
-            <div class="info-row">
-                <div class="info-label">Fecha de Nacimiento:</div>
-                <div class="info-value">{{ $holder_birthdate }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">CURP:</div>
-                <div class="info-value">{{ $holder_curp }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">RFC:</div>
-                <div class="info-value">{{ $holder_rfc }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Estado Civil:</div>
-                <div class="info-value">{{ ucfirst(str_replace('_', ' ', $holder_civil_status)) }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Ocupación:</div>
-                <div class="info-value">{{ $holder_occupation }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Correo Electrónico:</div>
-                <div class="info-value">{{ $holder_email }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Teléfono:</div>
-                <div class="info-value">{{ $holder_phone }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Domicilio Actual:</div>
-                <div class="info-value">{{ $holder_current_address }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Municipio:</div>
-                <div class="info-value">{{ $holder_municipality }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Estado:</div>
-                <div class="info-value">{{ $holder_state }}</div>
+            <div class="header-info">
+                <div class="header-box">
+                    <span class="header-label">ID Xante</span>
+                    <span class="header-value">{{ $xante_id ?? '___________' }}</span>
+                </div>
+                <div class="header-box">
+                    <span class="header-label">Fecha</span>
+                    <span class="header-value">{{ $fecha_actual ?? '___________' }}</span>
+                </div>
             </div>
         </div>
-    </div>
 
-    @if($spouse_name)
-    <div class="section">
-        <div class="section-title">DATOS PERSONALES DEL CÓNYUGE</div>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Nombre Completo:</div>
-                <div class="info-value">{{ $spouse_name }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">CURP:</div>
-                <div class="info-value">{{ $spouse_curp }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">RFC:</div>
-                <div class="info-value">{{ $spouse_rfc }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Correo Electrónico:</div>
-                <div class="info-value">{{ $spouse_email }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Teléfono:</div>
-                <div class="info-value">{{ $spouse_phone }}</div>
+        {{-- TÍTULO PRINCIPAL --}}
+        <div class="main-title">
+            DATOS GENERALES<br>"FASE I"
+        </div>
+
+        {{-- SECCIÓN: DATOS PERSONALES TITULAR --}}
+        <div class="section">
+            <div class="section-title">DATOS PERSONALES TITULAR:</div>
+            
+            <table class="data-table">
+                <tr>
+                    <td class="data-label">Nombre Cliente</td>
+                    <td class="data-value {{ strlen($holder_name ?? '') > 40 ? 'data-value-long' : '' }}">
+                        {{ $holder_name ?? '' }}
+                    </td>
+                    <td class="data-label">Entrega expediente</td>
+                    <td class="data-value">{{ $holder_delivery_file ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Fecha de Nacimiento</td>
+                    <td class="data-value">{{ $holder_birthdate ?? '' }}</td>
+                    <td class="data-label">Estado civil</td>
+                    <td class="data-value">{{ ucfirst(str_replace('_', ' ', $holder_civil_status ?? '')) }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">CURP</td>
+                    <td class="data-value">{{ $holder_curp ?? '' }}</td>
+                    <td class="data-label">Bajo ¿qué régimen?</td>
+                    <td class="data-value">{{ $holder_regime_type ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">RFC</td>
+                    <td class="data-value">{{ $holder_rfc ?? '' }}</td>
+                    <td class="data-label">Ocupación</td>
+                    <td class="data-value">{{ $holder_occupation ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Correo electrónico</td>
+                    <td class="data-value {{ strlen($holder_email ?? '') > 35 ? 'data-value-long' : '' }}">
+                        {{ $holder_email ?? '' }}
+                    </td>
+                    <td class="data-label">Tel. oficina</td>
+                    <td class="data-value">{{ $holder_office_phone ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Núm. Celular</td>
+                    <td class="data-value">{{ $holder_phone ?? '' }}</td>
+                    <td class="data-label">Tel. Contacto Adic.</td>
+                    <td class="data-value">{{ $holder_additional_contact_phone ?? '' }}</td>
+                </tr>
+            </table>
+
+            <table class="data-table">
+                <tr>
+                    <td class="data-label" style="width: 14%;">Domicilio Actual</td>
+                    <td class="data-value {{ strlen($holder_current_address ?? '') > 60 ? 'data-value-long' : '' }}" style="width: 86%;" colspan="3">
+                        {{ $holder_current_address ?? '' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="data-label">Colonia</td>
+                    <td class="data-value">{{ $holder_neighborhood ?? '' }}</td>
+                    <td class="data-label">C.P.</td>
+                    <td class="data-value">{{ $holder_postal_code ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Municipio - Alcaldía</td>
+                    <td class="data-value">{{ $holder_municipality ?? '' }}</td>
+                    <td class="data-label">Estado</td>
+                    <td class="data-value">{{ $holder_state ?? '' }}</td>
+                </tr>
+            </table>
+        </div>
+
+        {{-- SECCIÓN: DATOS PERSONALES COACREDITADO/CÓNYUGE --}}
+        <div class="section">
+            <div class="section-title">DATOS PERSONALES COACREDITADO / CÓNYUGE:</div>
+            
+            <table class="data-table">
+                <tr>
+                    <td class="data-label">Nombre Cliente</td>
+                    <td class="data-value {{ strlen($spouse_name ?? '') > 40 ? 'data-value-long' : '' }}">
+                        {{ $spouse_name ?? '' }}
+                    </td>
+                    <td class="data-label">Entrega expediente</td>
+                    <td class="data-value">{{ $spouse_delivery_file ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Fecha de Nacimiento</td>
+                    <td class="data-value">{{ $spouse_birthdate ?? '' }}</td>
+                    <td class="data-label">Estado civil</td>
+                    <td class="data-value">{{ ucfirst(str_replace('_', ' ', $spouse_civil_status ?? '')) }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">CURP</td>
+                    <td class="data-value">{{ $spouse_curp ?? '' }}</td>
+                    <td class="data-label">Bajo ¿qué régimen?</td>
+                    <td class="data-value">{{ $spouse_regime_type ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">RFC</td>
+                    <td class="data-value">{{ $spouse_rfc ?? '' }}</td>
+                    <td class="data-label">Ocupación</td>
+                    <td class="data-value">{{ $spouse_occupation ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Correo electrónico</td>
+                    <td class="data-value {{ strlen($spouse_email ?? '') > 35 ? 'data-value-long' : '' }}">
+                        {{ $spouse_email ?? '' }}
+                    </td>
+                    <td class="data-label">Tel. oficina</td>
+                    <td class="data-value">{{ $spouse_office_phone ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Núm. Celular</td>
+                    <td class="data-value">{{ $spouse_phone ?? '' }}</td>
+                    <td class="data-label">Tel. Contacto Adic.</td>
+                    <td class="data-value">{{ $spouse_additional_contact_phone ?? '' }}</td>
+                </tr>
+            </table>
+
+            <table class="data-table">
+                <tr>
+                    <td class="data-label" style="width: 14%;">Domicilio Actual</td>
+                    <td class="data-value {{ strlen($spouse_current_address ?? '') > 60 ? 'data-value-long' : '' }}" style="width: 86%;" colspan="3">
+                        {{ $spouse_current_address ?? '' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="data-label">Colonia</td>
+                    <td class="data-value">{{ $spouse_neighborhood ?? '' }}</td>
+                    <td class="data-label">C.P.</td>
+                    <td class="data-value">{{ $spouse_postal_code ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="data-label">Municipio - Alcaldía</td>
+                    <td class="data-value">{{ $spouse_municipality ?? '' }}</td>
+                    <td class="data-label">Estado</td>
+                    <td class="data-value">{{ $spouse_state ?? '' }}</td>
+                </tr>
+            </table>
+        </div>
+
+        {{-- SECCIÓN: CONTACTO AC Y/O PRESIDENTE DE PRIVADA --}}
+        <div class="contact-section">
+            <div class="section-title">CONTACTO AC Y/O PRESIDENTE DE PRIVADA</div>
+            
+            <div class="contact-grid">
+                <div class="contact-column">
+                    <div class="contact-field">
+                        <span class="contact-label">NOMBRE AC</span>
+                        <span class="contact-value">{{ $ac_name ?? '' }}</span>
+                    </div>
+                    <div class="contact-field">
+                        <span class="contact-label">Núm. Celular</span>
+                        <span class="contact-value">{{ $ac_phone ?? '' }}</span>
+                    </div>
+                    <div class="contact-field">
+                        <span class="contact-label">CUOTA</span>
+                        <span class="contact-value">
+                            @if(isset($ac_quota) && $ac_quota)
+                                ${{ number_format($ac_quota, 2) }}
+                            @endif
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="contact-column">
+                    <div class="contact-field">
+                        <span class="contact-label">PRESIDENTE PRIVADA</span>
+                        <span class="contact-value">{{ $private_president_name ?? '' }}</span>
+                    </div>
+                    <div class="contact-field">
+                        <span class="contact-label">Núm. Celular</span>
+                        <span class="contact-value">{{ $private_president_phone ?? '' }}</span>
+                    </div>
+                    <div class="contact-field">
+                        <span class="contact-label">CUOTA</span>
+                        <span class="contact-value">
+                            @if(isset($private_president_quota) && $private_president_quota)
+                                ${{ number_format($private_president_quota, 2) }}
+                            @endif
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    @endif
 
-    <div class="section">
-        <div class="section-title">INFORMACIÓN DE LA PROPIEDAD</div>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Domicilio del Convenio:</div>
-                <div class="info-value">{{ $domicilio_convenio }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Comunidad:</div>
-                <div class="info-value">{{ $comunidad }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Tipo de Vivienda:</div>
-                <div class="info-value">{{ $tipo_vivienda }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Prototipo:</div>
-                <div class="info-value">{{ $prototipo }}</div>
-            </div>
-            @if($lote)
-            <div class="info-row">
-                <div class="info-label">Lote:</div>
-                <div class="info-value">{{ $lote }}</div>
-            </div>
-            @endif
-            @if($manzana)
-            <div class="info-row">
-                <div class="info-label">Manzana:</div>
-                <div class="info-value">{{ $manzana }}</div>
-            </div>
-            @endif
-            @if($etapa)
-            <div class="info-row">
-                <div class="info-label">Etapa:</div>
-                <div class="info-value">{{ $etapa }}</div>
-            </div>
-            @endif
-            <div class="info-row">
-                <div class="info-label">Municipio:</div>
-                <div class="info-value">{{ $municipio_propiedad }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Estado:</div>
-                <div class="info-value">{{ $estado_propiedad }}</div>
+        {{-- SECCIÓN DE FIRMA --}}
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <div class="signature-label">
+                Nombre y firma de conformidad y enterado<br>
+                Vendedor
             </div>
         </div>
-    </div>
 
-    @if($ac_name || $private_president_name)
-    <div class="section">
-        <div class="section-title">CONTACTOS ADICIONALES</div>
-        <div class="two-column">
-            @if($ac_name)
-            <div class="column">
-                <strong>Contacto AC:</strong><br>
-                Nombre: {{ $ac_name }}<br>
-                Teléfono: {{ $ac_phone }}<br>
-                @if($ac_quota)
-                Cuota: ${{ number_format($ac_quota, 2) }}<br>
-                @endif
-            </div>
-            @endif
-            @if($private_president_name)
-            <div class="column">
-                <strong>Presidente de Privada:</strong><br>
-                Nombre: {{ $private_president_name }}<br>
-                Teléfono: {{ $private_president_phone }}<br>
-                @if($private_president_quota)
-                Cuota: ${{ number_format($private_president_quota, 2) }}<br>
-                @endif
-            </div>
-            @endif
-        </div>
-    </div>
-    @endif
-
-    <div class="section">
-        <div class="section-title">INFORMACIÓN FINANCIERA</div>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Valor del Convenio:</div>
-                <div class="info-value">${{ number_format($valor_convenio, 2) }} MXN</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Monto de Crédito:</div>
-                <div class="info-value">${{ number_format($monto_credito, 2) }} MXN</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Tipo de Crédito:</div>
-                <div class="info-value">{{ ucfirst($tipo_credito) }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="footer">
-        <p>Este documento fue generado automáticamente por el sistema XANTE.MX el {{ now()->format('d/m/Y H:i:s') }}</p>
-        <p>Documento confidencial - Solo para uso interno de XANTE.MX</p>
     </div>
 </body>
 </html>

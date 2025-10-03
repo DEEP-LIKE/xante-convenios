@@ -45,33 +45,43 @@ class WizardResource extends Resource
                     ->sortable()
                     ->default('Sin cliente'),
                     
-                TextColumn::make('current_step')
-                    ->label('Paso Actual')
-                    ->formatStateUsing(fn ($state, $record) => 
-                        "Paso {$state}: " . ($record->getCurrentStepName() ?? 'Desconocido')
-                    )
+                TextColumn::make('current_wizard')
+                    ->label('Etapa Actual')
+                    ->formatStateUsing(function ($state, $record) {
+                        $wizardNumber = $state ?? 1;
+                        $etapaNumero = $wizardNumber === 1 ? 'I' : 'II';
+                        $wizardName = $wizardNumber === 1 ? 'Captura de Información' : 'Gestión Documental';
+                        return "Etapa {$etapaNumero}: {$wizardName}";
+                    })
                     ->badge()
-                    ->color(fn ($state) => match($state) {
-                        1 => 'gray',
-                        2 => 'blue',
-                        3 => 'info',
-                        4 => 'yellow',
-                        5 => 'green',
-                        default => 'gray'
+                    ->color(function ($state) {
+                        return ($state ?? 1) === 1 ? 'info' : 'success';
                     }),
                     
-                // Columna de progreso simplificada para Filament 4
-                TextColumn::make('completion_percentage')
-                    ->label('Progreso')
-                    ->formatStateUsing(fn ($state) => $state . '%')
+                TextColumn::make('current_step')
+                    ->label('Paso Actual')
+                    ->formatStateUsing(function ($state, $record) {
+                        if (($record->current_wizard ?? 1) === 1) {
+                            return "Paso {$state}: " . ($record->getCurrentStepName() ?? 'Desconocido');
+                        } else {
+                            $wizard2Steps = $record->getWizard2Steps();
+                            $stepName = $wizard2Steps[$record->wizard2_current_step ?? 1] ?? 'Desconocido';
+                            return "Paso {$record->wizard2_current_step}: {$stepName}";
+                        }
+                    })
                     ->badge()
-                    ->color(fn ($state) => match(true) {
-                        $state < 25 => 'danger',
-                        $state < 50 => 'warning',
-                        $state < 75 => 'info',
-                        $state < 100 => 'success',
-                        $state == 100 => 'success',
-                        default => 'gray'
+                    ->color(function ($state, $record) {
+                        $currentWizard = $record->current_wizard ?? 1;
+                        $currentStep = $currentWizard === 1 ? $state : ($record->wizard2_current_step ?? 1);
+                        
+                        return match($currentStep) {
+                            1 => 'gray',
+                            2 => 'blue', 
+                            3 => 'info',
+                            4 => 'yellow',
+                            5 => 'green',
+                            default => 'gray'
+                        };
                     }),
                     
                 TextColumn::make('status')
@@ -148,35 +158,13 @@ class WizardResource extends Resource
                         'completed' => 'Completado',
                         'error_generating_documents' => 'Error al Generar Documentos',
                     ]),
-                    
-                SelectFilter::make('completion_percentage')
-                    ->label('Progreso')
-                    ->options([
-                        '0-25' => '0-25%',
-                        '26-50' => '26-50%',
-                        '51-75' => '51-75%',
-                        '76-99' => '76-99%',
-                        '100' => '100%',
-                    ])
-                    ->query(function ($query, array $data) {
-                        if (!$data['value']) return $query;
-                        
-                        return match($data['value']) {
-                            '0-25' => $query->whereBetween('completion_percentage', [0, 25]),
-                            '26-50' => $query->whereBetween('completion_percentage', [26, 50]),
-                            '51-75' => $query->whereBetween('completion_percentage', [51, 75]),
-                            '76-99' => $query->whereBetween('completion_percentage', [76, 99]),
-                            '100' => $query->where('completion_percentage', 100),
-                            default => $query
-                        };
-                    }),
             ])
             ->actions([
                 // Botón para Wizard 1
                 Action::make('continue_wizard1')
-                    ->label('Continuar Wizard 1')
+                    ->label('Continuar')
                     ->icon('heroicon-o-play')
-                    ->color('success')
+                    ->color('primary')
                     ->url(fn (Agreement $record): string => 
                         "/admin/create-agreement-wizard?agreement={$record->id}"
                     )
@@ -186,9 +174,9 @@ class WizardResource extends Resource
                     
                 // Botón para Wizard 2
                 Action::make('continue_wizard2')
-                    ->label('Gestionar Documentos')
-                    ->icon('heroicon-o-document-check')
-                    ->color('info')
+                    ->label('Continuar')
+                    ->icon('heroicon-o-play')
+                    ->color('primary')
                     ->url(fn (Agreement $record): string => 
                         "/admin/manage-agreement-documents/{$record->id}"
                     )
@@ -198,9 +186,9 @@ class WizardResource extends Resource
                     
                 // Botón de Ver Resumen (solo para completados)
                 Action::make('view_summary')
-                    ->label('Ver Resumen')
+                    ->label('Continuar')
                     ->icon('heroicon-o-eye')
-                    ->color('gray')
+                    ->color('primary')
                     ->url(fn (Agreement $record): string => 
                         "/admin/manage-agreement-documents/{$record->id}"
                     )
@@ -241,7 +229,7 @@ class WizardResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        $incomplete = static::getModel()::where('completion_percentage', '<', 100)->count();
+        $incomplete = static::getModel()::whereNotIn('status', ['completed'])->count();
         
         return match(true) {
             $incomplete > 10 => 'danger',

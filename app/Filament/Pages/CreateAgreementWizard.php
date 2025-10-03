@@ -18,6 +18,7 @@ use Filament\Actions\Action;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ConfigurationCalculator;
+use App\Services\PdfGenerationService;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -1124,9 +1125,9 @@ class CreateAgreementWizard extends Page implements HasForms
             return;
         }
 
-        // Actualizar estado y cambiar a Wizard 2
+        // Actualizar estado inicial
         $agreement->update([
-            'status' => 'pending_validation',
+            'status' => 'documents_generating',
             'current_step' => 5,
             'current_wizard' => 2,
             'wizard2_current_step' => 1,
@@ -1135,15 +1136,31 @@ class CreateAgreementWizard extends Page implements HasForms
             'can_return_to_wizard1' => false, // Ya no puede regresar al Wizard 1
         ]);
 
-        // Disparar el job asíncrono para generar documentos
-        GenerateAgreementDocumentsJob::dispatch($agreement, Auth::id());
-
-        Notification::make()
-            ->title('Documentos en Proceso')
-            ->body('Los documentos se están generando. Será redirigido al proceso de envío cuando estén listos.')
-            ->success()
-            ->duration(5000)
-            ->send();
+        try {
+            // Generar documentos de forma síncrona
+            $pdfService = app(PdfGenerationService::class);
+            $documents = $pdfService->generateAllDocuments($agreement);
+            
+            Notification::make()
+                ->title('📄 Documentos Generados')
+                ->body('Se generaron exitosamente ' . count($documents) . ' documentos')
+                ->success()
+                ->duration(5000)
+                ->send();
+                
+        } catch (\Exception $e) {
+            // Si hay error, actualizar estado y mostrar error
+            $agreement->update(['status' => 'error_generating_documents']);
+            
+            Notification::make()
+                ->title('❌ Error al Generar Documentos')
+                ->body('Error: ' . $e->getMessage())
+                ->danger()
+                ->duration(8000)
+                ->send();
+                
+            return; // No redirigir si hay error
+        }
 
         // Redirigir al Wizard 2
         $this->redirect("/admin/manage-agreement-documents/{$agreement->id}");

@@ -17,15 +17,29 @@ class PdfGenerationService
     {
         $documents = [];
         
+        // Plantillas Blade que se generan dinámicamente (4 documentos)
         $templates = [
             'acuerdo_promocion' => 'Acuerdo de Promoción Inmobiliaria',
             'datos_generales' => 'Datos Generales - Fase I',
             'checklist_expediente' => 'Checklist de Expediente Básico',
             'condiciones_comercializacion' => 'Condiciones para Comercialización',
         ];
+        
+        // Documentos originales que se copian tal cual (2 documentos)
+        $originalDocuments = [
+            'aviso_privacidad' => 'Aviso de Privacidad',
+            'euc_venta_convenio' => 'EUC Venta Convenio',
+        ];
 
+        // Generar documentos desde plantillas Blade
         foreach ($templates as $type => $name) {
             try {
+                Log::info("Iniciando generación de plantilla Blade", [
+                    'agreement_id' => $agreement->id,
+                    'document_type' => $type,
+                    'template' => "pdfs.templates.{$type}"
+                ]);
+                
                 $document = $this->generateSingleDocument($agreement, $type, $name);
                 $documents[] = $document;
                 
@@ -36,7 +50,37 @@ class PdfGenerationService
                 ]);
                 
             } catch (\Exception $e) {
-                Log::error("Error generando documento {$type} para Agreement #{$agreement->id}: " . $e->getMessage());
+                Log::error("Error generando documento {$type} para Agreement #{$agreement->id}: " . $e->getMessage(), [
+                    'exception' => $e,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e;
+            }
+        }
+        
+        // Copiar documentos originales
+        foreach ($originalDocuments as $type => $name) {
+            try {
+                Log::info("Iniciando copia de documento original", [
+                    'agreement_id' => $agreement->id,
+                    'document_type' => $type,
+                    'document_name' => $name
+                ]);
+                
+                $document = $this->copyOriginalDocument($agreement, $type, $name);
+                $documents[] = $document;
+                
+                Log::info("Documento original copiado exitosamente", [
+                    'agreement_id' => $agreement->id,
+                    'document_type' => $type,
+                    'file_path' => $document->file_path
+                ]);
+                
+            } catch (\Exception $e) {
+                Log::error("Error copiando documento original {$type} para Agreement #{$agreement->id}: " . $e->getMessage(), [
+                    'exception' => $e,
+                    'trace' => $e->getTraceAsString()
+                ]);
                 throw $e;
             }
         }
@@ -58,15 +102,97 @@ class PdfGenerationService
     }
 
     /**
+     * Copia un documento PDF original
+     */
+    private function copyOriginalDocument(Agreement $agreement, string $type, string $name): GeneratedDocument
+    {
+        // Mapeo de tipos a nombres de archivos originales
+        $originalFiles = [
+            'aviso_privacidad' => 'AVISO_DE_PRIVACIDAD.pdf',
+            'euc_venta_convenio' => 'EUC_VENTA_CONVENIO.pdf',
+        ];
+        
+        if (!isset($originalFiles[$type])) {
+            throw new \Exception("Archivo original no encontrado para tipo: {$type}");
+        }
+        
+        $originalFileName = $originalFiles[$type];
+        $originalPath = resource_path("views/pdfs/orginal_pdf/{$originalFileName}");
+        
+        Log::info("Intentando acceder al archivo original", [
+            'type' => $type,
+            'original_file' => $originalFileName,
+            'full_path' => $originalPath,
+            'file_exists' => file_exists($originalPath)
+        ]);
+        
+        if (!file_exists($originalPath)) {
+            throw new \Exception("Archivo original no existe: {$originalPath}");
+        }
+        
+        // Generar nombre y ruta del archivo de destino
+        $fileName = $this->generateFileName($agreement, $type);
+        $directory = "convenios/{$agreement->id}/generated";
+        $filePath = "{$directory}/{$fileName}";
+        
+        // Asegurar que el directorio existe
+        Storage::disk('private')->makeDirectory($directory);
+        
+        // Copiar archivo original
+        $fileContent = file_get_contents($originalPath);
+        Storage::disk('private')->put($filePath, $fileContent);
+        
+        // Registrar en base de datos
+        return GeneratedDocument::create([
+            'agreement_id' => $agreement->id,
+            'document_type' => $type,
+            'document_name' => $name,
+            'file_path' => $filePath,
+            'template_used' => "original_pdf/{$originalFileName}",
+            'file_size' => strlen($fileContent),
+            'generated_at' => now(),
+        ]);
+    }
+
+    /**
      * Genera un documento PDF individual
      */
     private function generateSingleDocument(Agreement $agreement, string $type, string $name): GeneratedDocument
     {
-        // Preparar datos para la plantilla
-        $data = $this->prepareTemplateData($agreement);
-        
-        // Renderizar HTML desde Blade
-        $html = view("pdfs.templates.{$type}", $data)->render();
+        try {
+            // Preparar datos para la plantilla
+            $data = $this->prepareTemplateData($agreement);
+            
+            Log::info("Datos preparados para plantilla", [
+                'agreement_id' => $agreement->id,
+                'document_type' => $type,
+                'data_keys' => array_keys($data)
+            ]);
+            
+            // Verificar que la vista existe
+            $viewPath = "pdfs.templates.{$type}";
+            if (!view()->exists($viewPath)) {
+                throw new \Exception("La plantilla Blade no existe: {$viewPath}");
+            }
+            
+            // Renderizar HTML desde Blade
+            $html = view($viewPath, $data)->render();
+            
+            Log::info("HTML renderizado exitosamente", [
+                'agreement_id' => $agreement->id,
+                'document_type' => $type,
+                'html_length' => strlen($html)
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error("Error en preparación de datos o renderizado", [
+                'agreement_id' => $agreement->id,
+                'document_type' => $type,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
         
         // Configurar PDF
         $pdf = Pdf::loadHTML($html)
@@ -138,12 +264,32 @@ class PdfGenerationService
             'holder_municipality' => $wizardData['holder_municipality'] ?? '',
             'holder_state' => $wizardData['holder_state'] ?? '',
             
-            // Datos del cónyuge
+            // Datos del cónyuge/coacreditado
             'spouse_name' => $wizardData['spouse_name'] ?? '',
             'spouse_email' => $wizardData['spouse_email'] ?? '',
             'spouse_phone' => $wizardData['spouse_phone'] ?? '',
             'spouse_curp' => $wizardData['spouse_curp'] ?? '',
             'spouse_rfc' => $wizardData['spouse_rfc'] ?? '',
+            'spouse_birthdate' => $wizardData['spouse_birthdate'] ?? '',
+            'spouse_civil_status' => $wizardData['spouse_civil_status'] ?? '',
+            'spouse_occupation' => $wizardData['spouse_occupation'] ?? '',
+            'spouse_current_address' => $wizardData['spouse_current_address'] ?? '',
+            'spouse_municipality' => $wizardData['spouse_municipality'] ?? '',
+            'spouse_state' => $wizardData['spouse_state'] ?? '',
+            'spouse_delivery_file' => $wizardData['spouse_delivery_file'] ?? '',
+            'spouse_regime_type' => $wizardData['spouse_regime_type'] ?? '',
+            'spouse_office_phone' => $wizardData['spouse_office_phone'] ?? '',
+            'spouse_additional_contact_phone' => $wizardData['spouse_additional_contact_phone'] ?? '',
+            'spouse_neighborhood' => $wizardData['spouse_neighborhood'] ?? '',
+            'spouse_postal_code' => $wizardData['spouse_postal_code'] ?? '',
+            
+            // Datos de contacto AC y Presidente de Privada
+            'ac_name' => $wizardData['ac_name'] ?? '',
+            'ac_phone' => $wizardData['ac_phone'] ?? '',
+            'ac_quota' => $wizardData['ac_quota'] ?? '',
+            'private_president_name' => $wizardData['private_president_name'] ?? '',
+            'private_president_phone' => $wizardData['private_president_phone'] ?? '',
+            'private_president_quota' => $wizardData['private_president_quota'] ?? '',
             
             // Datos de la propiedad
             'domicilio_convenio' => $wizardData['domicilio_convenio'] ?? '',
@@ -192,14 +338,52 @@ class PdfGenerationService
             'bank_account' => $wizardData['bank_account'] ?? '0123456789',
             'bank_clabe' => $wizardData['bank_clabe'] ?? '012345678901234567',
             
-            // Contactos adicionales
-            'ac_name' => $wizardData['ac_name'] ?? '',
-            'ac_phone' => $wizardData['ac_phone'] ?? '',
-            'ac_quota' => $wizardData['ac_quota'] ?? 0,
-            'private_president_name' => $wizardData['private_president_name'] ?? '',
-            'private_president_phone' => $wizardData['private_president_phone'] ?? '',
-            'private_president_quota' => $wizardData['private_president_quota'] ?? 0,
+            // Imágenes en formato base64 para PDFs
+            'logo_path' => $this->getImageBase64('Logo-Xante.png'),
+            'logo_base64' => $this->getImageBase64('Logo-Xante.png'),
+            
+            // Imágenes de condiciones comercialización en base64
+            'image_1_path' => $this->getImageBase64('1.png'),
+            'image_2_path' => $this->getImageBase64('2.png'),
+            'image_3_path' => $this->getImageBase64('3.png'),
+            'image_4_path' => $this->getImageBase64('4.png'),
+            'image_5_path' => $this->getImageBase64('5.png'),
+            'image_6_path' => $this->getImageBase64('6.png'),
+            'image_7_path' => $this->getImageBase64('7.png'),
+            'image_8_path' => $this->getImageBase64('8.png'),
         ];
+    }
+    
+    /**
+     * Convierte una imagen a formato base64 para usar en PDFs
+     */
+    private function getImageBase64(string $filename): string
+    {
+        $imagePath = resource_path("views/pdfs/images/{$filename}");
+        
+        if (!file_exists($imagePath)) {
+            Log::warning("Imagen no encontrada: {$imagePath}");
+            return '';
+        }
+        
+        try {
+            $imageData = file_get_contents($imagePath);
+            $mimeType = mime_content_type($imagePath);
+            $base64 = "data:{$mimeType};base64," . base64_encode($imageData);
+            
+            Log::info("Imagen convertida a base64", [
+                'filename' => $filename,
+                'path' => $imagePath,
+                'mime_type' => $mimeType,
+                'size' => strlen($imageData),
+                'base64_length' => strlen($base64)
+            ]);
+            
+            return $base64;
+        } catch (\Exception $e) {
+            Log::error("Error al convertir imagen a base64: {$filename}", ['error' => $e->getMessage()]);
+            return '';
+        }
     }
     
     /**
@@ -244,7 +428,17 @@ class PdfGenerationService
      */
     public function verifyDocumentsGenerated(Agreement $agreement): bool
     {
-        $expectedTypes = ['acuerdo_promocion', 'datos_generales', 'checklist_expediente', 'condiciones_comercializacion'];
+        // Lista completa de los 6 documentos esperados
+        $expectedTypes = [
+            // 4 plantillas Blade
+            'acuerdo_promocion', 
+            'datos_generales', 
+            'checklist_expediente', 
+            'condiciones_comercializacion',
+            // 2 documentos originales
+            'aviso_privacidad',
+            'euc_venta_convenio'
+        ];
         $generatedTypes = $agreement->generatedDocuments()->pluck('document_type')->toArray();
         
         foreach ($expectedTypes as $type) {

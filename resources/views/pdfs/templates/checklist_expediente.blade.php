@@ -2,272 +2,129 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Checklist de Expediente Básico</title>
+    <title>Checklist Apertura Convenio</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            font-size: 11pt; 
-            line-height: 1.4;
-            margin: 20px;
+        @page { margin: 40px 50px; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            color: #333;
         }
-        .header { 
-            text-align: center; 
-            margin-bottom: 25px; 
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 15px;
-        }
-        .logo {
-            font-size: 22px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 8px;
-        }
-        .title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        .client-info {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
+        header {
+            text-align: center;
             margin-bottom: 20px;
         }
-        .section { 
-            margin-bottom: 20px; 
+        header img {
+            max-height: 80px;
+        }
+        h1 {
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 10px;
+            text-transform: uppercase;
         }
         .section-title {
-            font-size: 14px;
+            background-color: #f2f2f2;
             font-weight: bold;
-            color: #007bff;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            padding: 5px;
+            margin-top: 15px;
+            border: 1px solid #ccc;
         }
-        .checklist {
+        .content {
+            margin-bottom: 15px;
+            line-height: 1.5;
+            text-align: justify;
+        }
+        .field {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 120px;
+            padding: 0 5px;
+            font-weight: bold;
+        }
+        ul {
             list-style: none;
-            padding: 0;
+            padding-left: 0;
         }
-        .checklist li {
-            margin-bottom: 8px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            position: relative;
-            padding-left: 35px;
+        ul li {
+            margin: 4px 0;
         }
         .checkbox {
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 15px;
-            height: 15px;
-            border: 2px solid #333;
             display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 1px solid #000;
+            margin-right: 8px;
         }
-        .required {
-            background-color: #fff3cd;
-            border-color: #ffeaa7;
-        }
-        .optional {
-            background-color: #e2e3e5;
-            border-color: #ced4da;
-        }
-        .notes-section {
-            margin-top: 30px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            min-height: 100px;
-        }
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-            border-top: 1px solid #ddd;
-            padding-top: 20px;
-        }
-        .signature-area {
-            margin-top: 40px;
-            display: table;
-            width: 100%;
-        }
-        .signature-box {
-            display: table-cell;
-            width: 50%;
-            text-align: center;
-            padding: 20px;
-        }
-        .signature-line {
-            border-top: 1px solid #333;
-            margin-top: 50px;
-            padding-top: 5px;
+        .footer-note {
             font-size: 11px;
+            margin-top: 20px;
+            text-align: justify;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        table td {
+            padding: 5px;
+            vertical-align: top;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">XANTE.MX</div>
-        <div class="title">CHECKLIST DE EXPEDIENTE BÁSICO</div>
-        <p>Fecha: {{ $fecha_actual }}</p>
-    </div>
+<header>
+    <img src="{{ $logo_path }}" alt="Logo Xante">
+</header>
 
-    <div class="client-info">
-        <strong>Cliente:</strong> {{ $holder_name }}<br>
-        <strong>ID Xante:</strong> {{ $xante_id }}<br>
-        <strong>Propiedad:</strong> {{ $domicilio_convenio }}<br>
-        <strong>Comunidad:</strong> {{ $comunidad }}
-    </div>
+<h1>CHECK LIST APERTURA <br> CONVENIO DE PROMOCIÓN INMOBILIARIA</h1>
 
-    <div class="section">
-        <div class="section-title">DOCUMENTACIÓN DEL TITULAR</div>
-        <ul class="checklist">
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>INE</strong> (A color, tamaño original, no fotos)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>CURP</strong> (Mes corriente)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Constancia de Situación Fiscal</strong>
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Comprobante de Domicilio Vivienda</strong>
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Comprobante de Domicilio Titular</strong>
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Acta de Nacimiento</strong>
-            </li>
-            <li class="optional">
-                <span class="checkbox"></span>
-                <strong>Acta de Matrimonio</strong> (Si aplica)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Carátula Estado de Cuenta Bancario</strong>
-            </li>
-        </ul>
-    </div>
+<div class="content">
+    Hola <span class="field">{{ $holder_name ?? '________' }}</span>, muchas gracias por la aceptación de nuestro convenio 
+    de comercialización, estaremos promocionando su vivienda a través de nuestra página web, redes sociales y portales inmobiliarios.
+</div>
 
-    @if($spouse_name)
-    <div class="section">
-        <div class="section-title">DOCUMENTACIÓN DEL CÓNYUGE</div>
-        <p><strong>Cónyuge:</strong> {{ $spouse_name }}</p>
-        <ul class="checklist">
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>INE del Cónyuge</strong> (A color, tamaño original)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>CURP del Cónyuge</strong> (Mes corriente)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Constancia de Situación Fiscal del Cónyuge</strong>
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Acta de Nacimiento del Cónyuge</strong>
-            </li>
-        </ul>
-    </div>
-    @endif
+<div class="content">
+    Para seguir ofreciéndole un excelente servicio, le solicitamos nos haga llegar la siguiente documentación, que formará parte 
+    de su expediente. Y al momento de la venta, eficientar los tiempos para el cierre de la operación.
+</div>
 
-    <div class="section">
-        <div class="section-title">DOCUMENTACIÓN DE LA PROPIEDAD</div>
-        <ul class="checklist">
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Instrumento Notarial</strong>
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Recibo Predial</strong> (Mes corriente)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Recibo de Agua</strong> (Mes corriente)
-            </li>
-            <li class="required">
-                <span class="checkbox"></span>
-                <strong>Recibo CFE</strong> con datos fiscales
-            </li>
-        </ul>
-    </div>
+<div class="content">
+    Es importante que cuente con su escritura original, ya que es un documento necesario para la formalización y cierre de la operación, 
+    que le solicitará la Notaría.
+</div>
 
-    <div class="section">
-        <div class="section-title">INFORMACIÓN FINANCIERA</div>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-            <tr style="background-color: #f8f9fa;">
-                <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">Concepto</td>
-                <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">Monto</td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">Valor del Convenio</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${{ number_format($valor_convenio, 2) }} MXN</td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">Precio de Promoción</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${{ number_format($precio_promocion, 2) }} MXN</td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">Comisión Total a Pagar</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">${{ number_format($comision_total_pagar, 2) }} MXN</td>
-            </tr>
-            <tr style="background-color: #d4edda;">
-                <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">Ganancia Final</td>
-                <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">${{ number_format($ganancia_final, 2) }} MXN</td>
-            </tr>
-        </table>
-    </div>
+<div class="section-title">CLIENTE</div>
+<p>Nombre: <span class="field">{{ $holder_name ?? '________' }}</span></p>
+<p>Privada: <span class="field">{{ $domicilio_convenio ?? '________' }}</span></p>
+<p>Comunidad: <span class="field">{{ $comunidad ?? '________' }}</span></p>
 
-    <div class="section">
-        <div class="section-title">OBSERVACIONES Y NOTAS</div>
-        <div class="notes-section">
-            <p><strong>Instrucciones:</strong></p>
-            <ul>
-                <li>Todos los documentos marcados como "requeridos" son obligatorios</li>
-                <li>Los documentos deben estar vigentes y en buen estado</li>
-                <li>Las copias deben ser legibles y a color cuando se especifique</li>
-                <li>Verificar que los nombres coincidan en todos los documentos</li>
-            </ul>
-            <br>
-            <p><strong>Notas adicionales:</strong></p>
-            <div style="border-bottom: 1px dotted #ccc; margin-bottom: 8px; height: 20px;"></div>
-            <div style="border-bottom: 1px dotted #ccc; margin-bottom: 8px; height: 20px;"></div>
-            <div style="border-bottom: 1px dotted #ccc; margin-bottom: 8px; height: 20px;"></div>
-        </div>
-    </div>
+<div class="section-title">DOCUMENTACIÓN TITULAR</div>
+<ul>
+    <li><span class="checkbox"></span> INE (A color, tamaño original, no fotos)</li>
+    <li><span class="checkbox"></span> CURP (Mes corriente)</li>
+    <li><span class="checkbox"></span> Constancia de Situación Fiscal (Mes corriente, completa)</li>
+    <li><span class="checkbox"></span> Comprobante de Domicilio Vivienda (Mes corriente)</li>
+    <li><span class="checkbox"></span> Comprobante de Domicilio Titular (Mes corriente)</li>
+    <li><span class="checkbox"></span> Acta de Nacimiento</li>
+    <li><span class="checkbox"></span> Acta de Matrimonio (Si aplica)</li>
+    <li><span class="checkbox"></span> Carátula Estado de Cuenta Bancario con Datos Fiscales (Mes corriente)</li>
+</ul>
 
-    <div class="signature-area">
-        <div class="signature-box">
-            <div class="signature-line">
-                <strong>{{ $holder_name }}</strong><br>
-                Cliente
-            </div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-line">
-                <strong>ASESOR XANTE</strong><br>
-                Responsable del Expediente
-            </div>
-        </div>
-    </div>
+<div class="section-title">DOCUMENTACIÓN PROPIEDAD</div>
+<ul>
+    <li><span class="checkbox"></span> Instrumento Notarial con Antecedentes Registrales</li>
+    <li><span class="checkbox"></span> Recibo predial (Mes corriente)</li>
+    <li><span class="checkbox"></span> Recibo de Agua (Mes corriente)</li>
+    <li><span class="checkbox"></span> Recibo CFE con datos fiscales (Mes corriente)</li>
+</ul>
 
-    <div class="footer">
-        <p>Este documento fue generado automáticamente por el sistema XANTE.MX el {{ now()->format('d/m/Y H:i:s') }}</p>
-        <p><strong>Importante:</strong> Este checklist debe ser completado antes de proceder con el convenio</p>
-    </div>
+<div class="footer-note">
+    • Nota: Esta documentación de apertura es necesaria para realizar los formatos de venta, y a su vez, iniciar el proceso de avalúo, 
+    una vez confirmado el apartado.<br>
+    • La documentación le solicitamos sea actualizada cada mes o bimestre, dependiendo el caso del pago de sus servicios.<br>
+    * La documentación debe ser escaneada, no fotos.
+</div>
+
 </body>
 </html>

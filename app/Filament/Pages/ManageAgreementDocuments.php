@@ -18,7 +18,9 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Checkbox;
 use App\Models\Agreement;
 use App\Services\PdfGenerationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use BackedEnum;
 
 class ManageAgreementDocuments extends Page implements HasForms
@@ -36,48 +38,67 @@ class ManageAgreementDocuments extends Page implements HasForms
     protected static bool $shouldRegisterNavigation = false;
 
     public string $view = 'filament.pages.manage-agreement-documents';
-
     public Agreement $agreement;
     public ?array $data = [];
     public int $currentStep = 1;
     public int $totalSteps = 3;
 
-    public function mount(Agreement $agreement): void
+    public function mount(): void
     {
-        $this->agreement = $agreement;
+        // Obtener el ID del agreement desde la URL
+        // URL esperada: /admin/manage-agreement-documents/272
+        $recordId = request()->segment(3); // Posición 3 en la URL
+        
+        // Log para debugging
+        Log::info('ManageAgreementDocuments mount', [
+            'url' => request()->url(),
+            'segments' => request()->segments(),
+            'recordId' => $recordId
+        ]);
+        
+        if (!$recordId || !is_numeric($recordId)) {
+            abort(404, 'Agreement ID not found or invalid: ' . $recordId);
+        }
+        
+        $this->agreement = Agreement::findOrFail($recordId);
         
         // Determinar el paso actual basado en el estado del convenio
         $this->currentStep = match($this->agreement->status) {
             'documents_generating', 'documents_generated' => 1,
             'documents_sent', 'awaiting_client_docs' => 2,
-            'documents_received', 'documents_validated', 'completed' => 3,
+            'documents_complete', 'completed' => 3,
             default => 1
         };
         
-        $this->data = [];
-        $this->form->fill($this->data);
+        // Refrescar las relaciones para asegurar que tenemos los datos más recientes
+        $this->agreement->refresh();
+        $this->agreement->load(['generatedDocuments', 'clientDocuments']);
         
-        // Mostrar notificación informativa
-        $this->showStatusNotification();
-    }
-    
-    private function showStatusNotification(): void
-    {
-        $messages = [
-            'documents_generating' => '⏳ Los documentos se están generando...',
-            'documents_generated' => '📄 Documentos listos para enviar al cliente',
-            'documents_sent' => '📤 Documentos enviados - Esperando documentos del cliente',
-            'awaiting_client_docs' => '📋 Recibiendo documentos del cliente',
-            'documents_received' => '✅ Todos los documentos recibidos',
-            'completed' => '🎉 Convenio completado exitosamente'
+        // Inicializar el formulario
+        $this->form->fill([]);
+        
+        // Precargar documentos existentes en el formulario
+        $this->loadExistingDocuments();
+        
+        // Forzar actualización del estado del formulario
+        $this->dispatch('refresh-form');
+        
+        // Notificación informativa sobre el estado actual
+        $statusMessages = [
+            'documents_generating' => 'Los documentos se están generando en segundo plano...',
+            'documents_generated' => 'Documentos listos para enviar al cliente',
+            'documents_sent' => 'Documentos enviados, esperando documentos del cliente',
+            'awaiting_client_docs' => 'Esperando que el cliente suba sus documentos',
+            'documents_complete' => 'Todos los documentos recibidos',
+            'completed' => 'Convenio completado exitosamente'
         ];
         
-        if (isset($messages[$this->agreement->status])) {
+        if (isset($statusMessages[$this->agreement->status])) {
             Notification::make()
-                ->title('Estado Actual')
-                ->body($messages[$this->agreement->status])
+                ->title('Estado del Convenio')
+                ->body($statusMessages[$this->agreement->status])
                 ->info()
-                ->duration(3000)
+                ->duration(5000)
                 ->send();
         }
     }
@@ -252,25 +273,115 @@ class ManageAgreementDocuments extends Page implements HasForms
                                 ->schema([
                                     FileUpload::make('holder_id_front')
                                         ->label('INE/IFE Frontal')
-                                        ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                        ->imageEditor()
+                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
+                                        ->maxSize(10240) // 10MB
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->disk('private')
+                                        ->visibility('public')
+                                        ->image() // Habilita preview de imágenes
+                                        ->loadingIndicatorPosition('center')
+                                        ->panelLayout('integrated')
+                                        ->removeUploadedFileButtonPosition('top-right')
+                                        ->uploadButtonPosition('center')
+                                        ->uploadProgressIndicatorPosition('center')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            // Generar nombre amigable basado en el tipo de documento
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'ine_frontal_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, $component) {
+                                            if ($state) {
+                                                try {
+                                                    $this->saveClientDocument('holder_id_front', $state, 'INE/IFE Frontal', 'titular');
+                                                } catch (\Exception $e) {
+                                                    Notification::make()
+                                                        ->title('❌ Error al Guardar')
+                                                        ->body('Error: ' . $e->getMessage())
+                                                        ->danger()
+                                                        ->send();
+                                                }
+                                            } else {
+                                                // Si $state está vacío, significa que se eliminó el archivo
+                                                $this->deleteClientDocument('holder_id_front', 'titular');
+                                            }
+                                        })
                                         ->hint('Subir imagen clara del frente de la identificación'),
                                         
                                     FileUpload::make('holder_id_back')
                                         ->label('INE/IFE Reverso')
-                                        ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                        ->imageEditor()
+                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
+                                        ->maxSize(10240)
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->disk('private')
+                                        ->visibility('public')
+                                        ->image()
+                                        ->loadingIndicatorPosition('center')
+                                        ->panelLayout('integrated')
+                                        ->removeUploadedFileButtonPosition('top-right')
+                                        ->uploadButtonPosition('center')
+                                        ->uploadProgressIndicatorPosition('center')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'ine_reverso_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_id_back', $state, 'INE/IFE Reverso', 'titular');
+                                            } else {
+                                                $this->deleteClientDocument('holder_id_back', 'titular');
+                                            }
+                                        })
                                         ->hint('Subir imagen clara del reverso de la identificación'),
                                         
                                     FileUpload::make('holder_curp')
                                         ->label('CURP')
-                                        ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                        ->imageEditor(),
+                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
+                                        ->maxSize(10240)
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->disk('private')
+                                        ->visibility('public')
+                                        ->image()
+                                        ->loadingIndicatorPosition('center')
+                                        ->panelLayout('integrated')
+                                        ->removeUploadedFileButtonPosition('top-right')
+                                        ->uploadButtonPosition('center')
+                                        ->uploadProgressIndicatorPosition('center')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'curp_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_curp', $state, 'CURP', 'titular');
+                                            }
+                                        }),
                                         
                                     FileUpload::make('holder_proof_address')
                                         ->label('Comprobante de Domicilio')
-                                        ->acceptedFileTypes(['image/*', 'application/pdf'])
-                                        ->imageEditor()
+                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
+                                        ->maxSize(10240)
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->disk('private')
+                                        ->visibility('public')
+                                        ->image()
+                                        ->loadingIndicatorPosition('center')
+                                        ->panelLayout('integrated')
+                                        ->removeUploadedFileButtonPosition('top-right')
+                                        ->uploadButtonPosition('center')
+                                        ->uploadProgressIndicatorPosition('center')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'comprobante_domicilio_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_proof_address', $state, 'Comprobante de Domicilio', 'titular');
+                                            }
+                                        })
                                         ->hint('No mayor a 3 meses'),
                                 ])
                                 ->collapsible(),
@@ -280,16 +391,52 @@ class ManageAgreementDocuments extends Page implements HasForms
                                     FileUpload::make('property_deed')
                                         ->label('Escrituras de la Propiedad')
                                         ->acceptedFileTypes(['application/pdf', 'image/*'])
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/propiedad')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'escrituras_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('property_deed', $state, 'Escrituras de la Propiedad', 'propiedad');
+                                            }
+                                        })
                                         ->hint('Documento legal de propiedad'),
                                         
                                     FileUpload::make('property_tax')
                                         ->label('Predial Actualizado')
                                         ->acceptedFileTypes(['application/pdf', 'image/*'])
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/propiedad')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'predial_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('property_tax', $state, 'Predial Actualizado', 'propiedad');
+                                            }
+                                        })
                                         ->hint('Comprobante de pago del predial'),
                                         
                                     FileUpload::make('property_water')
                                         ->label('Recibo de Agua')
                                         ->acceptedFileTypes(['application/pdf', 'image/*'])
+                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/propiedad')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'recibo_agua_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('property_water', $state, 'Recibo de Agua', 'propiedad');
+                                            }
+                                        })
                                         ->hint('Último recibo de agua'),
                                 ])
                                 ->collapsible(),
@@ -511,9 +658,10 @@ class ManageAgreementDocuments extends Page implements HasForms
             $documents = $pdfService->generateAllDocuments($this->agreement);
 
             Notification::make()
-                ->title('Documentos Regenerados')
-                ->body('Se generaron ' . count($documents) . ' documentos exitosamente')
+                ->title('📄 Documentos Regenerados')
+                ->body('Se han regenerado exitosamente ' . count($documents) . ' documentos')
                 ->success()
+                ->duration(5000)
                 ->send();
                 
             // Recargar la página para mostrar los nuevos documentos
@@ -521,7 +669,7 @@ class ManageAgreementDocuments extends Page implements HasForms
 
         } catch (\Exception $e) {
             Notification::make()
-                ->title('Error al Regenerar')
+                ->title('❌ Error al Regenerar')
                 ->body('Error: ' . $e->getMessage())
                 ->danger()
                 ->send();
@@ -628,6 +776,321 @@ class ManageAgreementDocuments extends Page implements HasForms
             ->send();
     }
 
+    /**
+     * Guarda un documento del cliente en la base de datos
+     */
+    private function saveClientDocument(string $fieldName, $filePath, string $documentName, string $category): void
+    {
+        try {
+            Log::info('Guardando documento del cliente', [
+                'field_name' => $fieldName,
+                'file_path' => $filePath,
+                'document_name' => $documentName,
+                'category' => $category,
+                'agreement_id' => $this->agreement->id
+            ]);
+            // Mapear nombres de campos a tipos de documento
+            $documentTypeMap = [
+                'holder_id_front' => 'titular_ine_frontal',
+                'holder_id_back' => 'titular_ine_reverso',
+                'holder_curp' => 'titular_curp',
+                'holder_proof_address' => 'titular_comprobante_domicilio',
+                'property_deed' => 'propiedad_instrumento_notarial',
+                'property_tax' => 'propiedad_recibo_predial',
+                'property_water' => 'propiedad_recibo_agua',
+            ];
+            
+            $documentType = $documentTypeMap[$fieldName] ?? $fieldName;
+            
+            // Obtener información del archivo
+            $fileSize = null;
+            $fileName = null;
+            $finalFilePath = null;
+            
+            Log::info('Procesando archivo recibido', [
+                'filePath_type' => gettype($filePath),
+                'filePath_class' => is_object($filePath) ? get_class($filePath) : 'N/A',
+                'is_array' => is_array($filePath),
+                'is_string' => is_string($filePath),
+                'is_object' => is_object($filePath)
+            ]);
+            
+            // Manejar diferentes tipos de datos que puede enviar Filament
+            if (is_string($filePath) && !empty($filePath)) {
+                // Caso 1: String directo (ruta del archivo)
+                $finalFilePath = $filePath;
+                $fileName = basename($filePath);
+                if (Storage::disk('private')->exists($filePath)) {
+                    $fileSize = Storage::disk('private')->size($filePath);
+                }
+            } elseif (is_array($filePath) && !empty($filePath)) {
+                // Caso 2: Array de rutas
+                $firstFile = $filePath[0];
+                if (!empty($firstFile)) {
+                    $finalFilePath = $firstFile;
+                    $fileName = basename($firstFile);
+                    if (Storage::disk('private')->exists($firstFile)) {
+                        $fileSize = Storage::disk('private')->size($firstFile);
+                    }
+                }
+            } elseif (is_object($filePath)) {
+                // Caso 3: Objeto UploadedFile o TemporaryUploadedFile
+                if (method_exists($filePath, 'getClientOriginalName')) {
+                    // Es un UploadedFile
+                    $fileName = $filePath->getClientOriginalName();
+                    $finalFilePath = $filePath->store('convenios/' . $this->agreement->id . '/client_documents/' . $category, 'private');
+                    $fileSize = $filePath->getSize();
+                } elseif (method_exists($filePath, 'getRealPath')) {
+                    // Es un archivo temporal
+                    $fileName = basename($filePath->getRealPath());
+                    $finalFilePath = $filePath->getRealPath();
+                    $fileSize = filesize($filePath->getRealPath());
+                } else {
+                    // Intentar obtener propiedades del objeto
+                    $properties = get_object_vars($filePath);
+                    Log::info('Propiedades del objeto recibido', $properties);
+                    throw new \Exception('Objeto no reconocido: ' . get_class($filePath));
+                }
+            }
+            
+            // Validar que tenemos una ruta válida
+            if (empty($finalFilePath)) {
+                throw new \Exception("No se pudo obtener la ruta del archivo. Tipo recibido: " . gettype($filePath));
+            }
+            
+            // Asegurar que fileName no sea null
+            if (empty($fileName)) {
+                $extension = pathinfo($finalFilePath, PATHINFO_EXTENSION) ?: 'pdf';
+                $fileName = $documentName . '_' . time() . '.' . $extension;
+            }
+            
+            // Verificar si ya existe un documento para este tipo
+            $existingDocument = $this->agreement->clientDocuments()
+                ->where('document_type', $documentType)
+                ->first();
+            
+            if ($existingDocument) {
+                // Actualizar documento existente
+                $existingDocument->update([
+                    'file_path' => $finalFilePath,
+                    'file_name' => $fileName,
+                    'file_size' => $fileSize,
+                    'document_category' => $category,
+                ]);
+                
+                $message = "Documento '{$documentName}' actualizado exitosamente";
+            } else {
+                // Crear nuevo documento
+                // Validar datos antes de guardar
+                if (empty($finalFilePath)) {
+                    throw new \Exception('file_path no puede estar vacío');
+                }
+                if (empty($fileName)) {
+                    throw new \Exception('file_name no puede estar vacío');
+                }
+                
+                $documentData = [
+                    'agreement_id' => $this->agreement->id,
+                    'document_type' => $documentType,
+                    'document_category' => $category,
+                    'file_name' => $fileName,
+                    'file_path' => $finalFilePath,
+                    'file_size' => $fileSize ?? 0,
+                    'is_validated' => false,
+                ];
+                
+                Log::info('Creando nuevo documento', $documentData);
+                
+                $this->agreement->clientDocuments()->create($documentData);
+                
+                $message = "Documento '{$documentName}' guardado exitosamente";
+            }
+            
+            // Actualizar estado del convenio si es necesario
+            if ($this->agreement->status === 'documents_sent') {
+                $this->agreement->update([
+                    'status' => 'awaiting_client_docs'
+                ]);
+            }
+            
+            Notification::make()
+                ->title('📄 Documento Guardado')
+                ->body($message)
+                ->success()
+                ->send();
+                
+        } catch (\Exception $e) {
+            Log::error('Error guardando documento del cliente', [
+                'field_name' => $fieldName,
+                'document_name' => $documentName,
+                'agreement_id' => $this->agreement->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            Notification::make()
+                ->title('Error al Guardar Documento')
+                ->body('Error guardando documento: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
+    /**
+     * Configuración común para campos FileUpload
+     */
+    private function getFileUploadConfig(): array
+    {
+        return [
+            'acceptedFileTypes' => ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'],
+            'maxSize' => 10240, // 10MB
+            'disk' => 'private',
+            'visibility' => 'private',
+            'image' => true,
+            'imagePreviewHeight' => '150',
+            'loadingIndicatorPosition' => 'center',
+            'panelAspectRatio' => '16:9',
+            'panelLayout' => 'integrated',
+            'removeUploadedFileButtonPosition' => 'top-right',
+            'uploadButtonPosition' => 'center',
+            'uploadProgressIndicatorPosition' => 'center',
+            'live' => true
+        ];
+    }
+    
+    /**
+     * Precarga los documentos existentes en el formulario
+     */
+    private function loadExistingDocuments(): void
+    {
+        try {
+            $documentFieldMap = [
+                'titular_ine_frontal' => 'holder_id_front',
+                'titular_ine_reverso' => 'holder_id_back',
+                'titular_curp' => 'holder_curp',
+                'titular_comprobante_domicilio' => 'holder_proof_address',
+                'propiedad_instrumento_notarial' => 'property_deed',
+                'propiedad_recibo_predial' => 'property_tax',
+                'propiedad_recibo_agua' => 'property_water',
+            ];
+            
+            $formData = [];
+            
+            foreach ($this->agreement->clientDocuments as $document) {
+                $fieldName = $documentFieldMap[$document->document_type] ?? null;
+                if ($fieldName && $document->file_path) {
+                    // Verificar que el archivo existe en el servidor (private o public)
+                    $fileExists = Storage::disk('private')->exists($document->file_path) || 
+                                 Storage::disk('public')->exists($document->file_path);
+                    
+                    if ($fileExists) {
+                        // Para archivos existentes, cargar la ruta
+                        $formData[$fieldName] = [$document->file_path];
+                        
+                        Log::info('Documento precargado', [
+                            'field' => $fieldName,
+                            'file_path' => $document->file_path,
+                            'document_type' => $document->document_type
+                        ]);
+                    } else {
+                        Log::warning('Archivo no encontrado en servidor', [
+                            'file_path' => $document->file_path,
+                            'document_type' => $document->document_type
+                        ]);
+                    }
+                }
+            }
+            
+            // Asignar los datos al formulario
+            if (!empty($formData)) {
+                // Usar form()->fill() para cargar los datos correctamente
+                $this->form->fill($formData);
+                
+                Log::info('Documentos precargados en formulario', [
+                    'count' => count($formData),
+                    'fields' => array_keys($formData),
+                    'data' => $formData
+                ]);
+                
+                // También asignar a $this->data como respaldo
+                $this->data = array_merge($this->data ?? [], $formData);
+                
+                // Notificar al usuario
+                Notification::make()
+                    ->title('📄 Documentos Precargados')
+                    ->body('Se han precargado ' . count($formData) . ' documentos existentes')
+                    ->info()
+                    ->duration(3000)
+                    ->send();
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error precargando documentos existentes', [
+                'error' => $e->getMessage(),
+                'agreement_id' => $this->agreement->id
+            ]);
+        }
+    }
+    
+    /**
+     * Elimina un documento del cliente del servidor y base de datos
+     */
+    private function deleteClientDocument(string $fieldName, string $category): void
+    {
+        try {
+            // Mapear nombres de campos a tipos de documento
+            $documentTypeMap = [
+                'holder_id_front' => 'titular_ine_frontal',
+                'holder_id_back' => 'titular_ine_reverso',
+                'holder_curp' => 'titular_curp',
+                'holder_proof_address' => 'titular_comprobante_domicilio',
+                'property_deed' => 'propiedad_instrumento_notarial',
+                'property_tax' => 'propiedad_recibo_predial',
+                'property_water' => 'propiedad_recibo_agua',
+            ];
+            
+            $documentType = $documentTypeMap[$fieldName] ?? $fieldName;
+            
+            // Buscar el documento en la base de datos
+            $existingDocument = $this->agreement->clientDocuments()
+                ->where('document_type', $documentType)
+                ->first();
+            
+            if ($existingDocument) {
+                // Eliminar archivo del servidor
+                if ($existingDocument->file_path && Storage::disk('private')->exists($existingDocument->file_path)) {
+                    Storage::disk('private')->delete($existingDocument->file_path);
+                    Log::info('Archivo eliminado del servidor', [
+                        'file_path' => $existingDocument->file_path,
+                        'document_type' => $documentType
+                    ]);
+                }
+                
+                // Eliminar registro de la base de datos
+                $existingDocument->delete();
+                
+                Notification::make()
+                    ->title('🗑️ Documento Eliminado')
+                    ->body('Documento eliminado del servidor y base de datos')
+                    ->warning()
+                    ->send();
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error eliminando documento del cliente', [
+                'field_name' => $fieldName,
+                'category' => $category,
+                'error' => $e->getMessage()
+            ]);
+            
+            Notification::make()
+                ->title('Error al Eliminar')
+                ->body('Error eliminando documento: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+    
     protected function getHeaderActions(): array
     {
         $actions = [
@@ -638,16 +1101,16 @@ class ManageAgreementDocuments extends Page implements HasForms
                 ->url('/admin/wizard-resources')
         ];
         
-        // Agregar botón de regenerar si no hay documentos o si hay pocos
-        if ($this->agreement->generatedDocuments->isEmpty() || $this->agreement->generatedDocuments->count() < 4) {
+        // Agregar botón de regenerar si no hay documentos o si hay pocos (deberían ser 6)
+        if ($this->agreement->generatedDocuments->isEmpty() || $this->agreement->generatedDocuments->count() < 6) {
             $actions[] = Action::make('regenerate_documents')
-                ->label('Regenerar Documentos')
+                ->label('Regenerar Documentos (Opcional)')
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->action('regenerateDocuments')
                 ->requiresConfirmation()
                 ->modalHeading('Regenerar Documentos')
-                ->modalDescription('¿Está seguro de regenerar todos los documentos? Esto eliminará los documentos existentes.')
+                ->modalDescription('Esta es una acción opcional. Use esta opción solo si los documentos no se generaron correctamente de manera automática. ¿Está seguro de regenerar todos los documentos?')
                 ->modalSubmitActionLabel('Sí, Regenerar');
         }
         

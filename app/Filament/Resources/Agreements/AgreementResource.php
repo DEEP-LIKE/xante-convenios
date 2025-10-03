@@ -35,6 +35,9 @@ class AgreementResource extends Resource
     protected static ?string $pluralModelLabel = 'Convenios';
     
     protected static ?int $navigationSort = 2;
+    
+    // Ocultar del menú principal - solo accesible vía wizard
+    protected static bool $shouldRegisterNavigation = false;
 
     // Helper para limpiar valores monetarios
     protected static function cleanMoneyValue($value): float
