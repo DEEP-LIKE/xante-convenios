@@ -303,29 +303,6 @@ class CreateAgreementWizard extends Page implements HasForms
                                             TextInput::make('spouse_current_address')
                                                 ->label('Calle y Domicilio')
                                                 ->maxLength(400)
-                                                ->columnSpan(1)
-                                                ->suffixAction(
-                                                    \Filament\Forms\Components\Actions\Action::make('copy_holder_address')
-                                                        ->icon('heroicon-m-clipboard')
-                                                        ->tooltip('Copiar domicilio del titular')
-                                                        ->action(function (callable $set, callable $get) {
-                                                            $set('spouse_current_address', $get('current_address'));
-                                                            $set('spouse_house_number', $get('holder_house_number'));
-                                                            $set('spouse_neighborhood', $get('neighborhood'));
-                                                            $set('spouse_postal_code', $get('postal_code'));
-                                                            $set('spouse_municipality', $get('municipality'));
-                                                            $set('spouse_state', $get('state'));
-                                                            
-                                                            \Filament\Notifications\Notification::make()
-                                                                ->title('Domicilio copiado')
-                                                                ->body('Se ha copiado el domicilio del titular al cónyuge')
-                                                                ->success()
-                                                                ->send();
-                                                        })
-                                                ),
-                                            TextInput::make('spouse_house_number')
-                                                ->label('Número')
-                                                ->maxLength(20)
                                                 ->columnSpan(1),
                                         ]),
                                     Grid::make(3)

@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 2cm 2.5cm;
+            margin: 2cm 3cm;
         }
         
         * {

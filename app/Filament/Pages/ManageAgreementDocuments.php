@@ -16,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Checkbox;
+use Illuminate\Support\HtmlString;
 use App\Models\Agreement;
 use App\Services\PdfGenerationService;
 use Illuminate\Support\Facades\Log;
@@ -227,7 +228,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                     </div>';
                                 }
                                 
-                                return '<div style="text-align: center;">
+                                return '<div style="text-align: left;">
                                     <button wire:click="sendDocumentsToClient" 
                                             wire:confirm="¿Está seguro de enviar todos los documentos al cliente por correo electrónico?"
                                             style="display: inline-flex; align-items: center; padding: 16px 32px; background: linear-gradient(135deg, #6C2582 0%, #7C4794 100%); color: white; font-weight: 600; border-radius: 16px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 32px rgba(108, 37, 130, 0.3); text-decoration: none; font-family: \'Franie\', sans-serif; font-size: 16px;"
@@ -531,46 +532,44 @@ class ManageAgreementDocuments extends Page implements HasForms
     
     private function getDocumentFields(): array
     {
-        $fields = [];
-        
+        // Array para almacenar los Placeholders de cada documento.
+        $documentPlaceholders = [];
+    
         foreach ($this->agreement->generatedDocuments as $document) {
-            $fields[] = Grid::make([
-                    'default' => 1,
-                    'sm' => 3,
-                ])
-                ->schema([
-                    Placeholder::make('doc_name_' . $document->id)
-                        ->label('📄 ' . $document->formatted_type)
-                        ->content('Tamaño: ' . $document->formatted_size . ' | Generado: ' . $document->generated_at->format('d/m/Y H:i'))
-                        ->columnSpan([
-                            'default' => 1,
-                            'sm' => 2,
-                        ]),
-                        
-                    Placeholder::make('doc_actions_' . $document->id)
-                        ->label('')
-                        ->content(function () use ($document) {
-                            return '<div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
-                                <button wire:click="downloadDocument(' . $document->id . ')" 
-                                        style="display: inline-flex; align-items: center; padding: 10px 20px; background: linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%); color: #342970; font-size: 14px; font-weight: 600; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 16px rgba(189, 206, 15, 0.25); text-decoration: none; font-family: \'Franie\', sans-serif;"
-                                        onmouseover="this.style.background=\'linear-gradient(135deg, #C9D534 0%, #BDCE0F 100%)\'; this.style.boxShadow=\'0 8px 32px rgba(189, 206, 15, 0.4)\'; this.style.transform=\'translateY(-2px) scale(1.02)\';"
-                                        onmouseout="this.style.background=\'linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%)\'; this.style.boxShadow=\'0 4px 16px rgba(189, 206, 15, 0.25)\'; this.style.transform=\'translateY(0) scale(1)\';">
-                                    <svg style="width: 18px; height: 18px; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                                    </svg>
-                                    📄 Descargar PDF
-                                </button>
-                            </div>';
-                        })
-                        ->columnSpan([
-                            'default' => 1,
-                            'sm' => 1,
-                        ])
-                        ->html(),
-                ]);
+            // Creamos el Placeholder para cada documento.
+            // Hemos eliminado el Grid anidado que limitaba el diseño a 1 columna.
+            $documentPlaceholders[] = Placeholder::make('doc_name_' . $document->id)
+                // Etiqueta del documento con el icono.
+                ->label('📄 ' . $document->formatted_type)
+                // Contenido HTML (el botón de descarga de Livewire).
+                ->content(function () use ($document) {
+                    // Usamos HtmlString de Illuminate\Support\HtmlString.
+                    // Esta es la forma más robusta cuando RawHtml no se encuentra directamente.
+                    return new HtmlString(
+                        '<div style="display: flex; justify-content: flex-start; align-items: center; height: 100%;">
+                            <button wire:click="downloadDocument(' . $document->id . ')" 
+                                    style="display: inline-flex; align-items: center; padding: 10px 20px; background: linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%); color: #342970; font-size: 14px; font-weight: 600; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 16px rgba(189, 206, 15, 0.25); text-decoration: none; font-family: \'Inter\', sans-serif;"
+                                    onmouseover="this.style.background=\'linear-gradient(135deg, #C9D534 0%, #BDCE0F 100%)\'; this.style.boxShadow=\'0 8px 32px rgba(189, 206, 15, 0.4)\'; this.style.transform=\'translateY(-2px) scale(1.02)\';"
+                                    onmouseout="this.style.background=\'linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%)\'; this.style.boxShadow=\'0 4px 16px rgba(189, 206, 15, 0.25)\'; this.style.transform=\'translateY(0) scale(1)\';">
+                                <svg style="width: 18px; height: 18px; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                </svg>
+                                📄 Descargar PDF
+                            </button>
+                        </div>'
+                    );
+                })
+                ->html(); // Es importante mantener este método
         }
         
-        return $fields;
+        // Devolvemos un array que contiene un único componente Grid
+        // configurado para 2 columnas, el cual contendrá todos los placeholders.
+        // Esto asegura que los documentos se muestren uno al lado del otro (máximo 2 por fila).
+        return [
+            Grid::make(2) // <- Esta línea define el diseño de 2 columnas
+                ->schema($documentPlaceholders)
+                ->columnSpanFull(), // Asegura que el Grid ocupe todo el ancho disponible si está anidado
+        ];
     }
     
     // Métodos para obtener datos del cliente desde wizard_data

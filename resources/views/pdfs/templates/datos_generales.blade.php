@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 1.5cm 2cm;
+            margin: 2cm 3cm;
         }
         
         * {
@@ -240,7 +240,7 @@
         {{-- HEADER CON LOGO --}}
         <div class="header">
             <div class="logo-container">
-                <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
+                <img src="{{ public_path('images/Logo-Xante.png') }}" alt="Xante Logo" class="logo">
             </div>
             <div class="header-info">
                 <div class="header-box">
