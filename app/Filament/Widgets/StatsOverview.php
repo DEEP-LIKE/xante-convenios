@@ -15,22 +15,22 @@ class StatsOverview extends BaseWidget
         return [
             Stat::make('Total de Clientes', Client::count())
                 ->description('Clientes registrados en el sistema')
-                ->descriptionIcon('heroicon-m-users')
+                ->icon('heroicon-o-users')
                 ->color('primary'),
 
-            Stat::make('Convenios Activos', Agreement::where('status', '!=', 'convenio_firmado')->count())
+            Stat::make('Convenios Activos', Agreement::whereNotIn('status', ['completed', 'convenio_firmado'])->count())
                 ->description('Convenios en proceso')
-                ->descriptionIcon('heroicon-m-document-text')
+                ->icon('heroicon-o-document-text')
                 ->color('warning'),
 
-            Stat::make('Convenios Completados', Agreement::where('status', 'convenio_firmado')->count())
+            Stat::make('Convenios Completados', Agreement::whereIn('status', ['completed', 'convenio_firmado'])->count())
                 ->description('Convenios finalizados')
-                ->descriptionIcon('heroicon-m-check-circle')
+                ->icon('heroicon-o-check-circle')
                 ->color('success'),
 
             Stat::make('Usuarios del Sistema', User::count())
                 ->description('Usuarios registrados')
-                ->descriptionIcon('heroicon-m-user-group')
+                ->icon('heroicon-o-user-group')
                 ->color('info'),
         ];
     }

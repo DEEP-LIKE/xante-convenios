@@ -98,7 +98,8 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         return [
                 Wizard::make([
-                    Step::make('Búsqueda e Identificación')
+                    Step::make('Identificación')
+                        ->description('Búsqueda y selección del cliente')
                         ->icon('heroicon-o-magnifying-glass')
                         ->schema([
                             TextInput::make('search_term')
@@ -133,7 +134,8 @@ class CreateAgreementWizard extends Page implements HasForms
                             $this->saveStepData(1);
                         }),
 
-                    Step::make('Datos del Cliente')
+                    Step::make('Cliente')
+                        ->description('Información personal del cliente')
                         ->icon('heroicon-o-user')
                         ->schema([
                             // DATOS GENERALES - FASE I
@@ -213,24 +215,29 @@ class CreateAgreementWizard extends Page implements HasForms
                                                 ->tel()
                                                 ->maxLength(20),
                                         ]),
-                                    Grid::make(1)
+                                    Grid::make(2)
                                         ->schema([
-                                            TextInput::make('holder_current_address')
-                                                ->label('Domicilio Actual')
-                                                ->maxLength(500),
+                                            TextInput::make('current_address')
+                                                ->label('Calle y Domicilio')
+                                                ->maxLength(400)
+                                                ->columnSpan(1),
+                                            TextInput::make('holder_house_number')
+                                                ->label('Número')
+                                                ->maxLength(20)
+                                                ->columnSpan(1),
                                         ]),
                                     Grid::make(3)
                                         ->schema([
-                                            TextInput::make('holder_neighborhood')
+                                            TextInput::make('neighborhood')
                                                 ->label('Colonia')
                                                 ->maxLength(100),
-                                            TextInput::make('holder_postal_code')
+                                            TextInput::make('postal_code')
                                                 ->label('C.P.')
                                                 ->maxLength(10),
-                                            TextInput::make('holder_municipality')
+                                            TextInput::make('municipality')
                                                 ->label('Municipio - Alcaldía')
                                                 ->maxLength(100),
-                                            TextInput::make('holder_state')
+                                            TextInput::make('state')
                                                 ->label('Estado')
                                                 ->maxLength(100),
                                         ]),
@@ -291,11 +298,35 @@ class CreateAgreementWizard extends Page implements HasForms
                                                 ->tel()
                                                 ->maxLength(20),
                                         ]),
-                                    Grid::make(1)
+                                    Grid::make(2)
                                         ->schema([
                                             TextInput::make('spouse_current_address')
-                                                ->label('Domicilio Actual')
-                                                ->maxLength(500),
+                                                ->label('Calle y Domicilio')
+                                                ->maxLength(400)
+                                                ->columnSpan(1)
+                                                ->suffixAction(
+                                                    \Filament\Forms\Components\Actions\Action::make('copy_holder_address')
+                                                        ->icon('heroicon-m-clipboard')
+                                                        ->tooltip('Copiar domicilio del titular')
+                                                        ->action(function (callable $set, callable $get) {
+                                                            $set('spouse_current_address', $get('current_address'));
+                                                            $set('spouse_house_number', $get('holder_house_number'));
+                                                            $set('spouse_neighborhood', $get('neighborhood'));
+                                                            $set('spouse_postal_code', $get('postal_code'));
+                                                            $set('spouse_municipality', $get('municipality'));
+                                                            $set('spouse_state', $get('state'));
+                                                            
+                                                            \Filament\Notifications\Notification::make()
+                                                                ->title('Domicilio copiado')
+                                                                ->body('Se ha copiado el domicilio del titular al cónyuge')
+                                                                ->success()
+                                                                ->send();
+                                                        })
+                                                ),
+                                            TextInput::make('spouse_house_number')
+                                                ->label('Número')
+                                                ->maxLength(20)
+                                                ->columnSpan(1),
                                         ]),
                                     Grid::make(3)
                                         ->schema([
@@ -349,7 +380,8 @@ class CreateAgreementWizard extends Page implements HasForms
                         ->afterValidation(function () {
                             $this->saveStepData(2);
                         }),
-                    Step::make('Datos de la propiedad')
+                    Step::make('Propiedad')
+                        ->description('Datos de la vivienda y ubicación')
                         ->icon('heroicon-o-home-modern')
                         ->schema([
                             Section::make('INFORMACIÓN DE LA PROPIEDAD')
@@ -415,7 +447,8 @@ class CreateAgreementWizard extends Page implements HasForms
                         ->afterValidation(function () {
                             $this->saveStepData(3);
                         }),
-                    Step::make('Calculadora Financiera')
+                    Step::make('Calculadora')
+                        ->description('Cálculos financieros del convenio')
                         ->icon('heroicon-o-calculator')
                         ->schema([
                             // Información de la Propiedad (Precargada)
@@ -666,7 +699,8 @@ class CreateAgreementWizard extends Page implements HasForms
                             $this->saveStepData(4);
                         }),
 
-                    Step::make('Resumen y Validación')
+                    Step::make('Validación')
+                        ->description('Resumen y confirmación de datos')
                         ->icon('heroicon-o-clipboard-document-check')
                         ->schema([
                             // SECCIÓN 1: DATOS DEL CLIENTE
@@ -1171,19 +1205,73 @@ class CreateAgreementWizard extends Page implements HasForms
      */
     protected function renderClientSummary(array $data): string
     {
-        $html = '<div class="space-y-3">';
+        $html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+        
+        // Columna 1: Datos del Titular
+        $html .= '<div class="space-y-3">';
+        $html .= '<h4 class="font-semibold text-lg text-blue-700 border-b border-blue-200 pb-2">👤 DATOS DEL TITULAR</h4>';
         
         if (!empty($data['holder_name'])) {
-            $html .= '<div class="bg-blue-50 p-3 rounded"><strong>Titular:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
+            $html .= '<div class="bg-blue-50 p-3 rounded-lg border border-blue-200">';
+            $html .= '<div class="grid grid-cols-1 gap-2 text-sm">';
+            $html .= '<div><strong>Nombre:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
             $html .= '<div><strong>Email:</strong> ' . ($data['holder_email'] ?? 'N/A') . '</div>';
             $html .= '<div><strong>Teléfono:</strong> ' . ($data['holder_phone'] ?? 'N/A') . '</div>';
             $html .= '<div><strong>CURP:</strong> ' . ($data['holder_curp'] ?? 'N/A') . '</div>';
             $html .= '<div><strong>RFC:</strong> ' . ($data['holder_rfc'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Estado Civil:</strong> ' . ($data['holder_civil_status'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Ocupación:</strong> ' . ($data['holder_occupation'] ?? 'N/A') . '</div>';
+            if (!empty($data['current_address'])) {
+                $address = $data['current_address'];
+                if (!empty($data['holder_house_number'])) {
+                    $address .= ' #' . $data['holder_house_number'];
+                }
+                $html .= '<div><strong>Domicilio:</strong> ' . $address . '</div>';
+                if (!empty($data['neighborhood'])) {
+                    $html .= '<div><strong>Colonia:</strong> ' . $data['neighborhood'] . '</div>';
+                }
+                if (!empty($data['postal_code'])) {
+                    $html .= '<div><strong>C.P.:</strong> ' . $data['postal_code'] . '</div>';
+                }
+            }
+            $html .= '</div></div>';
         }
+        $html .= '</div>';
+        
+        // Columna 2: Datos del Cónyuge
+        $html .= '<div class="space-y-3">';
+        $html .= '<h4 class="font-semibold text-lg text-green-700 border-b border-green-200 pb-2">💑 DATOS DEL CÓNYUGE</h4>';
         
         if (!empty($data['spouse_name'])) {
-            $html .= '<div class="bg-green-50 p-3 rounded mt-3"><strong>Cónyuge:</strong> ' . $data['spouse_name'] . '</div>';
+            $html .= '<div class="bg-green-50 p-3 rounded-lg border border-green-200">';
+            $html .= '<div class="grid grid-cols-1 gap-2 text-sm">';
+            $html .= '<div><strong>Nombre:</strong> ' . ($data['spouse_name'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Email:</strong> ' . ($data['spouse_email'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Teléfono:</strong> ' . ($data['spouse_phone'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>CURP:</strong> ' . ($data['spouse_curp'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>RFC:</strong> ' . ($data['spouse_rfc'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Estado Civil:</strong> ' . ($data['spouse_civil_status'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong>Ocupación:</strong> ' . ($data['spouse_occupation'] ?? 'N/A') . '</div>';
+            if (!empty($data['spouse_current_address'])) {
+                $address = $data['spouse_current_address'];
+                if (!empty($data['spouse_house_number'])) {
+                    $address .= ' #' . $data['spouse_house_number'];
+                }
+                $html .= '<div><strong>Domicilio:</strong> ' . $address . '</div>';
+                if (!empty($data['spouse_neighborhood'])) {
+                    $html .= '<div><strong>Colonia:</strong> ' . $data['spouse_neighborhood'] . '</div>';
+                }
+                if (!empty($data['spouse_postal_code'])) {
+                    $html .= '<div><strong>C.P.:</strong> ' . $data['spouse_postal_code'] . '</div>';
+                }
+            }
+            $html .= '</div></div>';
+        } else {
+            $html .= '<div class="bg-gray-50 p-3 rounded-lg border border-gray-200 text-center text-gray-500">';
+            $html .= 'No se capturó información del cónyuge';
+            $html .= '</div>';
         }
+        $html .= '</div>';
         
         $html .= '</div>';
         return $html;

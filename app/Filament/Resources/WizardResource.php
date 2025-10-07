@@ -22,11 +22,11 @@ class WizardResource extends Resource
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-sparkles';
 
-    protected static ?string $navigationLabel = 'Wizard de Convenios';
+    protected static ?string $navigationLabel = 'Convenios';
     
-    protected static ?string $modelLabel = 'Wizard de Convenio';
+    protected static ?string $modelLabel = 'Convenio';
     
-    protected static ?string $pluralModelLabel = 'Wizard de Convenios';
+    protected static ?string $pluralModelLabel = 'Convenios';
     
     protected static ?int $navigationSort = 1;
 
@@ -34,16 +34,57 @@ class WizardResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable()
-                    ->searchable(),
-                    
-                TextColumn::make('client.name')
+                TextColumn::make('client_name')
                     ->label('Cliente')
+                    ->getStateUsing(function (Agreement $record) {
+                        if ($record->client && $record->client->name) {
+                            return $record->client->name;
+                        }
+                        
+                        $wizardData = $record->wizard_data ?? [];
+                        if (!empty($wizardData['holder_name'])) {
+                            return $wizardData['holder_name'];
+                        }
+                        
+                        return 'Pendiente';
+                    })
                     ->searchable()
-                    ->sortable()
-                    ->default('Sin cliente'),
+                    ->sortable(),
+
+                TextColumn::make('xante_id')
+                    ->label('ID Xante')
+                    ->getStateUsing(function (Agreement $record) {
+                        // Primero buscar en la relación client
+                        if ($record->client && $record->client->xante_id) {
+                            return $record->client->xante_id;
+                        }
+                        
+                        // Luego buscar en wizard_data
+                        $wizardData = $record->wizard_data ?? [];
+                        if (!empty($wizardData['xante_id'])) {
+                            return $wizardData['xante_id'];
+                        }
+                        
+                        // Si no hay ID, mostrar "Sin asignar" en color claro
+                        return 'Sin asignar';
+                    })
+                    ->color(function (Agreement $record) {
+                        // Verificar si tiene ID Xante
+                        $hasXanteId = false;
+                        
+                        if ($record->client && $record->client->xante_id) {
+                            $hasXanteId = true;
+                        } else {
+                            $wizardData = $record->wizard_data ?? [];
+                            if (!empty($wizardData['xante_id'])) {
+                                $hasXanteId = true;
+                            }
+                        }
+                        
+                        return $hasXanteId ? 'primary' : 'gray';
+                    })
+                    ->searchable()
+                    ->sortable(),
                     
                 TextColumn::make('current_wizard')
                     ->label('Etapa Actual')
@@ -113,7 +154,8 @@ class WizardResource extends Resource
                 TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                     
                 TextColumn::make('createdBy.name')
                     ->label('Creado por')
@@ -124,18 +166,18 @@ class WizardResource extends Resource
                 SelectFilter::make('current_step')
                     ->label('Paso Actual')
                     ->options([
-                        1 => 'Paso 1: Búsqueda e Identificación',
-                        2 => 'Paso 2: Datos del Cliente',
-                        3 => 'Paso 3: Datos de la propiedad',
-                        4 => 'Paso 4: Calculadora Financiera',
-                        5 => 'Paso 5: Resumen y Validación',
+                        1 => 'Paso 1: Identificación',
+                        2 => 'Paso 2: Cliente',
+                        3 => 'Paso 3: Propiedad',
+                        4 => 'Paso 4: Calculadora',
+                        5 => 'Paso 5: Validación',
                     ]),
                     
                 SelectFilter::make('current_wizard')
-                    ->label('Wizard Actual')
+                    ->label('Etapa Actual')
                     ->options([
-                        1 => 'Wizard 1: Captura de Información',
-                        2 => 'Wizard 2: Gestión Documental',
+                        1 => 'Etapa I: Captura de Información',
+                        2 => 'Etapa II: Gestión Documental',
                     ]),
                     
                 SelectFilter::make('status')
@@ -160,41 +202,32 @@ class WizardResource extends Resource
                     ]),
             ])
             ->actions([
-                // Botón para Wizard 1
-                Action::make('continue_wizard1')
+                // Botón único que se adapta al wizard actual
+                Action::make('continue')
                     ->label('Continuar')
-                    ->icon('heroicon-o-play')
-                    ->color('primary')
-                    ->url(fn (Agreement $record): string => 
-                        "/admin/create-agreement-wizard?agreement={$record->id}"
+                    ->icon(fn (Agreement $record): string => 
+                        $record->status === 'completed' ? 'heroicon-o-eye' : 'heroicon-o-play'
                     )
-                    ->visible(fn (Agreement $record): bool => 
-                        $record->current_wizard === 1 && $record->can_return_to_wizard1 === true
-                    ),
-                    
-                // Botón para Wizard 2
-                Action::make('continue_wizard2')
-                    ->label('Continuar')
-                    ->icon('heroicon-o-play')
                     ->color('primary')
-                    ->url(fn (Agreement $record): string => 
-                        "/admin/manage-agreement-documents/{$record->id}"
-                    )
-                    ->visible(fn (Agreement $record): bool => 
-                        $record->current_wizard === 2 || $record->status === 'documents_generated'
-                    ),
-                    
-                // Botón de Ver Resumen (solo para completados)
-                Action::make('view_summary')
-                    ->label('Continuar')
-                    ->icon('heroicon-o-eye')
-                    ->color('primary')
-                    ->url(fn (Agreement $record): string => 
-                        "/admin/manage-agreement-documents/{$record->id}"
-                    )
-                    ->visible(fn (Agreement $record): bool => 
-                        $record->status === 'completed'
-                    ),
+                    ->url(function (Agreement $record): string {
+                        // Si está completado, ir al resumen
+                        if ($record->status === 'completed') {
+                            return "/admin/manage-agreement-documents/{$record->id}";
+                        }
+                        
+                        // Si está en Wizard 1 y puede regresar
+                        if ($record->current_wizard === 1 && $record->can_return_to_wizard1 === true) {
+                            return "/admin/convenios/crear?agreement={$record->id}";
+                        }
+                        
+                        // Si está en Wizard 2 o documentos generados
+                        if ($record->current_wizard === 2 || $record->status === 'documents_generated') {
+                            return "/admin/manage-agreement-documents/{$record->id}";
+                        }
+                        
+                        // Por defecto, ir al Wizard 1
+                        return "/admin/convenios/crear?agreement={$record->id}";
+                    }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -204,10 +237,10 @@ class WizardResource extends Resource
             ])
             ->emptyStateActions([
                 Action::make('create_first_agreement')
-                    ->label('Crear Primer Convenio')
+                    ->label('Nuevo Convenio')
                     ->icon('heroicon-o-plus')
                     ->color('primary')
-                    ->url('/admin/create-agreement-wizard')
+                    ->url('/admin/convenios/crear')
             ])
             ->defaultSort('created_at', 'desc')
             ->poll('30s') // Auto-refresh cada 30 segundos

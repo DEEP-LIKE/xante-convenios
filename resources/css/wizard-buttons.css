@@ -1,0 +1,155 @@
+/* Estilos personalizados para botones del Wizard 2 */
+
+/* Botón principal de descarga */
+.wizard-btn-download {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #2563eb;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    text-decoration: none;
+}
+
+.wizard-btn-download:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+.wizard-btn-download svg {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+/* Botón de envío de documentos */
+.wizard-btn-send {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 24px;
+    background-color: #2563eb;
+    color: white;
+    font-weight: 500;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+}
+
+.wizard-btn-send:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px) scale(1.05);
+}
+
+.wizard-btn-send svg {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+}
+
+/* Estado de documentos enviados */
+.wizard-status-sent {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 24px;
+    background-color: #dcfce7;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-weight: 500;
+    border-radius: 8px;
+}
+
+.wizard-status-sent svg {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+}
+
+/* Botones del paso final */
+.wizard-btn-final {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 24px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+}
+
+.wizard-btn-final.primary {
+    background-color: #2563eb;
+    color: white;
+}
+
+.wizard-btn-final.primary:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px) scale(1.05);
+}
+
+.wizard-btn-final.secondary {
+    background-color: #4b5563;
+    color: white;
+}
+
+.wizard-btn-final.secondary:hover {
+    background-color: #374151;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px) scale(1.05);
+}
+
+.wizard-btn-final svg {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+}
+
+/* Contenedores */
+.wizard-actions-container {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.wizard-center-container {
+    text-align: center;
+}
+
+.wizard-final-actions {
+    text-align: center;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.wizard-final-buttons {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+}
+
+@media (min-width: 640px) {
+    .wizard-final-buttons {
+        flex-direction: row;
+    }
+}
+
+/* Mensaje de finalización */
+.wizard-completion-message {
+    font-size: 14px;
+    color: #6b7280;
+    text-align: center;
+    margin-top: 16px;
+}

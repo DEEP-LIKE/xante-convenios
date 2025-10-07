@@ -35,11 +35,12 @@ class Agreement extends Model
         'holder_occupation',
         'holder_office_phone',
         'holder_additional_contact_phone',
-        'holder_current_address',
-        'holder_neighborhood',
-        'holder_postal_code',
-        'holder_municipality',
-        'holder_state',
+        'current_address',
+        'holder_house_number',
+        'neighborhood',
+        'postal_code',
+        'municipality',
+        'state',
         'spouse_name',
         'spouse_birthdate',
         'spouse_curp',
@@ -53,6 +54,7 @@ class Agreement extends Model
         'spouse_office_phone',
         'spouse_additional_contact_phone',
         'spouse_current_address',
+        'spouse_house_number',
         'spouse_neighborhood',
         'spouse_postal_code',
         'spouse_municipality',
@@ -93,6 +95,7 @@ class Agreement extends Model
         'can_return_to_wizard1',
         'current_wizard',
         'wizard2_current_step',
+        'completed_at',
     ];
 
     protected function casts(): array
@@ -106,11 +109,11 @@ class Agreement extends Model
             // Nuevos casts para wizard
             'wizard_data' => 'array',
             'completion_percentage' => 'integer',
-            'completed_at' => 'datetime',
             'current_step' => 'integer',
             // Nuevos casts para sistema de dos wizards
             'documents_generated_at' => 'datetime',
             'documents_sent_at' => 'datetime',
+            'completed_at' => 'datetime',
             'can_return_to_wizard1' => 'boolean',
             'current_wizard' => 'integer',
             'wizard2_current_step' => 'integer',
@@ -214,11 +217,11 @@ class Agreement extends Model
     public function getWizardSteps(): array
     {
         return [
-            1 => 'Búsqueda e Identificación',
-            2 => 'Datos del Cliente',
-            3 => 'Datos de la propiedad',
-            4 => 'Calculadora Financiera',
-            5 => 'Resumen y Validación',
+            1 => 'Identificación',
+            2 => 'Cliente',
+            3 => 'Propiedad',
+            4 => 'Calculadora',
+            5 => 'Validación',
         ];
     }
 
