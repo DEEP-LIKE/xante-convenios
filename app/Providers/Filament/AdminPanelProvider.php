@@ -19,6 +19,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Http\Middleware\SetSpanishLocale;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -36,11 +37,17 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('5rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
-                'primary' => Color::Emerald,
+                'primary' => Color::hex('#BDCE0F'),      // Verde Xante
+                'secondary' => Color::hex('#6C2582'),    // Morado Xante  
+                'success' => Color::hex('#C9D534'),      // Verde claro Xante
+                'warning' => Color::hex('#FFD729'),      // Amarillo Xante
+                'danger' => Color::hex('#D63B8E'),       // Rosa Xante
+                'info' => Color::hex('#62257D'),         // Morado profundo Xante
+                'gray' => Color::Zinc,
             ])
             ->navigationGroups([
-                    NavigationGroup::make('Configuraciones')->collapsed(true),
-                ])
+                NavigationGroup::make('Configuraciones')->collapsed(true),
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -64,6 +71,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetSpanishLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
