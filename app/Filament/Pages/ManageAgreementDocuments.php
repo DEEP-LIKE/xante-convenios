@@ -543,19 +543,20 @@ class ManageAgreementDocuments extends Page implements HasForms
                 ->label('📄 ' . $document->formatted_type)
                 // Contenido HTML (el botón de descarga de Livewire).
                 ->content(function () use ($document) {
-                    // Usamos HtmlString de Illuminate\Support\HtmlString.
-                    // Esta es la forma más robusta cuando RawHtml no se encuentra directamente.
+                    $downloadUrl = route('documents.download', ['document' => $document->id]);
+                    
                     return new HtmlString(
                         '<div style="display: flex; justify-content: flex-start; align-items: center; height: 100%;">
-                            <button wire:click="downloadDocument(' . $document->id . ')" 
-                                    style="display: inline-flex; align-items: center; padding: 10px 20px; background: linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%); color: #342970; font-size: 14px; font-weight: 600; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 16px rgba(189, 206, 15, 0.25); text-decoration: none; font-family: \'Inter\', sans-serif;"
-                                    onmouseover="this.style.background=\'linear-gradient(135deg, #C9D534 0%, #BDCE0F 100%)\'; this.style.boxShadow=\'0 8px 32px rgba(189, 206, 15, 0.4)\'; this.style.transform=\'translateY(-2px) scale(1.02)\';"
-                                    onmouseout="this.style.background=\'linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%)\'; this.style.boxShadow=\'0 4px 16px rgba(189, 206, 15, 0.25)\'; this.style.transform=\'translateY(0) scale(1)\';">
+                            <a href="' . $downloadUrl . '" 
+                               target="_self"
+                               style="display: inline-flex; align-items: center; padding: 10px 20px; background: linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%); color: #342970; font-size: 14px; font-weight: 600; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 16px rgba(189, 206, 15, 0.25); text-decoration: none; font-family: \'Inter\', sans-serif;"
+                               onmouseover="this.style.background=\'linear-gradient(135deg, #C9D534 0%, #BDCE0F 100%)\'; this.style.boxShadow=\'0 8px 32px rgba(189, 206, 15, 0.4)\'; this.style.transform=\'translateY(-2px) scale(1.02)\';"
+                               onmouseout="this.style.background=\'linear-gradient(135deg, #BDCE0F 0%, #C9D534 100%)\'; this.style.boxShadow=\'0 4px 16px rgba(189, 206, 15, 0.25)\'; this.style.transform=\'translateY(0) scale(1)\';">
                                 <svg style="width: 18px; height: 18px; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                                 </svg>
                                 📄 Descargar PDF
-                            </button>
+                            </a>
                         </div>'
                     );
                 })
@@ -667,7 +668,10 @@ class ManageAgreementDocuments extends Page implements HasForms
                 return;
             }
             
-            return Storage::disk('private')->download($document->file_path, $document->formatted_type . '.pdf');
+            // Abrir la descarga en nueva ventana usando la ruta existente
+            $downloadUrl = route('documents.download', ['document' => $documentId]);
+            
+            $this->dispatch('open-url', ['url' => $downloadUrl]);
             
         } catch (\Exception $e) {
             Notification::make()

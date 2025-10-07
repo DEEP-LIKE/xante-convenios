@@ -27,6 +27,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Checkbox;
 use App\Jobs\GenerateAgreementDocumentsJob;
+use Illuminate\Support\HtmlString;
 
 use BackedEnum;
 
@@ -39,6 +40,7 @@ class CreateAgreementWizard extends Page implements HasForms
     protected static ?string $title = 'Nuevo Convenio';
     protected static ?string $navigationLabel = 'Crear Convenio';
     protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $slug = 'convenios/crear';
     
     public string $view = 'filament.pages.create-agreement-wizard';
     
@@ -246,6 +248,36 @@ class CreateAgreementWizard extends Page implements HasForms
                                 
                             // DATOS PERSONALES COACREDITADO / CÓNYUGE
                             Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE:')
+                                ->description('Información del cónyuge o coacreditado')
+                                ->headerActions([
+                                    Action::make('copy_from_holder')
+                                        ->label('Copiar datos del titular')
+                                        ->icon('heroicon-o-document-duplicate')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->action(function (callable $set, callable $get) {
+                                            // Copiar datos de domicilio
+                                            $set('spouse_current_address', $get('current_address'));
+                                            $set('spouse_house_number', $get('holder_house_number'));
+                                            $set('spouse_neighborhood', $get('neighborhood'));
+                                            $set('spouse_postal_code', $get('postal_code'));
+                                            $set('spouse_municipality', $get('municipality'));
+                                            $set('spouse_state', $get('state'));
+                                            
+                                            // Copiar datos de teléfono
+                                            $set('spouse_phone', $get('holder_phone'));
+                                            $set('spouse_office_phone', $get('holder_office_phone'));
+                                            $set('spouse_additional_contact_phone', $get('holder_additional_contact_phone'));
+                                            
+                                            Notification::make()
+                                                ->title('Datos copiados exitosamente')
+                                                ->body('Los datos de domicilio y teléfono del titular han sido copiados al cónyuge.')
+                                                ->success()
+                                                ->duration(5000)
+                                                ->send();
+                                        })
+                                        ->tooltip('Copiar domicilios y teléfonos del titular'),
+                                ])
                                 ->schema([
                                     Grid::make(2)
                                         ->schema([
@@ -680,31 +712,50 @@ class CreateAgreementWizard extends Page implements HasForms
                         ->description('Resumen y confirmación de datos')
                         ->icon('heroicon-o-clipboard-document-check')
                         ->schema([
-                            // SECCIÓN 1: DATOS DEL CLIENTE
-                            Section::make('📋 DATOS DEL CLIENTE')
-                                ->description('Información capturada en Paso 2')
+                            // Grid de 3 columnas para las secciones principales
+                            Grid::make(3)
                                 ->schema([
-                                    Placeholder::make('client_summary')
-                                        ->content(function () {
-                                            return $this->renderClientSummary($this->data);
-                                        })
-                                        ->html(),
-                                ])
-                                ->collapsible(),
+                                    // SECCIÓN 1: DATOS DEL TITULAR
+                                    Section::make('👤 DATOS DEL TITULAR')
+                                        ->description('Información del titular capturada en Paso 2')
+                                        ->schema([
+                                            Placeholder::make('holder_summary')
+                                                ->content(function () {
+                                                    return $this->renderHolderSummary($this->data);
+                                                })
+                                                ->html(),
+                                        ])
+                                        ->collapsible()
+                                        ->collapsed(false),
 
-                            // SECCIÓN 2: DATOS DE LA PROPIEDAD
-                            Section::make('🏠 DATOS DE LA PROPIEDAD')
-                                ->description('Información capturada en Paso 3')
-                                ->schema([
-                                    Placeholder::make('property_summary')
-                                        ->content(function () {
-                                            return $this->renderPropertySummary($this->data);
-                                        })
-                                        ->html(),
-                                ])
-                                ->collapsible(),
+                                    // SECCIÓN 2: DATOS DEL CÓNYUGE/COACREDITADO
+                                    Section::make('💑 DATOS DEL CÓNYUGE')
+                                        ->description('Información del cónyuge/coacreditado capturada en Paso 2')
+                                        ->schema([
+                                            Placeholder::make('spouse_summary')
+                                                ->content(function () {
+                                                    return $this->renderSpouseSummary($this->data);
+                                                })
+                                                ->html(),
+                                        ])
+                                        ->collapsible()
+                                        ->collapsed(false),
 
-                            // SECCIÓN 3: CALCULADORA FINANCIERA
+                                    // SECCIÓN 3: DATOS DE LA PROPIEDAD
+                                    Section::make('🏠 DATOS DE LA PROPIEDAD')
+                                        ->description('Información capturada en Paso 3')
+                                        ->schema([
+                                            Placeholder::make('property_summary')
+                                                ->content(function () {
+                                                    return $this->renderPropertySummary($this->data);
+                                                })
+                                                ->html(),
+                                        ])
+                                        ->collapsible()
+                                        ->collapsed(false),
+                                ]),
+                            
+                            // SECCIÓN 4: CALCULADORA FINANCIERA (ancho completo)
                             Section::make('💰 RESUMEN FINANCIERO')
                                 ->description('Cálculos realizados en Paso 4')
                                 ->schema([
@@ -714,42 +765,47 @@ class CreateAgreementWizard extends Page implements HasForms
                                         })
                                         ->html(),
                                 ])
-                                ->collapsible(),
-
-                            // ADVERTENCIA CRÍTICA
-                            Section::make('⚠️ ADVERTENCIA IMPORTANTE')
+                                ->collapsible()
+                                ->collapsed(false)
+                                ->columnSpanFull(),
+                            
+                            // SECCIÓN DE CONFIRMACIÓN
+                            Section::make('CONFIRMACIÓN FINAL')
                                 ->schema([
-                                    Placeholder::make('warning')
-                                        ->content('
-                                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                                                <div class="flex">
-                                                    <div class="flex-shrink-0">
-                                                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    Placeholder::make('warning_message')
+                                        ->content(new HtmlString('
+                                            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px;">
+                                                <div style="display: flex;">
+                                                    <div style="flex-shrink: 0; margin-right: 12px;">
+                                                        <svg style="height: 20px; width: 20px; color: #f59e0b;" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                                                         </svg>
                                                     </div>
-                                                    <div class="ml-3">
-                                                        <h3 class="text-sm font-medium text-yellow-800">
+                                                    <div>
+                                                        <h3 style="font-size: 14px; font-weight: 500; color: #92400e; margin: 0;">
                                                             Una vez que genere los documentos, NO PODRÁ modificar esta información
                                                         </h3>
-                                                        <div class="mt-2 text-sm text-yellow-700">
-                                                            <p>Los documentos PDF se generarán con la información que aparece arriba. Revise cuidadosamente antes de continuar.</p>
+                                                        <div style="margin-top: 8px; font-size: 14px; color: #b45309;">
+                                                            <p style="margin: 0;">Los documentos PDF se generarán con la información que aparece arriba. Revise cuidadosamente antes de continuar.</p>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        ')
-                                        ->html(),
-                                ]),
-
-                            // CHECKBOX DE CONFIRMACIÓN
-                            Checkbox::make('confirm_data_correct')
-                                ->label('Confirmo que he revisado toda la información y es correcta')
-                                ->required()
-                                ->accepted()
-                                ->validationMessages([
-                                    'accepted' => 'Debe confirmar que la información es correcta para continuar.',
-                                ]),
+                                        '))
+                                        ->hiddenLabel(),
+                                    
+                                    Checkbox::make('confirm_data_correct')
+                                        ->label('✓ Confirmo que he revisado toda la información y es correcta')
+                                        ->required()
+                                        ->accepted()
+                                        ->validationMessages([
+                                            'accepted' => 'Debe confirmar que la información es correcta para continuar.',
+                                        ])
+                                        ->helperText('Esta confirmación es obligatoria para poder generar los documentos')
+                                        ->inline(false)
+                                        ->dehydrated(),
+                                ])
+                                ->columnSpanFull(),
                         ])
                         ->afterValidation(function () {
                             $this->saveStepData(5);
@@ -759,10 +815,6 @@ class CreateAgreementWizard extends Page implements HasForms
                     ->label('Validar y Generar Documentos')
                     ->icon('heroicon-o-document-plus')
                     ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Confirmación Final')
-                    ->modalDescription('Está a punto de generar los documentos oficiales del convenio. Esta acción es IRREVERSIBLE. ¿Confirma que desea continuar?')
-                    ->modalSubmitActionLabel('Sí, Generar Documentos')
                     ->action('generateDocumentsAndProceed'))
                 ->nextAction(fn (Action $action) => $action->label('Siguiente'))
                 ->previousAction(fn (Action $action) => $action->label('Anterior'))
@@ -872,40 +924,101 @@ class CreateAgreementWizard extends Page implements HasForms
 
     public function saveStepData(int $step): void
     {
-        if ($this->agreementId) {
+        try {
+            // CRÍTICO: Obtener el estado actual del formulario antes de guardar
+            $formData = $this->form->getState();
+            
+            // Actualizar $this->data con los datos del formulario
+            $this->data = array_merge($this->data ?? [], $formData);
+            
+            if (!$this->agreementId) {
+                \Log::error('CreateAgreementWizard: No se encontró agreementId en saveStepData');
+                
+                Notification::make()
+                    ->title('Error de guardado')
+                    ->body('No se pudo identificar el convenio. Por favor, intente nuevamente.')
+                    ->danger()
+                    ->duration(5000)
+                    ->send();
+                return;
+            }
+            
             $agreement = Agreement::find($this->agreementId);
             
-            if ($agreement) {
-                // Actualizar datos del convenio
-                $agreement->update([
-                    'current_step' => $step,
-                    'wizard_data' => $this->data,
-                ]);
+            if (!$agreement) {
+                \Log::error("CreateAgreementWizard: Agreement ID {$this->agreementId} no encontrado");
                 
-                // Calcular porcentaje de completitud usando el método del modelo
-                $agreement->calculateCompletionPercentage();
-                
-                // Guardar automáticamente a partir del paso 2
-                if ($step >= 2) {
-                    // Mostrar notificación de guardado automático
-                    Notification::make()
-                        ->title('Progreso guardado')
-                        ->body("Paso {$step} guardado automáticamente: " . $agreement->getCurrentStepName())
-                        ->success()
-                        ->duration(3000)
-                        ->send();
-                }
-                
-                // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
-                if ($step === 2 && isset($this->data['client_id']) && $this->data['client_id']) {
-                    $this->updateClientData($this->data['client_id']);
-                }
-                
-                // Si estamos llegando al paso 4 (Calculadora), precargar datos de propiedad
-                if ($step === 3) {
-                    $this->preloadPropertyDataForCalculator();
-                }
+                Notification::make()
+                    ->title('Error de guardado')
+                    ->body('No se encontró el convenio en la base de datos.')
+                    ->danger()
+                    ->duration(5000)
+                    ->send();
+                return;
             }
+            
+            // Actualizar datos del convenio
+            $updated = $agreement->update([
+                'current_step' => $step,
+                'wizard_data' => $this->data,
+                'updated_at' => now(),
+            ]);
+            
+            if (!$updated) {
+                \Log::error("CreateAgreementWizard: Error al actualizar Agreement ID {$this->agreementId}");
+                
+                Notification::make()
+                    ->title('Error de guardado')
+                    ->body('No se pudieron guardar los datos. Por favor, intente nuevamente.')
+                    ->danger()
+                    ->duration(5000)
+                    ->send();
+                return;
+            }
+            
+            // Calcular porcentaje de completitud usando el método del modelo
+            $agreement->calculateCompletionPercentage();
+            
+            // Actualizar la URL para incluir el agreement ID (solo si no está presente)
+            if (!request()->has('agreement')) {
+                $this->dispatch('update-query-string', ['agreement' => $this->agreementId]);
+            }
+            
+            // Mostrar notificación de guardado automático
+            if ($step >= 1) {
+                Notification::make()
+                    ->title('✅ Progreso guardado')
+                    ->body("Paso {$step} guardado exitosamente: " . $agreement->getCurrentStepName())
+                    ->success()
+                    ->duration(3000)
+                    ->send();
+                    
+                \Log::info("CreateAgreementWizard: Paso {$step} guardado para Agreement ID {$this->agreementId}");
+            }
+            
+            // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
+            if ($step === 2 && isset($this->data['client_id']) && $this->data['client_id']) {
+                $this->updateClientData($this->data['client_id']);
+            }
+            
+            // Si estamos llegando al paso 4 (Calculadora), precargar datos de propiedad
+            if ($step === 3) {
+                $this->preloadPropertyDataForCalculator();
+            }
+            
+        } catch (\Exception $e) {
+            \Log::error('CreateAgreementWizard::saveStepData - Error: ' . $e->getMessage(), [
+                'step' => $step,
+                'agreementId' => $this->agreementId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            Notification::make()
+                ->title('Error inesperado')
+                ->body('Ocurrió un error al guardar: ' . $e->getMessage())
+                ->danger()
+                ->duration(8000)
+                ->send();
         }
     }
     
@@ -1106,12 +1219,21 @@ class CreateAgreementWizard extends Page implements HasForms
      */
     public function generateDocumentsAndProceed(): void
     {
-        // Validar que el checkbox esté marcado
+        // CRÍTICO: Obtener estado actual del formulario
+        try {
+            $formData = $this->form->getState();
+            $this->data = array_merge($this->data ?? [], $formData);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener estado del formulario: ' . $e->getMessage());
+        }
+
+        // VALIDACIÓN: Verificar que el checkbox de confirmación esté marcado
         if (!($this->data['confirm_data_correct'] ?? false)) {
             Notification::make()
-                ->title('Confirmación requerida')
-                ->body('Debe confirmar que ha revisado toda la información antes de continuar.')
-                ->danger()
+                ->title('⚠️ Confirmación Requerida')
+                ->body('Debe marcar el checkbox para confirmar que ha revisado toda la información antes de generar los documentos.')
+                ->warning()
+                ->duration(5000)
                 ->send();
             return;
         }
@@ -1178,77 +1300,112 @@ class CreateAgreementWizard extends Page implements HasForms
     }
 
     /**
-     * Renderiza el resumen de datos del cliente
+     * Renderiza el resumen de datos del TITULAR
      */
-    protected function renderClientSummary(array $data): string
+    protected function renderHolderSummary(array $data): string
     {
-        $html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
-        
-        // Columna 1: Datos del Titular
-        $html .= '<div class="space-y-3">';
-        $html .= '<h4 class="font-semibold text-lg text-blue-700 border-b border-blue-200 pb-2">👤 DATOS DEL TITULAR</h4>';
+        $html = '<div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">';
         
         if (!empty($data['holder_name'])) {
-            $html .= '<div class="bg-blue-50 p-3 rounded-lg border border-blue-200">';
-            $html .= '<div class="grid grid-cols-1 gap-2 text-sm">';
-            $html .= '<div><strong>Nombre:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Email:</strong> ' . ($data['holder_email'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Teléfono:</strong> ' . ($data['holder_phone'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>CURP:</strong> ' . ($data['holder_curp'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>RFC:</strong> ' . ($data['holder_rfc'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Estado Civil:</strong> ' . ($data['holder_civil_status'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Ocupación:</strong> ' . ($data['holder_occupation'] ?? 'N/A') . '</div>';
+            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
+            $html .= '<div><strong class="text-blue-700">Nombre:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">Email:</strong> ' . ($data['holder_email'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">Teléfono:</strong> ' . ($data['holder_phone'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">Tel. Oficina:</strong> ' . ($data['holder_office_phone'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">CURP:</strong> ' . ($data['holder_curp'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">RFC:</strong> ' . ($data['holder_rfc'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">Estado Civil:</strong> ' . ($data['holder_civil_status'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-blue-700">Ocupación:</strong> ' . ($data['holder_occupation'] ?? 'N/A') . '</div>';
+            
+            // Domicilio del titular
             if (!empty($data['current_address'])) {
+                $html .= '<div class="col-span-2 mt-3 pt-3 border-t border-blue-200">';
+                $html .= '<h5 class="font-semibold text-blue-700 mb-2 flex items-center"><span class="mr-1">📍</span> Domicilio</h5>';
+                
                 $address = $data['current_address'];
                 if (!empty($data['holder_house_number'])) {
                     $address .= ' #' . $data['holder_house_number'];
                 }
-                $html .= '<div><strong>Domicilio:</strong> ' . $address . '</div>';
+                $html .= '<div class="mb-2"><strong class="text-blue-700">Dirección:</strong> ' . $address . '</div>';
+                
+                $html .= '<div class="grid grid-cols-2 gap-2">';
                 if (!empty($data['neighborhood'])) {
-                    $html .= '<div><strong>Colonia:</strong> ' . $data['neighborhood'] . '</div>';
+                    $html .= '<div><strong class="text-blue-700">Colonia:</strong> ' . $data['neighborhood'] . '</div>';
                 }
                 if (!empty($data['postal_code'])) {
-                    $html .= '<div><strong>C.P.:</strong> ' . $data['postal_code'] . '</div>';
+                    $html .= '<div><strong class="text-blue-700">C.P.:</strong> ' . $data['postal_code'] . '</div>';
                 }
+                if (!empty($data['municipality'])) {
+                    $html .= '<div><strong class="text-blue-700">Municipio:</strong> ' . $data['municipality'] . '</div>';
+                }
+                if (!empty($data['state'])) {
+                    $html .= '<div><strong class="text-blue-700">Estado:</strong> ' . $data['state'] . '</div>';
+                }
+                $html .= '</div>';
+                $html .= '</div>';
             }
-            $html .= '</div></div>';
+            
+            $html .= '</div>';
+        } else {
+            $html .= '<div class="text-center text-gray-500 py-4">📝 No se capturó información del titular</div>';
         }
-        $html .= '</div>';
         
-        // Columna 2: Datos del Cónyuge
-        $html .= '<div class="space-y-3">';
-        $html .= '<h4 class="font-semibold text-lg text-green-700 border-b border-green-200 pb-2">💑 DATOS DEL CÓNYUGE</h4>';
+        $html .= '</div>';
+        return $html;
+    }
+
+    /**
+     * Renderiza el resumen de datos del CÓNYUGE/COACREDITADO
+     */
+    protected function renderSpouseSummary(array $data): string
+    {
+        $html = '<div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">';
         
         if (!empty($data['spouse_name'])) {
-            $html .= '<div class="bg-green-50 p-3 rounded-lg border border-green-200">';
-            $html .= '<div class="grid grid-cols-1 gap-2 text-sm">';
-            $html .= '<div><strong>Nombre:</strong> ' . ($data['spouse_name'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Email:</strong> ' . ($data['spouse_email'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Teléfono:</strong> ' . ($data['spouse_phone'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>CURP:</strong> ' . ($data['spouse_curp'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>RFC:</strong> ' . ($data['spouse_rfc'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Estado Civil:</strong> ' . ($data['spouse_civil_status'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong>Ocupación:</strong> ' . ($data['spouse_occupation'] ?? 'N/A') . '</div>';
+            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
+            $html .= '<div><strong class="text-green-700">Nombre:</strong> ' . ($data['spouse_name'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">Email:</strong> ' . ($data['spouse_email'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">Teléfono:</strong> ' . ($data['spouse_phone'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">Tel. Oficina:</strong> ' . ($data['spouse_office_phone'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">CURP:</strong> ' . ($data['spouse_curp'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">RFC:</strong> ' . ($data['spouse_rfc'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">Estado Civil:</strong> ' . ($data['spouse_civil_status'] ?? 'N/A') . '</div>';
+            $html .= '<div><strong class="text-green-700">Ocupación:</strong> ' . ($data['spouse_occupation'] ?? 'N/A') . '</div>';
+            
+            // Domicilio del cónyuge
             if (!empty($data['spouse_current_address'])) {
+                $html .= '<div class="col-span-2 mt-3 pt-3 border-t border-green-200">';
+                $html .= '<h5 class="font-semibold text-green-700 mb-2 flex items-center"><span class="mr-1">📍</span> Domicilio</h5>';
+                
                 $address = $data['spouse_current_address'];
                 if (!empty($data['spouse_house_number'])) {
                     $address .= ' #' . $data['spouse_house_number'];
                 }
-                $html .= '<div><strong>Domicilio:</strong> ' . $address . '</div>';
+                $html .= '<div class="mb-2"><strong class="text-green-700">Dirección:</strong> ' . $address . '</div>';
+                
+                $html .= '<div class="grid grid-cols-2 gap-2">';
                 if (!empty($data['spouse_neighborhood'])) {
-                    $html .= '<div><strong>Colonia:</strong> ' . $data['spouse_neighborhood'] . '</div>';
+                    $html .= '<div><strong class="text-green-700">Colonia:</strong> ' . $data['spouse_neighborhood'] . '</div>';
                 }
                 if (!empty($data['spouse_postal_code'])) {
-                    $html .= '<div><strong>C.P.:</strong> ' . $data['spouse_postal_code'] . '</div>';
+                    $html .= '<div><strong class="text-green-700">C.P.:</strong> ' . $data['spouse_postal_code'] . '</div>';
                 }
+                if (!empty($data['spouse_municipality'])) {
+                    $html .= '<div><strong class="text-green-700">Municipio:</strong> ' . $data['spouse_municipality'] . '</div>';
+                }
+                if (!empty($data['spouse_state'])) {
+                    $html .= '<div><strong class="text-green-700">Estado:</strong> ' . $data['spouse_state'] . '</div>';
+                }
+                $html .= '</div>';
+                $html .= '</div>';
             }
-            $html .= '</div></div>';
+            
+            $html .= '</div>';
         } else {
-            $html .= '<div class="bg-gray-50 p-3 rounded-lg border border-gray-200 text-center text-gray-500">';
-            $html .= 'No se capturó información del cónyuge';
+            $html .= '<div class="text-center text-gray-500 py-4 italic">';
+            $html .= '📝 No se capturó información del cónyuge / coacreditado';
             $html .= '</div>';
         }
-        $html .= '</div>';
         
         $html .= '</div>';
         return $html;

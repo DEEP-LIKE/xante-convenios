@@ -2,4 +2,22 @@
     <div class="max-w-4xl mx-auto">
         {{ $this->form }}
     </div>
+
+    @push('scripts')
+    <script>
+        // Escuchar el evento de actualización de query string
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('update-query-string', (data) => {
+                if (data && data.agreement) {
+                    // Actualizar la URL sin recargar la página
+                    const url = new URL(window.location);
+                    url.searchParams.set('agreement', data.agreement);
+                    window.history.pushState({}, '', url);
+                    
+                    console.log('URL actualizada con agreement ID:', data.agreement);
+                }
+            });
+        });
+    </script>
+    @endpush
 </x-filament-panels::page>

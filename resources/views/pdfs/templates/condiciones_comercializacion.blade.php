@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 2cm 3cm;
+            margin: 2.5cm 3.5cm;
         }
         
         * {
@@ -19,6 +19,7 @@
         
         body {
             font-family: Arial, Helvetica, sans-serif;
+            padding: 40px;
             font-size: 10pt;
             line-height: 1.4;
             color: #000;
@@ -236,6 +237,44 @@
         .underline {
             text-decoration: underline;
         }
+        
+        /* GALERÍA DE IMÁGENES */
+        .galeria-imagenes {
+            margin-top: 15px;
+            width: 100%;
+        }
+        
+        .fila-imagenes {
+            display: table;
+            width: 100%;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+        
+        .contenedor-imagen {
+            display: table-cell;
+            width: 33.33%;
+            padding: 5px;
+            text-align: center;
+            vertical-align: top;
+        }
+        
+        .imagen-ejemplo {
+            width: 100%;
+            aspect-ratio: 9 / 16;
+            object-fit: cover;
+            border: 1px solid #ccc;
+        }
+        
+        .texto-imagen {
+            font-size: 8pt;
+            margin-top: 3px;
+            text-align: center;
+        }
+        
+        .texto-centrado {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -427,11 +466,12 @@
         </div>
 
         {{-- EJEMPLO DE FOTOGRAFÍAS --}}
-        <div class="example-section">
+        <div class="example-section" style="page-break-before: always; margin-top: 0;">
             Ejemplo de fotografías requeridas:
         </div>
 
         <div class="galeria-imagenes">
+            {{-- FILA 1: 3 IMÁGENES --}}
             <div class="fila-imagenes">
                 <div class="contenedor-imagen">
                     <img src="{{ $image_1_path }}" alt="Ejemplo fotografía 1" class="imagen-ejemplo">
@@ -441,20 +481,18 @@
                     <img src="{{ $image_2_path }}" alt="Ejemplo fotografía 2" class="imagen-ejemplo">
                     <div class="texto-imagen">Sala de estar</div>
                 </div>
-            </div>
-            
-            <div class="fila-imagenes">
                 <div class="contenedor-imagen">
                     <img src="{{ $image_3_path }}" alt="Ejemplo fotografía 3" class="imagen-ejemplo">
                     <div class="texto-imagen">Comedor</div>
                 </div>
+            </div>
+            
+            {{-- FILA 2: 3 IMÁGENES --}}
+            <div class="fila-imagenes">
                 <div class="contenedor-imagen">
                     <img src="{{ $image_4_path }}" alt="Ejemplo fotografía 4" class="imagen-ejemplo">
                     <div class="texto-imagen">Cocina</div>
                 </div>
-            </div>
-            
-            <div class="fila-imagenes">
                 <div class="contenedor-imagen">
                     <img src="{{ $image_5_path }}" alt="Ejemplo fotografía 5" class="imagen-ejemplo">
                     <div class="texto-imagen">Recámara principal</div>
@@ -465,6 +503,7 @@
                 </div>
             </div>
             
+            {{-- FILA 3: 2 IMÁGENES --}}
             <div class="fila-imagenes">
                 <div class="contenedor-imagen">
                     <img src="{{ $image_7_path }}" alt="Ejemplo fotografía 7" class="imagen-ejemplo">

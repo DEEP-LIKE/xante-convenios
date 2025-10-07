@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 2cm 3cm;
+            margin: 2.5cm 3.5cm;
         }
         
         * {
@@ -19,6 +19,7 @@
         
         body {
             font-family: Arial, Helvetica, sans-serif;
+            padding: 40px;
             font-size: 11pt;
             line-height: 1.4;
             color: #000;

@@ -15,6 +15,18 @@ class PdfGenerationService
      */
     public function generateAllDocuments(Agreement $agreement): array
     {
+        // IMPORTANTE: Limpiar documentos existentes antes de generar nuevos
+        // Solo elimina las referencias en BD, no los archivos físicos
+        if ($agreement->generatedDocuments()->count() > 0) {
+            Log::info("Limpiando referencias de documentos existentes antes de regenerar", [
+                'agreement_id' => $agreement->id,
+                'documentos_existentes' => $agreement->generatedDocuments()->count()
+            ]);
+            
+            // Eliminar solo las referencias de la base de datos
+            $agreement->generatedDocuments()->delete();
+        }
+        
         $documents = [];
         
         // Plantillas Blade que se generan dinámicamente (4 documentos)
