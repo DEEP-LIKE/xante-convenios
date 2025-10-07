@@ -1,390 +1,434 @@
+{{-- resources/views/pdfs/templates/condiciones_comercializacion.blade.php --}}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Condiciones para Comercialización XANTE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condiciones para Comercialización Xante</title>
     <style>
         @page {
+            size: letter;
             margin: 2cm 2.5cm;
-            @bottom-center {
-                content: "www.xante.mx " counter(page);
-                font-size: 9pt;
-                color: #666;
-                font-family: Arial, Helvetica, sans-serif;
-            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 11pt;
-            line-height: 1.6;
+            font-size: 10pt;
+            line-height: 1.4;
             color: #000;
-            margin: 0;
-            padding: 0;
         }
         
+        .page-container {
+            width: 100%;
+            max-width: 21.59cm;
+            margin: 0 auto;
+        }
+        
+        /* HEADER */
         .header {
-            text-align: center;
-            margin-bottom: 25px;
-            position: relative;
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
         }
         
-        .header .logo-container {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .logo-container {
+            display: table-cell;
             width: 120px;
+            vertical-align: middle;
         }
         
-        .header .logo {
+        .logo {
             width: 100px;
             height: auto;
         }
         
-        .titulo-principal {
-            font-size: 14pt;
+        .header-info {
+            display: table-cell;
+            vertical-align: top;
+            padding-left: 15px;
+        }
+        
+        .property-data {
+            margin-bottom: 3px;
+            font-size: 9pt;
+        }
+        
+        .property-label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 110px;
+        }
+        
+        .property-value {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 200px;
+        }
+        
+        .date-box {
+            text-align: right;
+            margin-top: 10px;
+            font-size: 9pt;
+        }
+        
+        .date-value {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            min-width: 30px;
+        }
+        
+        /* TÍTULO */
+        .main-title {
+            text-align: center;
+            font-size: 13pt;
             font-weight: bold;
             text-transform: uppercase;
-            margin: 10px 0;
-            line-height: 1.3;
+            margin-bottom: 25px;
+            background-color: #A8D08D;
+            padding: 8px;
+            border: 1px solid #000;
         }
         
-        .info-propiedad {
-            margin: 20px 0;
-            padding: 10px 0;
+        /* CONDICIONES */
+        .condition {
+            margin-bottom: 15px;
+            text-align: justify;
+            line-height: 1.5;
         }
         
-        .campo-propiedad {
-            display: inline-block;
-            margin-right: 30px;
+        .condition-number {
             font-weight: bold;
+            display: inline;
         }
         
-        .campo-propiedad strong {
+        /* OPCIONES DE VISITA */
+        .options-section {
+            margin: 15px 0 15px 20px;
+        }
+        
+        .option-label {
+            font-weight: bold;
+            margin-bottom: 10px;
             text-decoration: underline;
         }
         
-        .fecha {
-            text-align: left;
-            margin: 15px 0;
-            font-size: 11pt;
-        }
-        
-        .numero-condicion {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .texto-condicion {
-            text-align: justify;
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-        
-        .tabla-opciones {
+        .options-grid {
+            display: table;
             width: 100%;
             border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 10pt;
-        }
-        
-        .tabla-opciones th {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: center;
-            background-color: #f0f0f0;
-            font-weight: bold;
-            width: 33.33%;
-        }
-        
-        .tabla-opciones td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top;
-        }
-        
-        .campo-opcion {
-            text-align: center;
             margin: 10px 0;
-            font-weight: bold;
         }
         
-        .campo-subrayado {
+        .option-box {
+            display: table-cell;
+            width: 33.33%;
+            border: 1px solid #000;
+            padding: 10px;
+            vertical-align: top;
+            text-align: center;
+        }
+        
+        .option-letter {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .option-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 9pt;
+        }
+        
+        .option-description {
+            font-size: 8pt;
+            font-style: italic;
+            margin-top: 5px;
+            line-height: 1.3;
+        }
+        
+        .option-note {
+            font-size: 7.5pt;
+            margin-top: 8px;
+            line-height: 1.2;
+        }
+        
+        .hours-input {
             border-bottom: 1px solid #000;
             display: inline-block;
-            min-width: 50px;
-            text-align: center;
-            margin: 0 5px;
+            min-width: 40px;
+            margin: 0 3px;
         }
         
-        .firma {
-            margin-top: 80px;
-            text-align: center;
+        /* SUB-LISTAS */
+        .sub-list {
+            margin: 8px 0 8px 30px;
+            list-style-type: lower-alpha;
         }
         
-        .linea-firma {
-            border-top: 1px solid #000;
-            width: 300px;
-            margin: 60px auto 5px auto;
+        .sub-list li {
+            margin-bottom: 8px;
+            text-align: justify;
+            line-height: 1.4;
         }
         
-        .texto-firma {
-            font-weight: bold;
-        }
-        
-        .galeria-imagenes {
+        /* ANEXO */
+        .anexo-section {
             margin: 20px 0;
         }
         
-        .fila-imagenes {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
+        .anexo-title {
+            font-weight: bold;
+            margin-bottom: 10px;
         }
         
-        .contenedor-imagen {
-            width: 48%;
-            text-align: center;
+        .anexo-list {
+            margin-left: 20px;
+            list-style-type: disc;
         }
         
-        .imagen-ejemplo {
-            width: 100%;
-            max-width: 300px;
-            height: auto;
-            border: 1px solid #ddd;
-        }
-        
-        .texto-imagen {
-            font-size: 9pt;
-            margin-top: 5px;
-            color: #666;
-        }
-        
-        .salto-pagina {
-            page-break-before: always;
-        }
-        
-        .numero-pagina {
-            position: absolute;
-            top: -25px;
-            right: 0;
-            font-size: 9pt;
-            color: #666;
-        }
-        
-        .container {
-            position: relative;
-        }
-        
-        .lista-viñetas {
-            margin: 10px 0 10px 20px;
-        }
-        
-        .lista-viñetas li {
+        .anexo-list li {
             margin-bottom: 8px;
             text-align: justify;
+            line-height: 1.4;
         }
         
-        .destacado {
+        /* FIRMA */
+        .signature-section {
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #000;
+            width: 60%;
+            margin: 40px auto 8px auto;
+        }
+        
+        .signature-label {
+            text-align: center;
+            font-size: 9pt;
             font-weight: bold;
         }
         
-        .texto-centrado {
-            text-align: center;
+        /* EJEMPLO DE FOTOS */
+        .example-section {
+            margin-top: 25px;
+            font-weight: bold;
+            font-size: 10pt;
         }
         
-        .texto-derecha {
-            text-align: right;
+        /* UTILIDADES */
+        .bold {
+            font-weight: bold;
+        }
+        
+        .italic {
+            font-style: italic;
+        }
+        
+        .underline {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    @php
-        $monthNames = [
-            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
-            5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
-        ];
-    @endphp
-
-    {{-- PÁGINA 1 --}}
-    <div class="container">
-        <div class="numero-pagina">1</div>
+    <div class="page-container">
         
+        {{-- HEADER CON LOGO E INFORMACIÓN --}}
         <div class="header">
             <div class="logo-container">
                 <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
             </div>
-            <div class="titulo-principal">CONDICIONES PARA COMERCIALIZACIÓN XANTE</div>
-        </div>
-
-        <div class="info-propiedad">
-            <span class="campo-propiedad">
-                <strong>Comunidad:</strong> {{ $comunidad ?? '________________' }}
-            </span>
-            <span class="campo-propiedad">
-                <strong>Tipo:</strong> {{ $tipo_vivienda ?? '________________' }}
-            </span>
-            <br>
-            <span class="campo-propiedad">
-                <strong>Privada:</strong> {{ $privada ?? '________________' }}
-            </span>
-            <span class="campo-propiedad">
-                <strong>Precio de venta:</strong> ${{ isset($precio_promocion) ? number_format($precio_promocion, 2) : '________' }}
-            </span>
-        </div>
-
-        <div class="fecha">
-            <span class="campo-subrayado">{{ $day ?? now()->format('d') }}</span> de 
-            <span class="campo-subrayado">{{ $month ?? $monthNames[now()->format('n')] ?? '__________' }}</span> del 
-            <span class="campo-subrayado">{{ $year ?? now()->format('Y') }}</span>
-        </div>
-
-        <div class="numero-condicion">1.</div>
-        <div class="texto-condicion">
-            Se solicita que la vivienda esté en condiciones óptimas (limpieza) para realizar visitas de prospectos.
-        </div>
-
-        <div class="numero-condicion">2.</div>
-        <div class="texto-condicion">
-            Confirma, en la siguiente casilla, entre A, B o C, la disponibilidad para visita de clientes de acuerdo con las siguientes opciones:
-        </div>
-
-        <div class="campo-opcion">
-            MEJOR OPCIÓN PARA MI: <span class="campo-subrayado" style="min-width: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-        </div>
-
-        <div class="campo-opcion">
-            En caso de ser C. Requiero de anticipación <span class="campo-subrayado" style="min-width: 30px;">&nbsp;&nbsp;&nbsp;&nbsp;</span> horas
-        </div>
-
-        <table class="tabla-opciones">
-            <tr>
-                <th>A</th>
-                <th>B</th>
-                <th>C</th>
-            </tr>
-            <tr>
-                <td>
-                    <strong>Acceso con días y horarios específicos</strong><br>
-                    *El titular dará acceso a la privada y vivienda
-                </td>
-                <td>
-                    <strong>Entrega de juego de llaves para acceso peatonal y/o vehicular</strong><br>
-                    *Sólo disponible para viviendas deshabitadas<br>
-                    *Al no contar con exclusividad, no nos hacemos responsables por daños.<br>
-                    *Al considerar que la vivienda se pueda estar promoviendo, por igual, a terceros.
-                </td>
-                <td>
-                    <strong>Sujeto a disponibilidad.</strong><br>
-                    *Solicitud de acceso con 24 horas de anticipación.<br>
-                    *O mencionar tiempo que se requiere de anticipación: _____ horas
-                </td>
-            </tr>
-        </table>
-
-        <div class="numero-condicion">3.</div>
-        <div class="texto-condicion">
-            Notificar a su administración general y de privada la comercialización de su vivienda. Para dar a conocer las visitas que se estarán realizando de los prospectos.
-        </div>
-
-        <div class="numero-condicion">4.</div>
-        <div class="texto-condicion">
-            Es responsabilidad del titular realizar los arreglos que la vivienda requiera, como pintura, fugas, entre otros. Al momento en que sean solicitados, ya sea para avalúo y/o entrega de vivienda.
-        </div>
-
-        <div class="numero-condicion">5.</div>
-        <div class="texto-condicion">
-            Al recibir una intención de compra que NO sea por medio de Xante es obligación del cliente notificarlo al correo contacto@xante.mx en un máximo de 24 horas. De igual forma, Xante notificará al tener cliente confirmado para ya no promover la vivienda.
-        </div>
-
-        <div class="numero-condicion">6.</div>
-        <div class="texto-condicion">
-            Se requiere que se entregue la documentación con anticipación (check list) para armado de expediente. Y al momento de notificar la venta, solicitamos de su apoyo para que en un máximo de 36 horas nos entregue la documentación completa actualizada y escaneada.
-        </div>
-    </div>
-
-    {{-- PÁGINA 2 --}}
-    <div class="salto-pagina"></div>
-    <div class="container">
-        <div class="numero-pagina">2</div>
-        
-        <div class="header">
-            <div class="logo-container">
-                <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
+            <div class="header-info">
+                <div class="property-data">
+                    <span class="property-label">Comunidad:</span>
+                    <span class="property-value">{{ $comunidad ?? '' }}</span>
+                </div>
+                <div class="property-data">
+                    <span class="property-label">Privada:</span>
+                    <span class="property-value">{{ $property_community ?? '' }}</span>
+                </div>
+                <div class="property-data">
+                    <span class="property-label">Tipo:</span>
+                    <span class="property-value">{{ $tipo_vivienda ?? '' }}</span>
+                </div>
+                <div class="property-data">
+                    <span class="property-label">Precio de venta:</span>
+                    <span class="property-value">${{ number_format($precio_promocion ?? 0, 2, '.', ',') }}</span>
+                </div>
+                <div class="date-box">
+                    <span class="date-value">{{ $day ?? '__' }}</span> de 
+                    <span class="date-value">{{ $month ?? '__________' }}</span> del 
+                    <span class="date-value">{{ $year ?? '2025' }}</span>
+                </div>
             </div>
-            <div class="titulo-principal">CONDICIONES PARA COMERCIALIZACIÓN XANTE</div>
         </div>
 
-        <div class="texto-condicion" style="margin-top: 20px;">
-            a. Se solicitará expediente completo de vendedor(es) y vivienda para iniciar proceso de compraventa. Le solicitamos contar con su documentación disponible y sus pagos de servicios al corriente.
+        {{-- TÍTULO PRINCIPAL --}}
+        <div class="main-title">
+            CONDICIONES PARA COMERCIALIZACIÓN XANTE
         </div>
 
-        <div class="texto-condicion">
-            b. Al ser notificado de que su vivienda fue vendida, se comunicará con usted el área de titulación para seguimiento e integración de su expediente.
+        {{-- CONDICIÓN 1 --}}
+        <div class="condition">
+            <span class="condition-number">1.</span> Se solicita que la vivienda esté en condiciones óptimas (limpieza) para realizar visitas de
+            prospectos.
         </div>
 
-        <div class="numero-condicion">7.</div>
-        <div class="texto-condicion">
-            Es responsabilidad del propietario tener al corriente todos sus servicios como agua, predial, luz, internet-telefonía y mantenimientos. Así como, la entrega de documentación en tiempo y forma para iniciar proceso de escrituración correspondiente a la compraventa.
+        {{-- CONDICIÓN 2 --}}
+        <div class="condition">
+            <span class="condition-number">2.</span> Confirma, en la siguiente casilla, entre A, B o C, la disponibilidad para visita de clientes de acuerdo
+            con las siguientes opciones:
         </div>
 
-        <div class="numero-condicion">8.</div>
-        <div class="texto-condicion">
-            Debes considerar que existen gastos al momento de la venta de tu inmueble: como las certificaciones de no adeudo (depende del municipio), cancelación de hipoteca, en caso de que cuentes con un crédito(s) hipotecario e ISR, que corren por tu cuenta.
-        </div>
-
-        <div class="numero-condicion">9.</div>
-        <div class="texto-condicion">
-            Si al momento del apartado de la vivienda, el cliente reciba un anticipo, pagará a XANTE el 50% de la comisión pactada más el Impuesto al Valor Agregado, y; al momento de la formalización de la Escritura Pública pagará el 50% restante más el Impuesto al Valor Agregado. De no firmar contrato o promesa de compraventa y no existir un anticipo entre el comprador y el vendedor, la comisión de XANTE será pagada en su totalidad al momento de la escrituración cuando EL VENDEDOR reciba el pago total del inmueble, en un lapso no mayor a 12 horas.
-        </div>
-
-        <div class="numero-condicion">10.</div>
-        <div class="texto-condicion">
-            Al no contar con la exclusividad para la comercialización de la vivienda no nos hacemos responsables por pérdidas o desperfectos realizados en la vivienda.
-        </div>
-
-        <div class="numero-condicion">11.</div>
-        <div class="texto-condicion">
-            Al confirmar y enviar "Acuerdo de Promoción y Comercialización" deberá enviar fotos con las especificaciones presentadas (Anexo 1).
-        </div>
-
-        <div class="numero-condicion">12.</div>
-        <div class="texto-condicion">
-            Si su vivienda se encuentra con las siguientes características (sin muebles y se les solicita se encuentre limpia), puede agendar una cita con nosotros para realizar el recorrido virtual y sesión fotográfica de su casa-depa para nuestra página web y ficha técnica. Únicamente requerimos nos confirme enviando un correo a ventas@xante.mx para agendar su cita. De lo contrario, envía las fotografías de tu inmueble con las siguientes características.
-        </div>
-
-        <div class="texto-condicion" style="margin-top: 25px;">
-            <strong>Anexo 1.</strong>
-        </div>
-
-        <ul class="lista-viñetas">
-            <li>Las fotos se requieren con buena iluminación y en buenas condiciones de limpieza.</li>
-            <li>Te solicitamos tomes fotografía de cada una de las plazas (sala, comedor, cocina, baño(s), recámaras, alcoba, patio, jardín, cuarto de servicio, acceso al fraccionamiento y privada más la fachada del inmueble) Así como del equipamiento con el que cuenta (cocina integral, cancel, clósets, etc).</li>
-            <li>En caso de que se vaya a retirar el equipamiento que se tenga en la vivienda, mencionarlo.</li>
-        </ul>
-
-        <div class="firma">
-            <div class="linea-firma"></div>
-            <div class="texto-firma">Nombre y firma de conformidad y enterado</div>
-        </div>
-    </div>
-
-    {{-- PÁGINA 3 --}}
-    <div class="salto-pagina"></div>
-    <div class="container">
-        <div class="numero-pagina">3</div>
-        
-        <div class="header">
-            <div class="logo-container">
-                <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
+        <div class="options-section">
+            <div class="option-label">MEJOR OPCIÓN PARA MI: <span style="border-bottom: 1px solid #000; display: inline-block; min-width: 40px;"></span></div>
+            <div style="margin-bottom: 8px; font-size: 9pt;">
+                En caso de ser C. Requiero de anticipación <span class="hours-input"></span> horas
             </div>
-            <div class="titulo-principal">CONDICIONES PARA COMERCIALIZACIÓN XANTE</div>
+            
+            <div class="options-grid">
+                <div class="option-box">
+                    <div class="option-letter">A</div>
+                    <div class="option-title">Acceso con días y horarios específicos</div>
+                    <div class="option-description">*El titular dará acceso a la privada y vivienda</div>
+                </div>
+                
+                <div class="option-box">
+                    <div class="option-letter">B</div>
+                    <div class="option-title">Entrega de juego de llaves para acceso peatonal y/o vehicular</div>
+                    <div class="option-description">*Sólo disponible para viviendas deshabitadas</div>
+                    <div class="option-note">
+                        Al no contar con exclusividad, no nos hacemos responsables por daños. Al considerar que la vivienda
+                        se pueda estar promoviendo, por igual, a terceros.
+                    </div>
+                </div>
+                
+                <div class="option-box">
+                    <div class="option-letter">C</div>
+                    <div class="option-title">Sujeto a disponibilidad.</div>
+                    <div class="option-description">*Solicitud de acceso con 24 horas de anticipación.</div>
+                    <div class="option-description" style="margin-top: 8px;">
+                        O mencionar tiempo que se requiere de anticipación: <span class="hours-input"></span> horas
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="texto-condicion texto-centrado" style="margin: 20px 0;">
-            <strong>Ejemplo de fotografías requeridas:</strong>
+        {{-- CONDICIONES 3-12 --}}
+        <div class="condition">
+            <span class="condition-number">3.</span> Notificar a su administración general y de privada la comercialización de su vivienda. Para dar a
+            conocer las visitas que se estarán realizando de los prospectos.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">4.</span> Es responsabilidad del titular realizar los arreglos que la vivienda requiera, como pintura, fugas,
+            entre otros. Al momento en que sean solicitados, ya sea para avalúo y/o entrega de vivienda.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">5.</span> Al recibir una intención de compra que NO sea por medio de Xante es obligación del cliente
+            notificarlo al correo <span class="bold">contacto@xante.mx</span> en un máximo de 24 horas. De igual forma, Xante notificará
+            al tener cliente confirmado para ya no promover la vivienda.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">6.</span> Se requiere que se entregue la documentación con anticipación (check list) para armado de
+            expediente. Y al momento de notificar la venta, solicitamos de su apoyo para que en un máximo de
+            36 horas nos entregue la documentación completa actualizada y escaneada.
+            
+            <ol class="sub-list">
+                <li>
+                    Se solicitará expediente completo de vendedor(es) y vivienda para iniciar proceso de
+                    compraventa. Le solicitamos contar con su documentación disponible y sus pagos de
+                    servicios al corriente.
+                </li>
+                <li>
+                    Al ser notificado de que su vivienda fue vendida, se comunicará con usted el área de
+                    titulación para seguimiento e integración de su expediente.
+                </li>
+            </ol>
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">7.</span> Es responsabilidad del propietario tener al corriente todos sus servicios como agua, predial, luz,
+            internet-telefonía y mantenimientos. Así como, la entrega de documentación en tiempo y forma
+            para iniciar proceso de escrituración correspondiente a la compraventa.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">8.</span> Debes considerar que existen gastos al momento de la venta de tu inmueble: como las
+            certificaciones de no adeudo (depende del municipio), cancelación de hipoteca, en caso de que
+            cuentes con un crédito(s) hipotecario e ISR, que corren por tu cuenta.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">9.</span> Si al momento del apartado de la vivienda, el cliente reciba un anticipo, pagará a XANTE el 50% de
+            la comisión pactada más el Impuesto al Valor Agregado, y; al momento de la formalización de la
+            Escritura Pública pagará el 50% restante más el Impuesto al Valor Agregado. De no firmar contrato
+            o promesa de compraventa y no existir un anticipo entre el comprador y el vendedor, la comisión de
+            XANTE será pagada en su totalidad al momento de la escrituración cuando EL VENDEDOR reciba el
+            pago total del inmueble, en un lapso no mayor a 12 horas.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">10.</span> Al no contar con la exclusividad para la comercialización de la vivienda no nos hacemos
+            responsables por pérdidas o desperfectos realizados en la vivienda.
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">11.</span> Al confirmar y enviar "Acuerdo de Promoción y Comercialización" deberá enviar fotos con las
+            especificaciones presentadas (Anexo 1).
+        </div>
+
+        <div class="condition">
+            <span class="condition-number">12.</span> Si su vivienda se encuentra con las siguientes características (sin muebles y se les solicita se
+            encuentre limpia), puede agendar una cita con nosotros para realizar el recorrido virtual y sesión
+            fotográfica de su casa-depa para nuestra página web y ficha técnica.
+        </div>
+
+        <div class="condition" style="margin-left: 20px;">
+            Únicamente requerimos nos confirme enviando un correo a <span class="bold">ventas@xante.mx</span> para agendar su cita.
+            De lo contrario, envía las fotografías de tu inmueble con las siguientes características.
+        </div>
+
+        {{-- ANEXO 1 --}}
+        <div class="anexo-section">
+            <div class="anexo-title">Anexo 1.</div>
+            <ul class="anexo-list">
+                <li>
+                    Las fotos se requieren con buena iluminación y en buenas condiciones de limpieza.
+                </li>
+                <li>
+                    Te solicitamos tomes fotografía de cada una de las plazas (sala, comedor, cocina, baño(s),
+                    recámaras, alcoba, patio, jardín, cuarto de servicio, acceso al fraccionamiento y privada más
+                    la fachada del inmueble) Así como del equipamiento con el que cuenta (cocina integral, cancel,
+                    clósets, etc).
+                </li>
+                <li>
+                    En caso de que se vaya a retirar el equipamiento que se tenga en la vivienda, mencionarlo.
+                </li>
+            </ul>
+        </div>
+
+        {{-- FIRMA --}}
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <div class="signature-label">
+                Nombre y firma de conformidad y enterado
+            </div>
+        </div>
+
+        {{-- EJEMPLO DE FOTOGRAFÍAS --}}
+        <div class="example-section">
+            Ejemplo de fotografías requeridas:
         </div>
 
         <div class="galeria-imagenes">
