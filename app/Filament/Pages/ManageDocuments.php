@@ -5,13 +5,9 @@ namespace App\Filament\Pages;
 use Filament\Pages\Page;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
-// use Filament\Forms\Components\Wizard;
-// use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\CheckboxList;
-// use Filament\Forms\Components\Grid;
-// use Filament\Forms\Components\Section;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -19,8 +15,9 @@ use Filament\Actions\Action;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ConfigurationCalculator;
-use App\Services\PdfGenerationService;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TimePicker;
@@ -33,8 +30,10 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
+use App\Services\PdfGenerationService;
 
 use BackedEnum;
+
 
 
 class ManageDocuments extends Page implements HasForms
@@ -52,6 +51,15 @@ class ManageDocuments extends Page implements HasForms
 
     public ?Agreement $agreement = null;
     public ?array $data = [];
+    public ?array $property_deed = [];
+    public ?array $property_tax = [];
+    public ?array $property_water = [];
+    public ?array $holder_id_front = [];
+    public ?array $holder_id_back = [];
+    public ?array $holder_curp = [];
+    public ?array $holder_proof_address = [];
+    
+    
     public int $currentStep = 1;
     public int $totalSteps = 3;
 
@@ -487,9 +495,25 @@ class ManageDocuments extends Page implements HasForms
     // PASO 3: Cierre Exitoso
     private function getStepThreeSchema(): array
     {
+        // Simulamos la carga del agreement si no existe (Necesario para que el código no falle en una prueba inicial)
+        $agreement = $this->agreement ?? new Agreement();
+        // Asumo que generatedDocuments es una Collection o un Array, o simulamos uno vacío.
+        $documents = $agreement->generatedDocuments ?? collect();
+
+        // Colores en HEX para los botones (Lime 600, Lime 700, Gris, etc.)
+        $primaryBg = '#84CC16'; // Lime 600 (Color de fondo inicial)
+        $primaryHover = '#65A30D'; // Lime 700 (Color de fondo en hover)
+        $primaryText = '#1F2937'; // Gray 900 (Color de texto)
+        $secondaryBg = '#E5E7EB'; // Gray 200 (Color de fondo inicial)
+        $secondaryHover = '#D1D5DB'; // Gray 300 (Color de fondo en hover)
+        $secondaryText = '#4B5563'; // Gray 700 (Color de texto)
+
+
         return [
-            Section::make('🎉 Convenio Completado')
+            Section::make('Convenio Completado')
                 ->description('El proceso ha sido finalizado exitosamente')
+                ->icon('heroicon-o-fire') // Usamos el icono oficial de Heroicons
+                ->iconColor('success') // Le damos un color llamativo (verde)
                 ->schema([
                     Placeholder::make('completion_summary')
                         ->label('🎉 Convenio Completado Exitosamente')
@@ -499,38 +523,74 @@ class ManageDocuments extends Page implements HasForms
                         ->schema([
                             Placeholder::make('completion_date')
                                 ->label('Fecha de Finalización')
-                                ->content($this->agreement->completed_at?->format('d/m/Y H:i') ?? 'En proceso'),
+                                ->content($agreement->completed_at?->format('d/m/Y H:i') ?? 'N/A'),
                                 
                             Placeholder::make('total_documents')
                                 ->label('Documentos Generados')
-                                ->content($this->agreement->generatedDocuments->count() . ' PDFs'),
+                                ->content($documents->count() . ' PDFs'),
                                 
-                            Placeholder::make('final_status')
+                            Placeholder::make('Descargar todos los PDF')
                                 ->label('Estado Final')
                                 ->content('✅ Completado')
                         ]),
                         
                     Placeholder::make('final_actions_css')
-                        ->label('')
-                        ->content('<div class="text-center space-y-4">
-                            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                                <button wire:click="downloadAllDocuments" 
-                                        class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    📦 Descargar Todos los Documentos
-                                </button>
-                                <button wire:click="generateFinalReport" 
-                                        class="inline-flex items-center px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors shadow-lg">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    📊 Generar Reporte Final
-                                </button>
+                        ->label('Documentos generados')
+                        ->icon('heroicon-o-arrow-down-tray') // Usamos el icono oficial de Heroicons
+                        ->iconColor('success') // Le damos un color llamativo (verde)
+                        ->content('
+                            <div class="text-center space-y-4">
+                                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                                    <button wire:click="downloadAllDocuments" 
+                                            class="inline-flex items-center rounded-lg font-bold transition-colors shadow-lg"
+                                            style="
+                                                display: inline-flex; 
+                                                align-items: center; 
+                                                padding: 10px 16px; 
+                                                background-color: ' . $primaryBg . '; 
+                                                color: ' . $primaryText . '; 
+                                                border: none;
+                                                border-radius: 8px; 
+                                                font-weight: 600; 
+                                                font-size: 12px;
+                                                text-transform: uppercase;
+                                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                                transition: background-color 0.15s ease-in-out;
+                                            "
+                                            onmouseover="this.style.backgroundColor=\'' . $primaryHover . '\';"
+                                            onmouseout="this.style.backgroundColor=\'' . $primaryBg . ';\';">
+                                        <svg style="width: 16px; height: 16px; margin-right: 6px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        📦 Descargar Todos los Documentos
+                                    </button>
+                                    <button wire:click="generateFinalReport" 
+                                            class="inline-flex items-center rounded-lg font-bold transition-colors shadow-lg"
+                                            style="
+                                                display: inline-flex; 
+                                                align-items: center; 
+                                                padding: 10px 16px; 
+                                                background-color: ' . $secondaryBg . '; 
+                                                color: ' . $secondaryText . '; 
+                                                border: none;
+                                                border-radius: 8px; 
+                                                font-weight: 600; 
+                                                font-size: 12px;
+                                                text-transform: uppercase;
+                                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                                transition: background-color 0.15s ease-in-out;
+                                            "
+                                            onmouseover="this.style.backgroundColor=\'' . $secondaryHover . '\';"
+                                            onmouseout="this.style.backgroundColor=\'' . $secondaryBg . ';\';">
+                                        <svg style="width: 16px; height: 16px; margin-right: 6px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        📊 Generar Reporte Final
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-600">El convenio ha sido completado exitosamente. Todos los documentos están disponibles.</p>
                             </div>
-                            <p class="text-sm text-gray-600">El convenio ha sido completado exitosamente. Todos los documentos están disponibles.</p>
-                        </div>')
+                        ')
                         ->html(),
                 ])
         ];
