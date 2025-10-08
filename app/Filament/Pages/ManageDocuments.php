@@ -51,17 +51,46 @@ class ManageDocuments extends Page implements HasForms
 
     public ?Agreement $agreement = null;
     public ?array $data = [];
-    public ?array $property_deed = [];
-    public ?array $property_tax = [];
-    public ?array $property_water = [];
-    public ?array $holder_id_front = [];
-    public ?array $holder_id_back = [];
-    public ?array $holder_curp = [];
-    public ?array $holder_proof_address = [];
-    
-    
+
+    // Propiedades para los campos de FileUpload con ->live()
+    public $holder_id_front = null;
+    public $holder_id_back = null;
+    public $holder_curp = null;
+    public $holder_proof_address = null;
+    public $property_deed = null;
+    public $property_tax = null;
+    public $property_water= null;
     public int $currentStep = 1;
     public int $totalSteps = 3;
+    private function getCurrentUrlStep(): ?int
+    {
+        $currentUrl = request()->url();
+        $queryParams = request()->query();
+
+        // Buscar el parámetro 'step' en la URL
+        if (isset($queryParams['step'])) {
+            $stepParam = $queryParams['step'];
+
+            // El formato del parámetro step es algo como: "form.wizard.cierre-exitoso:::wizard-step"
+            // Necesitamos extraer el número del paso del final
+            if (preg_match('/wizard-step$/', $stepParam)) {
+                // Si termina con "wizard-step", asumimos que es el paso 3 (cierre-exitoso)
+                return 3;
+            }
+
+            // También podemos buscar patrones como "form.wizard.envio-de-documentos:::wizard-step" para paso 1
+            if (preg_match('/envio-de-documentos/', $stepParam)) {
+                return 1;
+            }
+
+            // "form.wizard.recepcion-de-documentos:::wizard-step" para paso 2
+            if (preg_match('/recepcion-de-documentos/', $stepParam)) {
+                return 2;
+            }
+        }
+
+        return null;
+    }
 
     public function mount(): void
     {
@@ -73,9 +102,23 @@ class ManageDocuments extends Page implements HasForms
             default => 1
         };
 
-        // Si llegamos al paso 3 y el estado no es 'completed', actualizarlo
-        if ($this->currentStep === 3 && $this->agreement->status !== 'completed') {
-            $this->markAsCompleted();
+        // Verificar si hay un parámetro de paso específico en la URL
+        $currentUrlStep = $this->getCurrentUrlStep();
+
+        // Si hay un paso específico en la URL y es diferente al calculado por estado, usarlo
+        if ($currentUrlStep && $currentUrlStep !== $this->currentStep) {
+            $this->currentStep = $currentUrlStep;
+
+            // SOLO marcar como completado si realmente llegamos al paso 3 desde la interfaz
+            // No marcar como completado si navegamos manualmente al paso 3 desde URL
+            if ($this->currentStep === 3 && $this->agreement->status !== 'completed' && $currentUrlStep === 3) {
+                $this->markAsCompleted();
+            }
+        } else {
+            // Marcar como completado solo si llegamos al paso 3 por estado Y el estado no es 'completed'
+            if ($this->currentStep === 3 && $this->agreement->status !== 'completed') {
+                $this->markAsCompleted();
+            }
         }
 
         // Refrescar las relaciones para asegurar que tenemos los datos más recientes
