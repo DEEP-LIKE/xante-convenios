@@ -212,7 +212,7 @@ class WizardResource extends Resource
                     ->url(function (Agreement $record): string {
                         // Si está completado, ir al resumen
                         if ($record->status === 'completed') {
-                            return "/admin/manage-agreement-documents/{$record->id}";
+                            return "/admin/manage-documents/{$record->id}";
                         }
                         
                         // Si está en Wizard 1 y puede regresar
@@ -222,7 +222,7 @@ class WizardResource extends Resource
                         
                         // Si está en Wizard 2 o documentos generados
                         if ($record->current_wizard === 2 || $record->status === 'documents_generated') {
-                            return "/admin/manage-agreement-documents/{$record->id}";
+                            return "/admin/manage-documents/{$record->id}";
                         }
                         
                         // Por defecto, ir al Wizard 1

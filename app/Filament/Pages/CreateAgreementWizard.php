@@ -5,13 +5,13 @@ namespace App\Filament\Pages;
 use Filament\Pages\Page;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Schemas\Components\Wizard;
-use Filament\Schemas\Components\Wizard\Step;
+use Filament\Forms\Components\Wizard;
+use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
@@ -1280,8 +1280,8 @@ class CreateAgreementWizard extends Page implements HasForms
             return; // No redirigir si hay error
         }
 
-        // Redirigir al Wizard 2
-        $this->redirect("/admin/manage-agreement-documents/{$agreement->id}");
+        // Redirigir al Wizard 2 (nueva página migrada)
+        $this->redirect("/admin/manage-documents/{$agreement->id}");
     }
 
     /**

@@ -5,52 +5,58 @@ namespace App\Filament\Pages;
 use Filament\Pages\Page;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Wizard;
-use Filament\Forms\Components\Wizard\Step;
+// use Filament\Forms\Components\Wizard;
+// use Filament\Forms\Components\Wizard\Step;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\CheckboxList;
+// use Filament\Forms\Components\Grid;
+// use Filament\Forms\Components\Section;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Checkbox;
-use Illuminate\Support\HtmlString;
 use App\Models\Agreement;
+use App\Models\Client;
+use App\Models\ConfigurationCalculator;
 use App\Services\PdfGenerationService;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\TimePicker;
+use Filament\Support\Icons\Heroicon;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Checkbox;
+use App\Jobs\GenerateAgreementDocumentsJob;
+use Illuminate\Support\HtmlString;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Wizard;
+use Filament\Schemas\Components\Wizard\Step;
+
 use BackedEnum;
 
-class ManageAgreementDocuments extends Page implements HasForms
+
+class ManageDocuments extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected $listeners = [
-        'sendDocumentsToClient' => 'sendDocumentsToClient',
-        'downloadAllDocuments' => 'downloadAllDocuments',
-        'generateFinalReport' => 'generateFinalReport',
-    ];
-
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-check';
-    protected static ?string $title = 'Gestión de Documentos';
+    protected static ?string $navigationLabel = 'Gestión de Documentos';
+    protected static ?string $title = 'Gestión de Documentos del Convenio';
+    protected static ?string $slug = 'manage-documents/{agreement?}';
+    protected static ?int $navigationSort = 5;
     protected static bool $shouldRegisterNavigation = false;
-    protected static ?string $slug = 'manage-agreement-documents/{agreement}';
 
-    public string $view = 'filament.pages.manage-agreement-documents';
+    public string $view = 'filament.pages.manage-documents';
 
-    public Agreement $agreement;
+    public ?Agreement $agreement = null;
     public ?array $data = [];
     public int $currentStep = 1;
     public int $totalSteps = 3;
 
     public function mount(): void
     {
-        // El modelo Agreement ya está inyectado automáticamente por Filament
-        // No necesitamos búsqueda manual ni abort(404)
-
         // Determinar el paso actual basado en el estado del convenio
         $this->currentStep = match($this->agreement->status) {
             'documents_generating', 'documents_generated' => 1,
@@ -70,11 +76,6 @@ class ManageAgreementDocuments extends Page implements HasForms
 
         // Inicializar el formulario con datos vacíos
         $this->form->fill([]);
-
-        // Precargar documentos existentes en el formulario si el método existe
-        if (method_exists($this, 'loadExistingDocuments')) {
-            $this->loadExistingDocuments();
-        }
 
         // Notificación informativa sobre el estado actual
         $statusMessages = [
@@ -97,7 +98,9 @@ class ManageAgreementDocuments extends Page implements HasForms
     }
 
     protected function getFormSchema(): array
-    {
+{
+    // Verificar si Wizard está disponible
+    if (class_exists(Wizard::class)) {
         return [
             Wizard::make([
                 Step::make('Envío de Documentos')
@@ -122,15 +125,21 @@ class ManageAgreementDocuments extends Page implements HasForms
             ->previousAction(fn (Action $action) => $action->label('Anterior'))
             ->startOnStep($this->currentStep)
             ->skippable(false)
-            ->persistStepInQueryString()
+            ->persistStepInQueryString(),
         ];
+    } else {
+        // Fallback a Tabs si Wizard no está disponible
+        return $this->getStepOneSchema(); // Mostrar solo el primer paso
     }
+}
 
     // PASO 1: Envío de Documentos
     private function getStepOneSchema(): array
     {
         return [
-            Section::make('📄 Información del Convenio')
+            Section::make('Información del Convenio')
+                ->icon('heroicon-o-document-text') // Usamos el icono oficial de Heroicons
+                ->iconColor('success') // Le damos un color llamativo (verde)
                 ->description('Datos básicos del convenio')
                 ->schema([
                     Grid::make(3)
@@ -138,45 +147,51 @@ class ManageAgreementDocuments extends Page implements HasForms
                             Placeholder::make('agreement_id')
                                 ->label('ID del Convenio')
                                 ->content($this->agreement->id),
-
+                                
                             Placeholder::make('client_name')
                                 ->label('Cliente Titular')
                                 ->content($this->getClientName()),
-
+                                
                             Placeholder::make('client_email')
                                 ->label('Email del Cliente')
                                 ->content($this->getClientEmail()),
-
+                                
                             Placeholder::make('client_phone')
                                 ->label('Teléfono del Cliente')
                                 ->content($this->getClientPhone()),
-
+                                
                             Placeholder::make('property_address')
                                 ->label('Domicilio de la Propiedad')
                                 ->content($this->getPropertyAddress()),
-
+                                
                             Placeholder::make('documents_count')
                                 ->label('Documentos Generados')
                                 ->content($this->agreement->generatedDocuments->count() . ' PDFs'),
                         ])
                 ]),
-
-            Section::make('📋 Documentos Disponibles')
+                
+            Section::make('Documentos Disponibles')
                 ->description('Documentos PDF generados para este convenio')
+                ->icon('heroicon-o-document-text') // Usamos el icono oficial de Heroicons
+                ->iconColor('success') // Le damos un color llamativo (verde)
                 ->schema($this->getDocumentFields())
                 ->visible($this->agreement->generatedDocuments->isNotEmpty()),
-
-            Section::make('⚠️ Sin Documentos')
+                
+            Section::make('Sin Documentos')
                 ->description('No hay documentos generados')
+                ->icon('heroicon-o-exclamation-triangle') // Usamos el icono oficial de Heroicons
+                ->iconColor('warning') // Le damos un color llamativo (verde)
                 ->schema([
                     Placeholder::make('no_documents')
                         ->label('Estado')
                         ->content('No se encontraron documentos generados para este convenio. Use el botón "Regenerar Documentos" en la parte superior.'),
                 ])
                 ->visible($this->agreement->generatedDocuments->isEmpty()),
-
-            Section::make('📤 Enviar al Cliente')
+                
+            Section::make('Enviar al Cliente')
                 ->description('Enviar documentos por correo electrónico')
+                ->icon('heroicon-o-paper-airplane') // Usamos el icono oficial de Heroicons
+                ->iconColor('success') // Le damos un color llamativo (verde)
                 ->schema([
                     Grid::make(2)
                         ->schema([
@@ -187,54 +202,57 @@ class ManageAgreementDocuments extends Page implements HasForms
                                     $clientEmail = $this->getClientEmail();
                                     $docsCount = $this->agreement->generatedDocuments->count();
                                     $propertyAddress = $this->getPropertyAddress();
-
+                                    
                                     return "Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs<br>Propiedad: {$propertyAddress}";
                                 })
                                 ->html(),
-
+                                
                             Placeholder::make('agreement_summary')
                                 ->label('💰 Datos del Convenio')
                                 ->content(function () {
                                     $agreementValue = $this->getAgreementValue();
                                     $community = $this->getPropertyCommunity();
                                     $createdDate = $this->agreement->created_at->format('d/m/Y');
-
+                                    
                                     return "Valor: {$agreementValue}<br>Comunidad: {$community}<br>Creado: {$createdDate}";
                                 })
                                 ->html(),
                         ]),
-
-                    Placeholder::make('send_documents_button')
-                        ->label('')
-                        ->content(function () {
-                            if ($this->agreement->generatedDocuments->isEmpty() || $this->agreement->status === 'documents_sent') {
-                                return '';
-                            }
-
-                            return new HtmlString('
-                                <div class="text-center">
-                                    <button wire:click="sendDocumentsToClient"
+                        Placeholder::make('send_button_css')
+                            ->label('')
+                            ->content(function () {
+                                if ($this->agreement->status === 'documents_sent') {
+                                    return '<div style="text-align: center;">
+                                        <div style="display: inline-flex; align-items: center; padding: 16px 32px; background: linear-gradient(135deg, #C9D534 0%, #BDCE0F 100%); border: 2px solid #BDCE0F; color: #342970; font-weight: 600; border-radius: 16px; font-family: \'Franie\', sans-serif; box-shadow: 0 8px 32px rgba(189, 206, 15, 0.3);">
+                                            <svg style="width: 24px; height: 24px; margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            ✅ Documentos Enviados Exitosamente
+                                        </div>
+                                    </div>';
+                                }
+                                
+                                return '<div style="text-align: left;">
+                                    <button wire:click="sendDocumentsToClient" 
                                             wire:confirm="¿Está seguro de enviar todos los documentos al cliente por correo electrónico?"
-                                            class="inline-flex items-center px-6 py-3 bg-primary-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-primary-700 focus:bg-primary-700 active:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                            style="display: inline-flex; align-items: center; padding: 16px 32px; background: linear-gradient(135deg, #6C2582 0%, #7C4794 100%); color: white; font-weight: 600; border-radius: 16px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 32px rgba(108, 37, 130, 0.3); text-decoration: none; font-family: \'Franie\', sans-serif; font-size: 16px;"
+                                            onmouseover="this.style.background=\'linear-gradient(135deg, #7C4794 0%, #62257D 100%)\'; this.style.boxShadow=\'0 12px 48px rgba(108, 37, 130, 0.5)\'; this.style.transform=\'translateY(-3px) scale(1.05)\';"
+                                            onmouseout="this.style.background=\'linear-gradient(135deg, #6C2582 0%, #7C4794 100%)\'; this.style.boxShadow=\'0 8px 32px rgba(108, 37, 130, 0.3)\'; this.style.transform=\'translateY(0) scale(1)\';">
+                                        <svg style="width: 24px; height: 24px; margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
                                         </svg>
                                         📧 Enviar Documentos al Cliente
                                     </button>
-                                </div>
-                            ');
-                        })
-                        ->visible($this->agreement->generatedDocuments->isNotEmpty() && $this->agreement->status !== 'documents_sent'),
-
-                    Placeholder::make('documents_sent_status')
-                        ->label('Estado del Envío')
-                        ->content('✅ Documentos enviados exitosamente')
-                        ->visible($this->agreement->status === 'documents_sent')
+                                </div>';
+                            })
+                            ->html()
                 ])
                 ->visible($this->agreement->generatedDocuments->isNotEmpty() && $this->agreement->status !== 'documents_sent'),
-
-            Section::make('✅ Documentos Enviados')
+                
+            Section::make('Documentos Enviados')
                 ->description('Los documentos han sido enviados al cliente')
+                ->icon('heroicon-o-check') // Usamos el icono oficial de Heroicons
+                ->iconColor('success') // Le damos un color llamativo (verde)
                 ->schema([
                     Grid::make(2)
                         ->schema([
@@ -245,11 +263,11 @@ class ManageAgreementDocuments extends Page implements HasForms
                                     $clientName = $this->getClientName();
                                     $clientEmail = $this->getClientEmail();
                                     $docsCount = $this->agreement->generatedDocuments->count();
-
+                                    
                                     return "✅ Enviado exitosamente el {$sentDate}<br>Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs";
                                 })
                                 ->html(),
-
+                                
                             Placeholder::make('next_steps')
                                 ->label('📋 Próximos Pasos')
                                 ->content('El cliente debe revisar los documentos y enviar la documentación requerida. Proceda al siguiente paso para gestionar la recepción de documentos del cliente.')
@@ -258,7 +276,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                 ->visible($this->agreement->status === 'documents_sent'),
         ];
     }
-
+    
     // PASO 2: Recepción de Documentos
     private function getStepTwoSchema(): array
     {
@@ -274,29 +292,40 @@ class ManageAgreementDocuments extends Page implements HasForms
                                         ->label('INE/IFE Frontal')
                                         ->required()
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
-                                        ->maxSize(10240)
+                                        ->maxSize(10240) // 10MB
                                         ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
                                         ->disk('private')
-                                        ->image()
+                                        ->visibility('public')
+                                        ->image() // Habilita preview de imágenes
                                         ->loadingIndicatorPosition('center')
                                         ->panelLayout('integrated')
                                         ->removeUploadedFileButtonPosition('top-right')
                                         ->uploadButtonPosition('center')
                                         ->uploadProgressIndicatorPosition('center')
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            // Generar nombre amigable basado en el tipo de documento
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
                                             return 'ine_frontal_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
                                         })
                                         ->live()
-                                        ->afterStateUpdated(function ($state) {
+                                        ->afterStateUpdated(function ($state, $component) {
                                             if ($state) {
-                                                $this->saveClientDocument('holder_id_front', $state, 'INE/IFE Frontal', 'titular');
+                                                try {
+                                                    $this->saveClientDocument('holder_id_front', $state, 'INE/IFE Frontal', 'titular');
+                                                } catch (\Exception $e) {
+                                                    Notification::make()
+                                                        ->title('❌ Error al Guardar')
+                                                        ->body('Error: ' . $e->getMessage())
+                                                        ->danger()
+                                                        ->send();
+                                                }
                                             } else {
+                                                // Si $state está vacío, significa que se eliminó el archivo
                                                 $this->deleteClientDocument('holder_id_front', 'titular');
                                             }
                                         })
                                         ->hint('Subir imagen clara del frente de la identificación'),
-
+                                        
                                     FileUpload::make('holder_id_back')
                                         ->label('INE/IFE Reverso')
                                         ->required()
@@ -304,6 +333,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                         ->maxSize(10240)
                                         ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
                                         ->disk('private')
+                                        ->visibility('public')
                                         ->image()
                                         ->loadingIndicatorPosition('center')
                                         ->panelLayout('integrated')
@@ -323,7 +353,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                             }
                                         })
                                         ->hint('Subir imagen clara del reverso de la identificación'),
-
+                                        
                                     FileUpload::make('holder_curp')
                                         ->label('CURP')
                                         ->required()
@@ -331,6 +361,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                         ->maxSize(10240)
                                         ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
                                         ->disk('private')
+                                        ->visibility('public')
                                         ->image()
                                         ->loadingIndicatorPosition('center')
                                         ->panelLayout('integrated')
@@ -347,7 +378,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                                 $this->saveClientDocument('holder_curp', $state, 'CURP', 'titular');
                                             }
                                         }),
-
+                                        
                                     FileUpload::make('holder_proof_address')
                                         ->label('Comprobante de Domicilio')
                                         ->required()
@@ -355,6 +386,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                         ->maxSize(10240)
                                         ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
                                         ->disk('private')
+                                        ->visibility('public')
                                         ->image()
                                         ->loadingIndicatorPosition('center')
                                         ->panelLayout('integrated')
@@ -374,7 +406,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                         ->hint('No mayor a 3 meses'),
                                 ])
                                 ->collapsible(),
-
+                                
                             Section::make('🏠 Documentación de la Propiedad')
                                 ->schema([
                                     FileUpload::make('property_deed')
@@ -394,7 +426,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                             }
                                         })
                                         ->hint('Documento legal de propiedad'),
-
+                                        
                                     FileUpload::make('property_tax')
                                         ->label('Predial Actualizado')
                                         ->required()
@@ -412,7 +444,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                             }
                                         })
                                         ->hint('Comprobante de pago del predial'),
-
+                                        
                                     FileUpload::make('property_water')
                                         ->label('Recibo de Agua')
                                         ->required()
@@ -433,7 +465,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                                 ])
                                 ->collapsible(),
                         ]),
-
+                        
                     Grid::make(1)
                         ->schema([
                             Checkbox::make('documents_validated')
@@ -451,7 +483,7 @@ class ManageAgreementDocuments extends Page implements HasForms
                 ])
         ];
     }
-
+    
     // PASO 3: Cierre Exitoso
     private function getStepThreeSchema(): array
     {
@@ -462,42 +494,44 @@ class ManageAgreementDocuments extends Page implements HasForms
                     Placeholder::make('completion_summary')
                         ->label('🎉 Convenio Completado Exitosamente')
                         ->content('El convenio ha sido finalizado exitosamente. El proceso de gestión documental está completo.'),
-
+                        
                     Grid::make(3)
                         ->schema([
                             Placeholder::make('completion_date')
                                 ->label('Fecha de Finalización')
                                 ->content($this->agreement->completed_at?->format('d/m/Y H:i') ?? 'En proceso'),
-
+                                
                             Placeholder::make('total_documents')
                                 ->label('Documentos Generados')
                                 ->content($this->agreement->generatedDocuments->count() . ' PDFs'),
-
+                                
                             Placeholder::make('final_status')
                                 ->label('Estado Final')
                                 ->content('✅ Completado')
                         ]),
-
-                    Placeholder::make('final_actions')
+                        
+                    Placeholder::make('final_actions_css')
                         ->label('')
-                        ->content(new HtmlString('
-                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button wire:click="downloadAllDocuments"
-                                        class="inline-flex items-center px-6 py-3 bg-primary-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-primary-700 focus:bg-primary-700 active:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        ->content('<div class="text-center space-y-4">
+                            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                                <button wire:click="downloadAllDocuments" 
+                                        class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg">
                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                     📦 Descargar Todos los Documentos
                                 </button>
-                                <button wire:click="generateFinalReport"
-                                        class="inline-flex items-center px-6 py-3 bg-gray-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                <button wire:click="generateFinalReport" 
+                                        class="inline-flex items-center px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors shadow-lg">
                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                     📊 Generar Reporte Final
                                 </button>
                             </div>
-                        ')),
+                            <p class="text-sm text-gray-600">El convenio ha sido completado exitosamente. Todos los documentos están disponibles.</p>
+                        </div>')
+                        ->html(),
                 ])
         ];
     }
@@ -505,57 +539,77 @@ class ManageAgreementDocuments extends Page implements HasForms
     private function getDocumentFields(): array
     {
         $documentSections = [];
-
+    
+        // Definimos un color temático en HEX para consistencia. Usamos un verde/lima llamativo.
+        $color_bg = '#84CC16'; // Lima (lime-500)
+        $color_hover = '#65A30D'; // Lima oscuro (lime-600)
+        $color_text = '#1F2937'; // Gris oscuro (gray-800)
+    
         foreach ($this->agreement->generatedDocuments as $document) {
-            $documentSections[] = Section::make('📄 ' . $document->formatted_type)
-                ->description('Documento PDF generado')
-                ->schema([
-                    Grid::make(2)
-                        ->schema([
-                            Placeholder::make('doc_info_' . $document->id)
-                                ->label('Información')
-                                ->content(function () use ($document) {
-                                    $size = $document->file_size ?
-                                        number_format($document->file_size / 1024, 1) . ' KB' :
-                                        'Tamaño no disponible';
-                                    $created = $document->created_at->format('d/m/Y H:i');
-                                    return "Tamaño: {$size}<br>Creado: {$created}";
-                                })
-                                ->html(),
-
-                            Placeholder::make('document_actions_' . $document->id)
-                                ->label('')
-                                ->content(function () use ($document) {
-                                    $downloadUrl = route('documents.download', ['document' => $document->id]);
-
-                                    return new HtmlString('
-                                        <div class="flex gap-2">
-                                            <a href="' . $downloadUrl . '"
-                                               target="_blank"
-                                               class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                </svg>
-                                                👁️ Ver PDF
-                                            </a>
-                                            <button wire:click="downloadDocument(' . $document->id . ')"
-                                                    class="inline-flex items-center px-4 py-2 bg-primary-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-primary-700 focus:bg-primary-700 active:bg-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                                </svg>
-                                                📄 Descargar
-                                            </button>
-                                        </div>
-                                    ');
-                                })
-                        ])
-                ])
-                ->collapsible()
-                ->collapsed(false);
+            $documentSections[] = Section::make($document->formatted_type) // Eliminamos el emoji 📄
+                    ->icon('heroicon-o-document-check') // Usamos el icono oficial de Heroicons
+                    ->iconColor('success') // Le damos un color llamativo (verde)
+                    ->description('Documento PDF generado')
+                    ->schema([
+                        // Se usa un Grid de 1 columna para mostrar el botón de descarga.
+                        Grid::make(1) 
+                            ->schema([
+                                // Eliminamos el Placeholder de información y dejamos solo la acción.
+    
+                                Placeholder::make('document_actions_' . $document->id)
+                                    ->label('Documento') // Etiqueta solicitada
+                                    ->content(function () use ($document, $color_bg, $color_hover, $color_text) {
+                                        $downloadUrl = route('documents.download', ['document' => $document->id]);
+    
+                                        // Botón con estilos INLINE para asegurar compatibilidad si Tailwind falla.
+                                        // Se usa justify-content: flex-start para alinear a la izquierda.
+                                        return new HtmlString('
+                                            <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; height: 100%;">
+                                                <a href="' . $downloadUrl . '"
+                                                    target="_blank"
+                                                    style="
+                                                        display: inline-flex; 
+                                                        align-items: center; 
+                                                        padding: 10px 16px; 
+                                                        background-color: ' . $color_bg . '; 
+                                                        color: ' . $color_text . '; 
+                                                        border: none;
+                                                        border-radius: 8px; 
+                                                        font-weight: 600; 
+                                                        font-size: 12px;
+                                                        text-transform: uppercase;
+                                                        text-decoration: none;
+                                                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                                        transition: background-color 0.15s ease-in-out;
+                                                    "
+                                                    onmouseover="this.style.backgroundColor=\'' . $color_hover . '\';"
+                                                    onmouseout="this.style.backgroundColor=\'' . $color_bg . '\';"
+                                                >
+                                                    <!-- Icono SVG de Heroicons: arrow-down-tray (Descarga) -->
+                                                    <svg style="width: 16px; height: 16px; margin-right: 6px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0 4.5-4.5m-4.5 4.5V3" />
+                                                    </svg>
+                                                    Descargar
+                                                </a>
+                                            </div>
+                                        ');
+                                    })
+                                    // Aseguramos que el Placeholder de la acción ocupe 1 columna
+                                    ->columnSpanFull(), // Al usar Grid::make(1), columnSpanFull es la opción más segura.
+                            ])
+                            // Las celdas internas de información y acción ocupan la mitad de la sección.
+                            ->columnSpanFull(), 
+                    ])
+                    ->collapsible()
+                    ->collapsed(false);
         }
-
-        return $documentSections;
+    
+        // RETORNAMOS UN ÚNICO GRID DE 2 COLUMNAS QUE CONTIENE TODAS LAS SECCIONES.
+        return [
+            Grid::make(2) // <--- ESTO FUERZA EL LAYOUT EXTERNO DE 2 COLUMNAS
+                ->schema($documentSections)
+                ->columnSpanFull(), // Asegura que el Grid principal use todo el ancho
+        ];
     }
 
     // Métodos auxiliares

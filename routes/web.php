@@ -22,8 +22,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
     
     // Rutas para el sistema de dos wizards
-    Route::get('/admin/manage-agreement-documents/{agreement}', \App\Filament\Pages\ManageAgreementDocuments::class)
-        ->name('manage-agreement-documents');
+    // NOTA: La gestión de documentos ahora se maneja a través de ManageDocuments.php
+    // Route::get('/admin/manage-agreement-documents/{agreement}', \App\Filament\Pages\ManageAgreementDocuments::class)
+    //     ->name('manage-agreement-documents');
     
     // Rutas seguras para documentos
     Route::get('/secure/generated/{document}', [App\Http\Controllers\SecureDocumentController::class, 'serveGeneratedDocument'])

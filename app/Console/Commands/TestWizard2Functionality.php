@@ -157,8 +157,8 @@ class TestWizard2Functionality extends Command
     {
         $this->info('🔗 Verificando rutas...');
         
-        // Verificar ruta principal del Wizard 2
-        $wizard2Url = "/admin/manage-agreement-documents/{$agreement->id}";
+        // Verificar ruta principal del Wizard 2 (nueva página migrada)
+        $wizard2Url = "/admin/manage-documents/{$agreement->id}";
         $this->info("✅ Ruta Wizard 2: {$wizard2Url}");
         
         // Verificar rutas de descarga
