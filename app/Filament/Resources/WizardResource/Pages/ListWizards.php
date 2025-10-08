@@ -18,7 +18,7 @@ class ListWizards extends ListRecords
                 ->label('Nuevo Convenio Wizard')
                 ->icon('heroicon-o-plus')
                 ->color('primary')
-                ->url('/admin/create-agreement-wizard')
+                ->url('/admin/convenios/crear')
                 ->keyBindings(['cmd+n', 'ctrl+n']),
         ];
     }

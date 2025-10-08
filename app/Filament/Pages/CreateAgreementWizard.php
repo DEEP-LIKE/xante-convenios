@@ -1,24 +1,21 @@
 <?php
 
+
 namespace App\Filament\Pages;
 
 use Filament\Pages\Page;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Components\Wizard;
-use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ConfigurationCalculator;
-use App\Services\PdfGenerationService;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -28,6 +25,11 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Checkbox;
 use App\Jobs\GenerateAgreementDocumentsJob;
 use Illuminate\Support\HtmlString;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Wizard;
+use Filament\Schemas\Components\Wizard\Step;
+use App\Services\PdfGenerationService;
 
 use BackedEnum;
 
