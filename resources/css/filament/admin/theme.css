@@ -1,112 +1,124 @@
-@import '/vendor/filament/filament/resources/css/theme.css';
+/* ========================================
+   IDENTIDAD GRÁFICA XANTE - FUENTES
+   ======================================== */
 
-/* Estilos específicos para el wizard */
-.fi-wizard-container {
-    @apply space-y-6;
+/* Franie - Fuente Corporativa Principal */
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-Hair.woff2') format('woff2'),
+         url('/fonts/franie/Franie-Hair.woff') format('woff');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-wizard {
-    @apply space-y-6;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-ExtraLight.woff2') format('woff2'),
+         url('/fonts/franie/Franie-ExtraLight.woff') format('woff');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-wizard-step {
-    @apply relative;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-Light.woff2') format('woff2'),
+         url('/fonts/franie/Franie-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-wizard-step-indicator {
-    @apply flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-sm font-medium text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-Regular.woff2') format('woff2'),
+         url('/fonts/franie/Franie-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-wizard-step-indicator.active {
-    @apply border-primary-600 bg-primary-600 text-white dark:border-primary-500 dark:bg-primary-500;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-SemiBold.woff2') format('woff2'),
+         url('/fonts/franie/Franie-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-wizard-step-indicator.completed {
-    @apply border-green-600 bg-green-600 text-white;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-Bold.woff2') format('woff2'),
+         url('/fonts/franie/Franie-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
 }
 
-/* Botones de navegación del wizard */
-.fi-wizard-navigation {
-    @apply flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-ExtraBold.woff2') format('woff2'),
+         url('/fonts/franie/Franie-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-wizard-actions {
-    @apply flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700;
+@font-face {
+    font-family: 'Franie';
+    src: url('/fonts/franie/Franie-Black.woff2') format('woff2'),
+         url('/fonts/franie/Franie-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
 }
 
-/* Barra de progreso personalizada */
-.fi-progress-bar {
-    @apply w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700;
+/* Bitcheese - Fuente para Logos y Títulos Destacados */
+@font-face {
+    font-family: 'Bitcheese';
+    src: url('/fonts/bitcheese/Bitcheese.woff2') format('woff2'),
+         url('/fonts/bitcheese/Bitcheese.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
 }
 
-.fi-progress-fill {
-    @apply h-2 rounded-full transition-all duration-300 bg-primary-600;
-}
-
-/* Estilos para las acciones de tabla */
-.fi-ta-actions {
-    @apply flex items-center gap-1;
-}
-
-/* Mejoras visuales para el wizard */
-.fi-fo-wizard .fi-fo-wizard-header {
-    @apply mb-6;
-}
-
-.fi-fo-wizard .fi-fo-wizard-steps {
-    @apply flex items-center justify-between mb-8;
-}
-
-.fi-fo-wizard .fi-fo-wizard-step {
-    @apply flex items-center;
-}
-
-.fi-fo-wizard .fi-fo-wizard-step:not(:last-child)::after {
-    @apply content-[''] flex-1 h-0.5 bg-gray-200 dark:bg-gray-700 mx-4;
-}
-
-.fi-fo-wizard .fi-fo-wizard-step.completed::after {
-    @apply bg-green-500;
-}
-
-.fi-fo-wizard .fi-fo-wizard-step.active::after {
-    @apply bg-primary-500;
-}
-
-/* Responsive design para el wizard */
-@media (max-width: 768px) {
-    .fi-wizard-navigation {
-        @apply flex-col space-y-3;
-    }
+/* Variables CSS de Xante */
+:root {
+    --font-sans: 'Franie', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Bitcheese', sans-serif;
     
-    .fi-wizard-actions {
-        @apply flex-col space-y-3 space-x-0;
-    }
+    /* Colores corporativos Xante */
+    --xante-purple: #6C2582;
+    --xante-green: #BDCE0F;
+    --xante-purple-mid: #7C4794;
+    --xante-green-light: #C9D534;
+    --xante-yellow: #FFD729;
+    --xante-deep-purple: #62257D;
+    --xante-dark-blue: #342970;
+    --xante-magenta: #AD167F;
+    --xante-pink: #D63B8E;
 }
 
-/* Animaciones suaves */
-.fi-wizard-step-content {
-    @apply transition-all duration-300 ease-in-out;
+/* Aplicación global de tipografía */
+body {
+    font-family: var(--font-sans);
 }
 
-/* Estados de loading para el wizard */
-.fi-wizard-loading {
-    @apply opacity-50 pointer-events-none;
+/* Clase para títulos con Bitcheese */
+.font-bitcheese {
+    font-family: var(--font-display);
 }
 
-/* Estilos para notificaciones del wizard */
-.fi-wizard-notification {
-    @apply rounded-lg p-4 mb-4;
+/* Clase para tipografía display */
+.font-display {
+    font-family: var(--font-display);
 }
 
-.fi-wizard-notification.success {
-    @apply bg-green-50 border border-green-200 text-green-800;
-}
+/* ========================================
+   ESTILOS ADICIONALES PARA COMPONENTES
+   ======================================== */
 
-.fi-wizard-notification.error {
-    @apply bg-red-50 border border-red-200 text-red-800;
-}
-
-.fi-wizard-notification.warning {
-    @apply bg-yellow-50 border border-yellow-200 text-yellow-800;
-}
+/* Los estilos específicos del wizard son manejados por Filament */

@@ -10,6 +10,9 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use App\Filament\Widgets\StatsOverview;
@@ -32,19 +35,24 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('Xante')
             ->favicon(asset('favicon/favicon.ico'))
-            ->brandLogo(asset('images/Logo-Xante.png'))
-            ->darkModeBrandLogo(asset('images/Logo-Xante-Blanco.png'))
+            ->brandLogo(fn () => view('filament.brand.logo'))
+            ->darkModeBrandLogo(fn () => view('filament.brand.logo-dark'))
             ->brandLogoHeight('5rem')
             ->sidebarCollapsibleOnDesktop()
+            
+            // Paleta de colores corporativos de Xante
             ->colors([
-                'primary' => Color::hex('#BDCE0F'),      // Verde Xante
-                'secondary' => Color::hex('#6C2582'),    // Morado Xante  
-                'success' => Color::hex('#C9D534'),      // Verde claro Xante
+                'primary' => Color::hex('#6C2582'),      // Morado Oscuro Xante (Primary)
+                'success' => Color::hex('#BDCE0F'),      // Verde Lima Xante (Success)
                 'warning' => Color::hex('#FFD729'),      // Amarillo Xante
                 'danger' => Color::hex('#D63B8E'),       // Rosa Xante
-                'info' => Color::hex('#62257D'),         // Morado profundo Xante
-                'gray' => Color::Zinc,
+                'info' => Color::hex('#7C4794'),         // Morado Medio Xante
+                'gray' => Color::hex('#342970'),         // Azul Violeta Xante (Texto base)
             ])
+            
+            // Usar fuente del sistema por ahora para evitar problemas
+            // ->font('Franie')
+            
             ->navigationGroups([
                 NavigationGroup::make('Configuraciones')->collapsed(true),
             ])
@@ -52,8 +60,9 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
-                // AGREGAR: Página del wizard como página de Filament 4
+                // AGREGAR: Páginas del wizard como páginas de Filament 4
                 \App\Filament\Pages\CreateAgreementWizard::class,
+                \App\Filament\Pages\ManageAgreementDocuments::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

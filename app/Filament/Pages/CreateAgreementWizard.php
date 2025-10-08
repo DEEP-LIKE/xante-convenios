@@ -131,10 +131,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                 ->createOptionUsing(function (array $data) {
                                     return Client::create($data)->id;
                                 }),
-                        ])
-                        ->afterValidation(function () {
-                            $this->saveStepData(1);
-                        }),
+                        ]),
 
                     Step::make('Cliente')
                         ->description('Información personal del cliente')
@@ -385,10 +382,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                        ])
-                        ->afterValidation(function () {
-                            $this->saveStepData(2);
-                        }),
+                        ]),
                     Step::make('Propiedad')
                         ->description('Datos de la vivienda y ubicación')
                         ->icon('heroicon-o-home-modern')
@@ -452,10 +446,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                        ])
-                        ->afterValidation(function () {
-                            $this->saveStepData(3);
-                        }),
+                        ]),
                     Step::make('Calculadora')
                         ->description('Cálculos financieros del convenio')
                         ->icon('heroicon-o-calculator')
@@ -703,10 +694,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                        ])
-                        ->afterValidation(function () {
-                            $this->saveStepData(4);
-                        }),
+                        ]),
 
                     Step::make('Validación')
                         ->description('Resumen y confirmación de datos')
@@ -806,10 +794,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ->dehydrated(),
                                 ])
                                 ->columnSpanFull(),
-                        ])
-                        ->afterValidation(function () {
-                            $this->saveStepData(5);
-                        }),
+                        ]),
                 ])
                 ->submitAction(Action::make('submit')
                     ->label('Validar y Generar Documentos')

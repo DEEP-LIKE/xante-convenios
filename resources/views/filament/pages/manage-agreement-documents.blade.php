@@ -1,5 +1,7 @@
 <x-filament-panels::page>
-    {{ $this->form }}
+    <div class="max-w-4xl mx-auto">
+     {{ $this->form }}
+    </div>
     
     @push('scripts')
     <script>
