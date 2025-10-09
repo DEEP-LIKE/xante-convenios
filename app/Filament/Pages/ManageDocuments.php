@@ -12,11 +12,19 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\Grid as InfolistGrid;
 use App\Models\Agreement;
 use App\Models\Client;
+use App\Models\ClientDocument;
 use App\Models\ConfigurationCalculator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\UploadedFile;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -31,14 +39,17 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use App\Services\PdfGenerationService;
+use App\Mail\DocumentsReadyMail;
+use ZipArchive;
 
 use BackedEnum;
 
 
 
-class ManageDocuments extends Page implements HasForms
+class ManageDocuments extends Page implements HasForms, HasActions
 {
     use InteractsWithForms;
+    use InteractsWithActions;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-check';
     protected static ?string $navigationLabel = 'Gestión de Documentos';
@@ -53,13 +64,21 @@ class ManageDocuments extends Page implements HasForms
     public ?array $data = [];
 
     // Propiedades para los campos de FileUpload con ->live()
-    public $holder_id_front = null;
-    public $holder_id_back = null;
+    // DOCUMENTACIÓN TITULAR
+    public $holder_ine = null;
     public $holder_curp = null;
-    public $holder_proof_address = null;
-    public $property_deed = null;
-    public $property_tax = null;
-    public $property_water= null;
+    public $holder_fiscal_status = null;
+    public $holder_proof_address_home = null;
+    public $holder_proof_address_titular = null;
+    public $holder_birth_certificate = null;
+    public $holder_marriage_certificate = null;
+    public $holder_bank_statement = null;
+    
+    // DOCUMENTACIÓN PROPIEDAD
+    public $property_notarial_instrument = null;
+    public $property_tax_receipt = null;
+    public $property_water_receipt = null;
+    public $property_cfe_receipt = null;
     public int $currentStep = 1;
     public int $totalSteps = 3;
     private function getCurrentUrlStep(): ?int
@@ -158,19 +177,28 @@ class ManageDocuments extends Page implements HasForms
                     ->description('Generar y enviar documentos al cliente')
                     ->icon('heroicon-o-paper-airplane')
                     ->completedIcon('heroicon-o-check-circle')
-                    ->schema($this->getStepOneSchema()),
+                    ->schema($this->getStepOneSchema())
+                    ->afterValidation(function () {
+                        $this->saveStepData(1);
+                    }),
 
                 Step::make('Recepción de Documentos')
                     ->description('Recibir y validar documentos del cliente')
                     ->icon('heroicon-o-document-arrow-up')
                     ->completedIcon('heroicon-o-check-circle')
-                    ->schema($this->getStepTwoSchema()),
+                    ->schema($this->getStepTwoSchema())
+                    ->afterValidation(function () {
+                        $this->saveStepData(2);
+                    }),
 
                 Step::make('Cierre Exitoso')
                     ->description('Finalizar el proceso del convenio')
                     ->icon('heroicon-o-check-badge')
                     ->completedIcon('heroicon-o-check-circle')
-                    ->schema($this->getStepThreeSchema()),
+                    ->schema($this->getStepThreeSchema())
+                    ->afterValidation(function () {
+                        $this->saveStepData(3);
+                    }),
             ])
             ->nextAction(fn (Action $action) => $action->label('Siguiente'))
             ->previousAction(fn (Action $action) => $action->label('Anterior'))
@@ -188,6 +216,28 @@ class ManageDocuments extends Page implements HasForms
     private function getStepOneSchema(): array
     {
         return [
+            // Botones temporales para testing del Wizard 2
+            Placeholder::make('testing_buttons_wizard2')
+                ->label('🧪 Herramientas de Testing - Wizard 2')
+                ->content(new \Illuminate\Support\HtmlString('
+                    <div class="flex gap-4 justify-center mb-6">
+                        <button 
+                            type="button"
+                            wire:click="saveStepData(1)"
+                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                        >
+                            🔧 TEST: Forzar Guardado Paso 1
+                        </button>
+                        <button 
+                            type="button"
+                            wire:click="debugWizard2State"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            🔍 TEST: Debug Estado Wizard 2
+                        </button>
+                    </div>
+                ')),
+                
             Section::make('Información del Convenio')
                 ->icon('heroicon-o-document-text') // Usamos el icono oficial de Heroicons
                 ->iconColor('success') // Le damos un color llamativo (verde)
@@ -337,88 +387,39 @@ class ManageDocuments extends Page implements HasForms
                 ->schema([
                     Grid::make(2)
                         ->schema([
-                            Section::make('👤 Documentación del Titular')
+                            Section::make('👤 DOCUMENTACIÓN TITULAR')
+                                ->description('Todos los documentos son obligatorios')
                                 ->schema([
-                                    FileUpload::make('holder_id_front')
-                                        ->label('INE/IFE Frontal')
-                                        ->required()
-                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
-                                        ->maxSize(10240) // 10MB
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
-                                        ->disk('private')
-                                        ->visibility('public')
-                                        ->image() // Habilita preview de imágenes
-                                        ->loadingIndicatorPosition('center')
-                                        ->panelLayout('integrated')
-                                        ->removeUploadedFileButtonPosition('top-right')
-                                        ->uploadButtonPosition('center')
-                                        ->uploadProgressIndicatorPosition('center')
-                                        ->getUploadedFileNameForStorageUsing(function ($file) {
-                                            // Generar nombre amigable basado en el tipo de documento
-                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
-                                            return 'ine_frontal_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
-                                        })
-                                        ->live()
-                                        ->afterStateUpdated(function ($state, $component) {
-                                            if ($state) {
-                                                try {
-                                                    $this->saveClientDocument('holder_id_front', $state, 'INE/IFE Frontal', 'titular');
-                                                } catch (\Exception $e) {
-                                                    Notification::make()
-                                                        ->title('❌ Error al Guardar')
-                                                        ->body('Error: ' . $e->getMessage())
-                                                        ->danger()
-                                                        ->send();
-                                                }
-                                            } else {
-                                                // Si $state está vacío, significa que se eliminó el archivo
-                                                $this->deleteClientDocument('holder_id_front', 'titular');
-                                            }
-                                        })
-                                        ->hint('Subir imagen clara del frente de la identificación'),
-                                        
-                                    FileUpload::make('holder_id_back')
-                                        ->label('INE/IFE Reverso')
+                                    FileUpload::make('holder_ine')
+                                        ->label('1. INE (A color, tamaño original, no fotos)')
                                         ->required()
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                         ->maxSize(10240)
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
                                         ->disk('private')
-                                        ->visibility('public')
                                         ->image()
-                                        ->loadingIndicatorPosition('center')
-                                        ->panelLayout('integrated')
-                                        ->removeUploadedFileButtonPosition('top-right')
-                                        ->uploadButtonPosition('center')
-                                        ->uploadProgressIndicatorPosition('center')
+                                        ->imageEditor()
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
-                                            return 'ine_reverso_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                            return 'ine_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
                                             if ($state) {
-                                                $this->saveClientDocument('holder_id_back', $state, 'INE/IFE Reverso', 'titular');
-                                            } else {
-                                                $this->deleteClientDocument('holder_id_back', 'titular');
+                                                $this->saveClientDocument('holder_ine', $state, 'INE', 'titular');
                                             }
                                         })
-                                        ->hint('Subir imagen clara del reverso de la identificación'),
+                                        ->hint('📄 Documento privado guardado'),
                                         
                                     FileUpload::make('holder_curp')
-                                        ->label('CURP')
+                                        ->label('2. CURP (Mes corriente)')
                                         ->required()
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                         ->maxSize(10240)
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
                                         ->disk('private')
-                                        ->visibility('public')
                                         ->image()
-                                        ->loadingIndicatorPosition('center')
-                                        ->panelLayout('integrated')
-                                        ->removeUploadedFileButtonPosition('top-right')
-                                        ->uploadButtonPosition('center')
-                                        ->uploadProgressIndicatorPosition('center')
+                                        ->imageEditor()
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
                                             return 'curp_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
@@ -428,80 +429,180 @@ class ManageDocuments extends Page implements HasForms
                                             if ($state) {
                                                 $this->saveClientDocument('holder_curp', $state, 'CURP', 'titular');
                                             }
-                                        }),
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
                                         
-                                    FileUpload::make('holder_proof_address')
-                                        ->label('Comprobante de Domicilio')
+                                    FileUpload::make('holder_fiscal_status')
+                                        ->label('3. Constancia de Situación Fiscal (Mes corriente, completa)')
+                                        ->required()
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'constancia_fiscal_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_fiscal_status', $state, 'Constancia de Situación Fiscal', 'titular');
+                                            }
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
+                                        
+                                    FileUpload::make('holder_proof_address_home')
+                                        ->label('4. Comprobante de Domicilio Vivienda (Mes corriente)')
                                         ->required()
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                         ->maxSize(10240)
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/titular')
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
                                         ->disk('private')
-                                        ->visibility('public')
                                         ->image()
-                                        ->loadingIndicatorPosition('center')
-                                        ->panelLayout('integrated')
-                                        ->removeUploadedFileButtonPosition('top-right')
-                                        ->uploadButtonPosition('center')
-                                        ->uploadProgressIndicatorPosition('center')
+                                        ->imageEditor()
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
-                                            return 'comprobante_domicilio_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                            return 'comprobante_domicilio_vivienda_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
                                             if ($state) {
-                                                $this->saveClientDocument('holder_proof_address', $state, 'Comprobante de Domicilio', 'titular');
+                                                $this->saveClientDocument('holder_proof_address_home', $state, 'Comprobante de Domicilio Vivienda', 'titular');
                                             }
                                         })
-                                        ->hint('No mayor a 3 meses'),
+                                        ->hint('📄 Documento privado guardado'),
+                                        
+                                    FileUpload::make('holder_proof_address_titular')
+                                        ->label('5. Comprobante de Domicilio Titular (Mes corriente)')
+                                        ->required()
+                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
+                                        ->disk('private')
+                                        ->image()
+                                        ->imageEditor()
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'comprobante_domicilio_titular_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_proof_address_titular', $state, 'Comprobante de Domicilio Titular', 'titular');
+                                            }
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
+                                        
+                                    FileUpload::make('holder_birth_certificate')
+                                        ->label('6. Acta Nacimiento')
+                                        ->required()
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'acta_nacimiento_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_birth_certificate', $state, 'Acta Nacimiento', 'titular');
+                                            }
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
+                                        
+                                    FileUpload::make('holder_marriage_certificate')
+                                        ->label('7. Acta Matrimonio (Si aplica)')
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'acta_matrimonio_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_marriage_certificate', $state, 'Acta Matrimonio', 'titular');
+                                            }
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
+                                        
+                                    FileUpload::make('holder_bank_statement')
+                                        ->label('8. Carátula Estado de Cuenta Bancario con Datos Fiscales (Mes corriente)')
+                                        ->required()
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/titular')
+                                        ->disk('private')
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'estado_cuenta_bancario_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('holder_bank_statement', $state, 'Carátula Estado de Cuenta Bancario', 'titular');
+                                            }
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
                                 ])
                                 ->collapsible(),
                                 
-                            Section::make('🏠 Documentación de la Propiedad')
+                            Section::make('🏠 DOCUMENTACIÓN PROPIEDAD')
+                                ->description('Todos los documentos son obligatorios')
                                 ->schema([
-                                    FileUpload::make('property_deed')
-                                        ->label('Escrituras de la Propiedad')
+                                    FileUpload::make('property_notarial_instrument')
+                                        ->label('1. Instrumento Notarial con Antecedentes Registrales (Datos Registrales y Traslado de Dominio) Escaneada, visible')
                                         ->required()
-                                        ->acceptedFileTypes(['application/pdf', 'image/*'])
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/propiedad')
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/propiedad')
                                         ->disk('private')
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
-                                            return 'escrituras_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                            return 'instrumento_notarial_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
                                             if ($state) {
-                                                $this->saveClientDocument('property_deed', $state, 'Escrituras de la Propiedad', 'propiedad');
+                                                $this->saveClientDocument('property_notarial_instrument', $state, 'Instrumento Notarial', 'propiedad');
                                             }
                                         })
-                                        ->hint('Documento legal de propiedad'),
+                                        ->hint('📄 Documento privado guardado'),
                                         
-                                    FileUpload::make('property_tax')
-                                        ->label('Predial Actualizado')
+                                    FileUpload::make('property_tax_receipt')
+                                        ->label('2. Recibo predial (Mes corriente)')
                                         ->required()
-                                        ->acceptedFileTypes(['application/pdf', 'image/*'])
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/propiedad')
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/propiedad')
                                         ->disk('private')
+                                        ->image()
+                                        ->imageEditor()
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
-                                            return 'predial_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                            return 'recibo_predial_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
                                             if ($state) {
-                                                $this->saveClientDocument('property_tax', $state, 'Predial Actualizado', 'propiedad');
+                                                $this->saveClientDocument('property_tax_receipt', $state, 'Recibo Predial', 'propiedad');
                                             }
                                         })
-                                        ->hint('Comprobante de pago del predial'),
+                                        ->hint('📄 Documento privado guardado'),
                                         
-                                    FileUpload::make('property_water')
-                                        ->label('Recibo de Agua')
+                                    FileUpload::make('property_water_receipt')
+                                        ->label('3. Recibo de Agua (Mes corriente)')
                                         ->required()
-                                        ->acceptedFileTypes(['application/pdf', 'image/*'])
-                                        ->directory('convenios/' . $this->agreement->id . '/client_documents/propiedad')
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/propiedad')
                                         ->disk('private')
+                                        ->image()
+                                        ->imageEditor()
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
                                             return 'recibo_agua_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
@@ -509,10 +610,31 @@ class ManageDocuments extends Page implements HasForms
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
                                             if ($state) {
-                                                $this->saveClientDocument('property_water', $state, 'Recibo de Agua', 'propiedad');
+                                                $this->saveClientDocument('property_water_receipt', $state, 'Recibo de Agua', 'propiedad');
                                             }
                                         })
-                                        ->hint('Último recibo de agua'),
+                                        ->hint('📄 Documento privado guardado'),
+                                        
+                                    FileUpload::make('property_cfe_receipt')
+                                        ->label('4. Recibo CFE con datos fiscales (Mes corriente)')
+                                        ->required()
+                                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                        ->maxSize(10240)
+                                        ->directory('client_documents/' . $this->agreement->id . '/propiedad')
+                                        ->disk('private')
+                                        ->image()
+                                        ->imageEditor()
+                                        ->getUploadedFileNameForStorageUsing(function ($file) {
+                                            $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                                            return 'recibo_cfe_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state) {
+                                            if ($state) {
+                                                $this->saveClientDocument('property_cfe_receipt', $state, 'Recibo CFE', 'propiedad');
+                                            }
+                                        })
+                                        ->hint('📄 Documento privado guardado'),
                                 ])
                                 ->collapsible(),
                         ]),
@@ -538,103 +660,138 @@ class ManageDocuments extends Page implements HasForms
     // PASO 3: Cierre Exitoso
     private function getStepThreeSchema(): array
     {
-        // Simulamos la carga del agreement si no existe (Necesario para que el código no falle en una prueba inicial)
         $agreement = $this->agreement ?? new Agreement();
-        // Asumo que generatedDocuments es una Collection o un Array, o simulamos uno vacío.
         $documents = $agreement->generatedDocuments ?? collect();
 
-        // Colores en HEX para los botones (Lime 600, Lime 700, Gris, etc.)
-        $primaryBg = '#84CC16'; // Lime 600 (Color de fondo inicial)
-        $primaryHover = '#65A30D'; // Lime 700 (Color de fondo en hover)
-        $primaryText = '#1F2937'; // Gray 900 (Color de texto)
-        $secondaryBg = '#E5E7EB'; // Gray 200 (Color de fondo inicial)
-        $secondaryHover = '#D1D5DB'; // Gray 300 (Color de fondo en hover)
-        $secondaryText = '#4B5563'; // Gray 700 (Color de texto)
-
+        // Marcar convenio como completado al llegar a este paso
+        if ($agreement && $agreement->status !== 'completed') {
+            $agreement->update([
+                'status' => 'completed',
+                'completed_at' => now()
+            ]);
+        }
 
         return [
-            Section::make('Convenio Completado')
-                ->description('El proceso ha sido finalizado exitosamente')
-                ->icon('heroicon-o-fire') // Usamos el icono oficial de Heroicons
-                ->iconColor('success') // Le damos un color llamativo (verde)
+            Section::make('🎉 Convenio Completado Exitosamente')
+                ->description('El proceso de gestión documental ha finalizado correctamente')
                 ->schema([
-                    Placeholder::make('completion_summary')
-                        ->label('🎉 Convenio Completado Exitosamente')
-                        ->content('El convenio ha sido finalizado exitosamente. El proceso de gestión documental está completo.'),
+                    // Header celebratorio con información del convenio
+                    Placeholder::make('celebration_header')
+                        ->content(new HtmlString('
+                            <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+                                <div class="text-center">
+                                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                                        <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">¡Convenio Finalizado con Éxito!</h3>
+                                    <p class="text-gray-600">El proceso de gestión documental se ha completado correctamente.</p>
+                                </div>
+                            </div>
+                        ')),
                         
+                    // Resumen del proceso
                     Grid::make(3)
                         ->schema([
                             Placeholder::make('completion_date')
-                                ->label('Fecha de Finalización')
-                                ->content($agreement->completed_at?->format('d/m/Y H:i') ?? 'N/A'),
+                                ->label('📅 Fecha de Finalización')
+                                ->content($agreement->completed_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i')),
                                 
                             Placeholder::make('total_documents')
-                                ->label('Documentos Generados')
+                                ->label('📄 Documentos Generados')
                                 ->content($documents->count() . ' PDFs'),
                                 
-                            Placeholder::make('Descargar todos los PDF')
-                                ->label('Estado Final')
-                                ->content('✅ Completado')
+                            Placeholder::make('final_status')
+                                ->label('✅ Estado Final')
+                                ->content('Completado')
                         ]),
                         
-                    Placeholder::make('final_actions_css')
-                        ->label('Documentos generados')
-                        ->icon('heroicon-o-arrow-down-tray') // Usamos el icono oficial de Heroicons
-                        ->iconColor('success') // Le damos un color llamativo (verde)
-                        ->content('
-                            <div class="text-center space-y-4">
-                                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    // Timeline del proceso
+                    Placeholder::make('process_timeline')
+                        ->label('📋 Resumen del Proceso')
+                        ->content(new HtmlString('
+                            <div class="bg-white rounded-lg border p-4">
+                                <div class="space-y-3">
+                                    <div class="flex items-center text-sm">
+                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                                        <span class="text-gray-600">Wizard 1: Captura de información completada</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                                        <span class="text-gray-600">Documentos PDF generados automáticamente</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                                        <span class="text-gray-600">Documentos enviados al cliente</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                                        <span class="text-gray-600">Documentos del cliente recibidos y validados</span>
+                                    </div>
+                                    <div class="flex items-center text-sm">
+                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                                        <span class="text-gray-600 font-semibold">Convenio cerrado exitosamente</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ')),
+                        
+                    // Botones de acción funcionales
+                    Placeholder::make('final_actions')
+                        ->label('🔧 Acciones Disponibles')
+                        ->content(new HtmlString('
+                            <div class="bg-gray-50 rounded-xl p-6 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <!-- Descargar Todos los Documentos -->
                                     <button wire:click="downloadAllDocuments" 
-                                            class="inline-flex items-center rounded-lg font-bold transition-colors shadow-lg"
-                                            style="
-                                                display: inline-flex; 
-                                                align-items: center; 
-                                                padding: 10px 16px; 
-                                                background-color: ' . $primaryBg . '; 
-                                                color: ' . $primaryText . '; 
-                                                border: none;
-                                                border-radius: 8px; 
-                                                font-weight: 600; 
-                                                font-size: 12px;
-                                                text-transform: uppercase;
-                                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                                                transition: background-color 0.15s ease-in-out;
-                                            "
-                                            onmouseover="this.style.backgroundColor=\'' . $primaryHover . '\';"
-                                            onmouseout="this.style.backgroundColor=\'' . $primaryBg . ';\';">
-                                        <svg style="width: 16px; height: 16px; margin-right: 6px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                         </svg>
-                                        📦 Descargar Todos los Documentos
+                                        <span class="font-semibold text-sm">Descargar Todos</span>
+                                        <span class="text-xs opacity-90">los Documentos PDF</span>
                                     </button>
-                                    <button wire:click="generateFinalReport" 
-                                            class="inline-flex items-center rounded-lg font-bold transition-colors shadow-lg"
-                                            style="
-                                                display: inline-flex; 
-                                                align-items: center; 
-                                                padding: 10px 16px; 
-                                                background-color: ' . $secondaryBg . '; 
-                                                color: ' . $secondaryText . '; 
-                                                border: none;
-                                                border-radius: 8px; 
-                                                font-weight: 600; 
-                                                font-size: 12px;
-                                                text-transform: uppercase;
-                                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                                                transition: background-color 0.15s ease-in-out;
-                                            "
-                                            onmouseover="this.style.backgroundColor=\'' . $secondaryHover . '\';"
-                                            onmouseout="this.style.backgroundColor=\'' . $secondaryBg . ';\';">
-                                        <svg style="width: 16px; height: 16px; margin-right: 6px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    
+                                    <!-- Enviar Correos -->
+                                    <button wire:click="sendDocumentsToClient" 
+                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                         </svg>
-                                        📊 Generar Reporte Final
+                                        <span class="font-semibold text-sm">Enviar Correos</span>
+                                        <span class="text-xs opacity-90">Reenviar Documentos</span>
+                                    </button>
+                                    
+                                    <!-- Ver Datos del Cliente -->
+                                    <button wire:click="mountAction(\"viewClientData\")"
+                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                        <span class="font-semibold text-sm">Ver Datos</span>
+                                        <span class="text-xs opacity-90">del Cliente</span>
+                                    </button>
+                                    
+                                    <!-- Regresar a Inicio -->
+                                    <button wire:click="returnToHome" 
+                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                        </svg>
+                                        <span class="font-semibold text-sm">Regresar a Inicio</span>
+                                        <span class="text-xs opacity-90">Dashboard Principal</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-gray-600">El convenio ha sido completado exitosamente. Todos los documentos están disponibles.</p>
+                                
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-600">
+                                        <strong>¡Felicidades!</strong> El convenio se ha procesado exitosamente. 
+                                        Todos los documentos están disponibles para descarga.
+                                    </p>
+                                </div>
                             </div>
-                        ')
-                        ->html(),
+                        '))
                 ])
         ];
     }
@@ -813,7 +970,7 @@ class ManageDocuments extends Page implements HasForms
         }
     }
 
-    public function sendDocumentsToClient(): void
+    public function sendDocumentsToClient()
     {
         try {
             if ($this->agreement->generatedDocuments->isEmpty()) {
@@ -840,7 +997,7 @@ class ManageDocuments extends Page implements HasForms
                 'documents_sent_at' => now(),
             ]);
 
-            \Illuminate\Support\Facades\Mail::to($clientEmail)->send(new \App\Mail\DocumentsReadyMail($this->agreement));
+            Mail::to($clientEmail)->send(new DocumentsReadyMail($this->agreement));
 
             Notification::make()
                 ->title('📤 Documentos Enviados')
@@ -850,7 +1007,7 @@ class ManageDocuments extends Page implements HasForms
                 ->send();
 
             $this->currentStep = 2;
-            $this->redirect(request()->url());
+            return $this->redirect(request()->url());
 
         } catch (\Exception $e) {
             Notification::make()
@@ -861,7 +1018,7 @@ class ManageDocuments extends Page implements HasForms
         }
     }
 
-    public function markDocumentsReceived(): void
+    public function markDocumentsReceived()
     {
         try {
             $this->agreement->update([
@@ -879,7 +1036,7 @@ class ManageDocuments extends Page implements HasForms
                 ->send();
 
             $this->currentStep = 3;
-            $this->redirect(request()->url());
+            return $this->redirect(request()->url());
 
         } catch (\Exception $e) {
             Notification::make()
@@ -920,22 +1077,79 @@ class ManageDocuments extends Page implements HasForms
         }
     }
 
-    public function downloadAllDocuments(): void
+    public function downloadAllDocuments()
     {
-        Notification::make()
-            ->title('Función en Desarrollo')
-            ->body('La descarga masiva estará disponible próximamente')
-            ->info()
-            ->send();
+        try {
+            if (!$this->agreement) {
+                throw new \Exception('No se encontró el convenio');
+            }
+
+            $documents = $this->agreement->generatedDocuments;
+            
+            if ($documents->isEmpty()) {
+                Notification::make()
+                    ->title('Sin Documentos')
+                    ->body('No hay documentos generados para descargar')
+                    ->warning()
+                    ->send();
+                return;
+            }
+
+            // Crear un ZIP con todos los documentos
+            $zipFileName = 'convenio_' . $this->agreement->id . '_documentos_' . now()->format('Y-m-d') . '.zip';
+            $zipPath = storage_path('app/temp/' . $zipFileName);
+            
+            // Crear directorio temporal si no existe
+            if (!file_exists(dirname($zipPath))) {
+                mkdir(dirname($zipPath), 0755, true);
+            }
+
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+                foreach ($documents as $document) {
+                    $filePath = Storage::disk('private')->path($document->file_path);
+                    if (file_exists($filePath)) {
+                        $zip->addFile($filePath, $document->document_name . '.pdf');
+                    }
+                }
+                $zip->close();
+
+                Notification::make()
+                    ->title('📦 Descarga Iniciada')
+                    ->body('Se han preparado ' . $documents->count() . ' documentos para descarga')
+                    ->success()
+                    ->send();
+
+                // Descargar el archivo
+                return response()->download($zipPath, $zipFileName)->deleteFileAfterSend();
+            } else {
+                throw new \Exception('No se pudo crear el archivo ZIP');
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error downloading all documents', [
+                'agreement_id' => $this->agreement->id ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+
+            Notification::make()
+                ->title('❌ Error en Descarga')
+                ->body('Error al preparar la descarga: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
-    public function generateFinalReport(): void
+    public function returnToHome()
     {
         Notification::make()
-            ->title('Función en Desarrollo')
-            ->body('El reporte final estará disponible próximamente')
-            ->info()
+            ->title('🏠 Regresando al Inicio')
+            ->body('Redirigiendo al dashboard principal...')
+            ->success()
             ->send();
+
+        // Redirigir al dashboard principal
+        return $this->redirect('/admin');
     }
 
     private function saveClientDocument(string $fieldName, $filePath, string $documentName, string $category): void
@@ -950,13 +1164,18 @@ class ManageDocuments extends Page implements HasForms
             ]);
 
             $documentTypeMap = [
-                'holder_id_front' => 'titular_ine_frontal',
-                'holder_id_back' => 'titular_ine_reverso',
+                'holder_ine' => 'titular_ine',
                 'holder_curp' => 'titular_curp',
-                'holder_proof_address' => 'titular_comprobante_domicilio',
-                'property_deed' => 'propiedad_instrumento_notarial',
-                'property_tax' => 'propiedad_recibo_predial',
-                'property_water' => 'propiedad_recibo_agua',
+                'holder_fiscal_status' => 'titular_constancia_fiscal',
+                'holder_proof_address_home' => 'titular_comprobante_domicilio_vivienda',
+                'holder_proof_address_titular' => 'titular_comprobante_domicilio_titular',
+                'holder_birth_certificate' => 'titular_acta_nacimiento',
+                'holder_marriage_certificate' => 'titular_acta_matrimonio',
+                'holder_bank_statement' => 'titular_estado_cuenta_bancario',
+                'property_notarial_instrument' => 'propiedad_instrumento_notarial',
+                'property_tax_receipt' => 'propiedad_recibo_predial',
+                'property_water_receipt' => 'propiedad_recibo_agua',
+                'property_cfe_receipt' => 'propiedad_recibo_cfe',
             ];
 
             $documentType = $documentTypeMap[$fieldName] ?? $fieldName;
@@ -1005,8 +1224,18 @@ class ManageDocuments extends Page implements HasForms
                 $fileName = $documentName . '_' . time() . '.' . $extension;
             }
 
-            // Aquí iría la lógica para guardar en la base de datos
-            // Por ahora solo logueamos el éxito
+            // Guardar en la base de datos
+            ClientDocument::create([
+                'agreement_id' => $this->agreement->id,
+                'document_type' => $documentType,
+                'document_name' => $documentName,
+                'file_path' => $finalFilePath,
+                'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'category' => $category,
+                'uploaded_at' => now(),
+            ]);
+
             Log::info('Documento guardado exitosamente', [
                 'file_path' => $finalFilePath,
                 'file_name' => $fileName,
@@ -1038,6 +1267,167 @@ class ManageDocuments extends Page implements HasForms
     {
         Log::info('Cargando documentos existentes', [
             'agreement_id' => $this->agreement->id
+        ]);
+    }
+
+    /**
+     * Método mejorado de guardado automático para Wizard 2
+     */
+    public function saveStepData(int $step): void
+    {
+        try {
+            // Logging muy visible para debug
+            \Log::emergency("🔥 ManageDocuments::saveStepData - EJECUTÁNDOSE", [
+                'step' => $step,
+                'agreementId' => $this->agreement?->id,
+                'timestamp' => now()->format('Y-m-d H:i:s')
+            ]);
+            
+            // También mostrar notificación inmediata para debug
+            Notification::make()
+                ->title("🔥 DEBUG: Wizard 2 saveStepData ejecutándose")
+                ->body("Paso: {$step} | Agreement: {$this->agreement?->id}")
+                ->warning()
+                ->duration(8000)
+                ->send();
+            
+            if (!$this->agreement) {
+                \Log::error('ManageDocuments: No se encontró agreement en saveStepData');
+                return;
+            }
+
+            // CRÍTICO: Obtener datos sin validación para evitar errores de campos obligatorios
+            try {
+                $formData = $this->form->getRawState();
+            } catch (\Exception $e) {
+                // Si falla getRawState(), usar los datos actuales
+                \Log::warning("ManageDocuments::saveStepData - Error al obtener datos del formulario", [
+                    'error' => $e->getMessage(),
+                    'step' => $step
+                ]);
+                $formData = $this->data ?? [];
+            }
+            
+            // Actualizar $this->data con los datos del formulario
+            $this->data = array_merge($this->data ?? [], $formData);
+            
+            \Log::info("ManageDocuments::saveStepData - Datos del formulario obtenidos", [
+                'formDataKeys' => array_keys($formData),
+                'dataKeys' => array_keys($this->data)
+            ]);
+
+            // Actualizar datos del convenio con manejo de errores
+            try {
+                $updated = $this->agreement->update([
+                    'current_wizard' => 2,
+                    'wizard_data' => array_merge($this->agreement->wizard_data ?? [], $this->data),
+                    'updated_at' => now(),
+                ]);
+                
+                \Log::info("ManageDocuments::saveStepData - Actualización exitosa", [
+                    'step' => $step,
+                    'agreementId' => $this->agreement->id,
+                    'dataCount' => count($this->data)
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error("ManageDocuments::saveStepData - Error en actualización BD", [
+                    'error' => $e->getMessage(),
+                    'step' => $step,
+                    'agreementId' => $this->agreement->id
+                ]);
+                
+                Notification::make()
+                    ->title('⚠️ Error de guardado')
+                    ->body('Error al guardar en BD: ' . $e->getMessage())
+                    ->danger()
+                    ->duration(8000)
+                    ->send();
+                return;
+            }
+
+            // Mostrar notificación de guardado automático
+            if ($step >= 1) {
+                Notification::make()
+                    ->title('✅ Wizard 2 - Guardado exitoso')
+                    ->body("Paso {$step} guardado correctamente con " . count($this->data) . " campos")
+                    ->success()
+                    ->duration(4000)
+                    ->send();
+                    
+                \Log::info("ManageDocuments::saveStepData - GUARDADO EXITOSO", [
+                    'step' => $step,
+                    'agreementId' => $this->agreement->id,
+                    'fieldsCount' => count($this->data)
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error("ManageDocuments::saveStepData - Error general", [
+                'step' => $step,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            Notification::make()
+                ->title('Error inesperado')
+                ->body('Error en saveStepData: ' . $e->getMessage())
+                ->danger()
+                ->duration(8000)
+                ->send();
+        }
+    }
+
+    /**
+     * Método de debug para Wizard 2
+     */
+    public function debugWizard2State(): void
+    {
+        $debugInfo = [
+            'agreementId' => $this->agreement?->id,
+            'agreementStatus' => $this->agreement?->status,
+            'currentWizard' => $this->agreement?->current_wizard,
+            'dataKeys' => array_keys($this->data ?? []),
+            'url' => request()->url(),
+            'queryParams' => request()->query(),
+            'generatedDocuments' => $this->agreement?->generatedDocuments?->count() ?? 0,
+            'clientDocuments' => $this->agreement?->clientDocuments?->count() ?? 0,
+        ];
+
+        \Log::info("ManageDocuments::debugWizard2State", $debugInfo);
+
+        Notification::make()
+            ->title('🔍 DEBUG: Estado del Wizard 2')
+            ->body("Agreement: {$this->agreement?->id} | Status: {$this->agreement?->status} | Docs: {$debugInfo['generatedDocuments']}")
+            ->info()
+            ->duration(8000)
+            ->send();
+    }
+
+    protected function getActions(): array
+    {
+        return [
+            Action::make('viewClientData')
+                ->label('Ver Datos del Cliente')
+                ->icon('heroicon-o-user')
+                ->color('primary')
+                ->modalHeading('Datos Completos del Cliente')
+                ->modalDescription('Información detallada del convenio')
+                ->modalContent(fn () => $this->getClientDataModalContent())
+                ->modalWidth('7xl')
+                ->visible(fn () => $this->agreement && $this->agreement->wizard_data),
+        ];
+    }
+
+    protected function getClientDataModalContent()
+    {
+        if (!$this->agreement || !$this->agreement->wizard_data) {
+            return view('components.no-data-available');
+        }
+
+        return view('components.client-data-modal-content', [
+            'agreement' => $this->agreement,
+            'data' => $this->agreement->wizard_data
         ]);
     }
 }

@@ -13,6 +13,8 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Tables\Actions\HeaderAction;
+use Illuminate\Support\Facades\Artisan;
 
 
 
@@ -37,13 +39,24 @@ class WizardResource extends Resource
                 TextColumn::make('client_name')
                     ->label('Cliente')
                     ->getStateUsing(function (Agreement $record) {
+                        // 1. Buscar en la relación client
                         if ($record->client && $record->client->name) {
                             return $record->client->name;
                         }
                         
+                        // 2. Buscar en el campo directo holder_name
+                        if (!empty($record->holder_name)) {
+                            return $record->holder_name;
+                        }
+                        
+                        // 3. Buscar en wizard_data
                         $wizardData = $record->wizard_data ?? [];
                         if (!empty($wizardData['holder_name'])) {
                             return $wizardData['holder_name'];
+                        }
+                        // 4. Buscar en otros campos de wizard_data
+                        if (!empty($wizardData['name'])) {
+                            return $wizardData['name'];
                         }
                         
                         return 'Pendiente';
@@ -54,18 +67,23 @@ class WizardResource extends Resource
                 TextColumn::make('xante_id')
                     ->label('ID Xante')
                     ->getStateUsing(function (Agreement $record) {
-                        // Primero buscar en la relación client
+                        // 1. Buscar en la relación client
                         if ($record->client && $record->client->xante_id) {
                             return $record->client->xante_id;
                         }
                         
-                        // Luego buscar en wizard_data
+                        // 2. Buscar en client_xante_id directo
+                        if (!empty($record->client_xante_id)) {
+                            return $record->client_xante_id;
+                        }
+                        
+                        // 3. Buscar en wizard_data
                         $wizardData = $record->wizard_data ?? [];
                         if (!empty($wizardData['xante_id'])) {
                             return $wizardData['xante_id'];
                         }
                         
-                        // Si no hay ID, mostrar "Sin asignar" en color claro
+                        // Si no hay ID, mostrar "Sin asignar"
                         return 'Sin asignar';
                     })
                     ->color(function (Agreement $record) {
@@ -204,7 +222,9 @@ class WizardResource extends Resource
             ->actions([
                 // Botón único que se adapta al wizard actual
                 Action::make('continue')
-                    ->label('Continuar')
+                    ->label(fn (Agreement $record): string => 
+                        $record->status === 'completed' ? 'Ver' : 'Continuar'
+                    )
                     ->icon(fn (Agreement $record): string => 
                         $record->status === 'completed' ? 'heroicon-o-eye' : 'heroicon-o-play'
                     )

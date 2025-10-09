@@ -1,0 +1,123 @@
+/* Estilos personalizados para inputs con datos - Colores Xante */
+
+/* Input con datos - fondo verde claro Xante */
+.fi-input:not(:placeholder-shown),
+.fi-input[value]:not([value=""]),
+.fi-select select:not([value=""]),
+.fi-textarea textarea:not(:placeholder-shown) {
+    background-color: rgba(189, 206, 15, 0.08) !important; /* Verde Xante muy claro */
+    border-color: rgba(189, 206, 15, 0.3) !important; /* Borde verde Xante */
+}
+
+/* Input con datos en focus */
+.fi-input:not(:placeholder-shown):focus,
+.fi-input[value]:not([value=""]):focus,
+.fi-select select:not([value=""]):focus,
+.fi-textarea textarea:not(:placeholder-shown):focus {
+    background-color: rgba(189, 206, 15, 0.12) !important;
+    border-color: #BDCE0F !important; /* Verde Xante completo */
+    box-shadow: 0 0 0 1px rgba(189, 206, 15, 0.2) !important;
+}
+
+/* Input vacío - fondo blanco normal */
+.fi-input:placeholder-shown,
+.fi-input:not([value]),
+.fi-input[value=""],
+.fi-select select[value=""],
+.fi-textarea textarea:placeholder-shown {
+    background-color: white !important;
+    border-color: rgb(209, 213, 219) !important; /* Gris normal de Filament */
+}
+
+/* Estilos específicos para diferentes tipos de input */
+input[type="text"]:not(:placeholder-shown),
+input[type="email"]:not(:placeholder-shown),
+input[type="tel"]:not(:placeholder-shown),
+input[type="number"]:not(:placeholder-shown),
+input[type="date"]:not(:placeholder-shown),
+select:not([value=""]),
+textarea:not(:placeholder-shown) {
+    background-color: rgba(189, 206, 15, 0.08) !important;
+    border-color: rgba(189, 206, 15, 0.3) !important;
+}
+
+/* Estilos para inputs deshabilitados con datos */
+.fi-input:disabled:not(:placeholder-shown),
+.fi-input:disabled[value]:not([value=""]) {
+    background-color: rgba(189, 206, 15, 0.05) !important;
+    border-color: rgba(189, 206, 15, 0.2) !important;
+    color: rgba(108, 37, 130, 0.8) !important; /* Morado Xante para texto */
+}
+
+/* Estilos para campos calculados (colores distintivos) */
+.calculated-field {
+    background-color: rgba(124, 71, 148, 0.08) !important; /* Morado medio Xante */
+    border-color: rgba(124, 71, 148, 0.3) !important;
+}
+
+.calculated-field:focus {
+    background-color: rgba(124, 71, 148, 0.12) !important;
+    border-color: #7C4794 !important;
+    box-shadow: 0 0 0 1px rgba(124, 71, 148, 0.2) !important;
+}
+
+/* Estilos para campos de solo lectura */
+.readonly-field {
+    background-color: rgba(52, 41, 112, 0.05) !important; /* Azul violeta Xante muy claro */
+    border-color: rgba(52, 41, 112, 0.2) !important;
+    color: rgba(52, 41, 112, 0.9) !important;
+}
+
+/* Autocomplete de Chrome - override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgba(189, 206, 15, 0.08) inset !important;
+    -webkit-text-fill-color: rgba(52, 41, 112, 1) !important;
+    border-color: rgba(189, 206, 15, 0.3) !important;
+}
+
+/* Estilos para selects con opciones seleccionadas */
+.fi-select select option:checked {
+    background-color: rgba(189, 206, 15, 0.2) !important;
+    color: #342970 !important; /* Azul violeta Xante */
+}
+
+/* Placeholder mejorado */
+.fi-input::placeholder,
+.fi-textarea textarea::placeholder {
+    color: rgba(52, 41, 112, 0.5) !important; /* Azul violeta Xante claro */
+    font-style: italic;
+}
+
+/* Estilos para checkboxes y radios */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    background-color: #BDCE0F !important; /* Verde Xante */
+    border-color: #BDCE0F !important;
+}
+
+/* Estilos para file inputs */
+input[type="file"]:not(:placeholder-shown) {
+    background-color: rgba(189, 206, 15, 0.08) !important;
+    border-color: rgba(189, 206, 15, 0.3) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .fi-input:not(:placeholder-shown),
+    .fi-input[value]:not([value=""]) {
+        background-color: rgba(189, 206, 15, 0.06) !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .fi-input:not(:placeholder-shown),
+    .fi-input[value]:not([value=""]) {
+        background-color: rgba(189, 206, 15, 0.15) !important;
+        border-color: rgba(189, 206, 15, 0.4) !important;
+        color: white !important;
+    }
+}

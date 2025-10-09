@@ -2,6 +2,9 @@
     <div class="max-w-4xl mx-auto">
         {{ $this->form }}
     </div>
+    
+    <!-- Componente de Loading Xante -->
+    @livewire('xante-loading')
 
     @push('scripts')
     <script>
@@ -11,8 +14,13 @@
                 if (data && data.agreement) {
                     // Actualizar la URL sin recargar la página
                     const url = new URL(window.location);
+                    
+                    // Remover client_id si existe y agregar agreement
+                    url.searchParams.delete('client_id');
                     url.searchParams.set('agreement', data.agreement);
-                    window.history.pushState({}, '', url);
+                    
+                    // Actualizar la URL
+                    window.history.replaceState({}, '', url);
                     
                     console.log('URL actualizada con agreement ID:', data.agreement);
                 }

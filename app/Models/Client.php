@@ -76,6 +76,12 @@ class Client extends Model
     
     public function latestAgreement()
     {
-        return $this->hasOne(Agreement::class, 'client_xante_id', 'xante_id')->latest();
+        return $this->hasOne(Agreement::class, 'client_xante_id', 'xante_id')
+            ->latest('created_at');
+    }
+
+    public function getAgreementStatusAttribute(): string
+    {
+        return $this->latestAgreement?->status ?? 'sin_convenio';
     }
 }

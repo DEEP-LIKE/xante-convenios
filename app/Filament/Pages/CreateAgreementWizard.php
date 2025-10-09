@@ -50,15 +50,28 @@ class CreateAgreementWizard extends Page implements HasForms
     public ?int $agreementId = null;
     public int $currentStep = 1;
     public int $totalSteps = 5;
+    
+    protected $listeners = [
+        'stepChanged' => 'handleStepChange',
+    ];
 
     public function mount(?int $agreement = null): void
     {
         // Intentar obtener el agreement desde parámetro o query string
         $agreementId = $agreement ?? request()->get('agreement');
         
+        // Verificar si viene un client_id para preseleccionar
+        $clientId = request()->get('client_id');
+        
         if ($agreementId) {
             $this->agreementId = $agreementId;
             $agreementModel = Agreement::findOrFail($agreementId);
+            
+            \Log::info("CreateAgreementWizard::mount - Cargando convenio existente", [
+                'agreementId' => $agreementId,
+                'current_step_db' => $agreementModel->current_step,
+                'wizard_data_keys' => array_keys($agreementModel->wizard_data ?? [])
+            ]);
             
             // Cargar datos del wizard_data
             $this->data = $agreementModel->wizard_data ?? [];
@@ -69,15 +82,27 @@ class CreateAgreementWizard extends Page implements HasForms
             // Cargar el paso actual donde se quedó el usuario
             $this->currentStep = $agreementModel->current_step ?? 1;
             
+            \Log::info("CreateAgreementWizard::mount - Paso actual configurado", [
+                'currentStep' => $this->currentStep
+            ]);
+            
             // Llenar el formulario con los datos cargados
             $this->form->fill($this->data);
             
             // Notificar al usuario que se cargaron los datos
             Notification::make()
-                ->title('Datos cargados')
+                ->title('✅ Datos cargados')
                 ->body("Continuando desde el paso {$this->currentStep}: " . $agreementModel->getCurrentStepName())
                 ->success()
                 ->duration(5000)
+                ->send();
+                
+            // Debug: Mostrar estado actual
+            Notification::make()
+                ->title('🔍 DEBUG: Estado del Wizard')
+                ->body("Agreement ID: {$this->agreementId} | Paso: {$this->currentStep} | Datos: " . count($this->data) . " campos")
+                ->info()
+                ->duration(8000)
                 ->send();
         } else {
             // Crear nuevo convenio
@@ -88,7 +113,43 @@ class CreateAgreementWizard extends Page implements HasForms
             ]);
             $this->agreementId = $newAgreement->id;
             $this->data = [];
-            $this->currentStep = 1;
+            
+            // Si viene un client_id, preseleccionar el cliente y saltar al paso 2
+            if ($clientId) {
+                $client = Client::where('xante_id', $clientId)->first();
+                if ($client) {
+                    // Precargar datos del cliente
+                    $this->preloadClientDataFromObject($client);
+                    
+                    // Actualizar el convenio con la relación del cliente
+                    $newAgreement->update([
+                        'client_xante_id' => $client->xante_id,
+                        'current_step' => 2,
+                        'wizard_data' => $this->data
+                    ]);
+                    
+                    // Saltar al paso 2
+                    $this->currentStep = 2;
+                    
+                    // Notificar al usuario
+                    Notification::make()
+                        ->title('Cliente preseleccionado')
+                        ->body("Cliente {$client->name} ({$client->xante_id}) seleccionado automáticamente")
+                        ->success()
+                        ->duration(5000)
+                        ->send();
+                } else {
+                    $this->currentStep = 1;
+                    
+                    Notification::make()
+                        ->title('Cliente no encontrado')
+                        ->body("No se encontró el cliente con ID: {$clientId}")
+                        ->warning()
+                        ->send();
+                }
+            } else {
+                $this->currentStep = 1;
+            }
             
             // Pre-cargar valores de configuración
             $this->loadCalculatorDefaults();
@@ -105,6 +166,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Identificación')
                         ->description('Búsqueda y selección del cliente')
                         ->icon('heroicon-o-magnifying-glass')
+                        ->afterValidation(function () {
+                            $this->saveStepData(1);
+                        })
                         ->schema([
                             TextInput::make('search_term')
                                 ->label('Buscar Cliente')
@@ -115,6 +179,28 @@ class CreateAgreementWizard extends Page implements HasForms
                                         $this->searchClient();
                                     }
                                 }),
+                                
+                            // Botones temporales para testing
+                            Placeholder::make('testing_buttons')
+                                ->label('🧪 Herramientas de Testing')
+                                ->content(new \Illuminate\Support\HtmlString('
+                                    <div class="flex gap-4 justify-center">
+                                        <button 
+                                            type="button"
+                                            wire:click="forceSave"
+                                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                                        >
+                                            🔧 TEST: Forzar Guardado
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            wire:click="debugWizardState"
+                                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                        >
+                                            🔍 TEST: Debug Estado
+                                        </button>
+                                    </div>
+                                ')),
                             Select::make('client_id')
                                 ->label('Cliente Seleccionado')
                                 ->options(Client::limit(50)->pluck('name', 'id'))
@@ -138,6 +224,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Cliente')
                         ->description('Información personal del cliente')
                         ->icon('heroicon-o-user')
+                        ->afterValidation(function () {
+                            $this->saveStepData(2);
+                        })
                         ->schema([
                             // DATOS GENERALES - FASE I
                             Section::make('DATOS GENERALES "FASE I"')
@@ -388,6 +477,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Propiedad')
                         ->description('Datos de la vivienda y ubicación')
                         ->icon('heroicon-o-home-modern')
+                        ->afterValidation(function () {
+                            $this->saveStepData(3);
+                        })
                         ->schema([
                             Section::make('INFORMACIÓN DE LA PROPIEDAD')
                                 ->description('Datos de ubicación y características de la vivienda')
@@ -421,22 +513,27 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ->schema([
                                             TextInput::make('lote')
                                                 ->label('Lote')
-                                                ->maxLength(50),
+                                                ->maxLength(50)
+                                                ->required(),
                                             TextInput::make('manzana')
                                                 ->label('Manzana')
-                                                ->maxLength(50),
+                                                ->maxLength(50)
+                                                ->required(),
                                             TextInput::make('etapa')
                                                 ->label('Etapa')
-                                                ->maxLength(50),
+                                                ->maxLength(50)
+                                                ->required(),
                                         ]),
                                     Grid::make(2)
                                         ->schema([
                                             TextInput::make('municipio_propiedad')
                                                 ->label('Municipio')
-                                                ->maxLength(100),
+                                                ->maxLength(100)
+                                                ->required(),
                                             TextInput::make('estado_propiedad')
                                                 ->label('Estado')
-                                                ->maxLength(100),
+                                                ->maxLength(100)
+                                                ->required(),
                                         ]),
                                     Grid::make(1)
                                         ->schema([
@@ -444,7 +541,8 @@ class CreateAgreementWizard extends Page implements HasForms
                                                 ->label('Fecha')
                                                 ->native(false)
                                                 ->displayFormat('d/m/Y')
-                                                ->suffixIcon(Heroicon::Calendar),
+                                                ->suffixIcon(Heroicon::Calendar)
+                                                ->required(),
                                         ]),
                                 ])
                                 ->collapsible(),
@@ -452,6 +550,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Calculadora')
                         ->description('Cálculos financieros del convenio')
                         ->icon('heroicon-o-calculator')
+                        ->afterValidation(function () {
+                            $this->saveStepData(4);
+                        })
                         ->schema([
                             // Información de la Propiedad (Precargada)
                             Section::make('INFORMACIÓN DE LA PROPIEDAD')
@@ -701,6 +802,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Validación')
                         ->description('Resumen y confirmación de datos')
                         ->icon('heroicon-o-clipboard-document-check')
+                        ->afterValidation(function () {
+                            $this->saveStepData(5);
+                        })
                         ->schema([
                             // Grid de 3 columnas para las secciones principales
                             Grid::make(3)
@@ -808,6 +912,7 @@ class CreateAgreementWizard extends Page implements HasForms
                 ->cancelAction('Cancelar')
                 ->persistStepInQueryString()
                 ->startOnStep($this->currentStep)
+                ->skippable(false)
         ];
     }
 
@@ -912,11 +1017,41 @@ class CreateAgreementWizard extends Page implements HasForms
     public function saveStepData(int $step): void
     {
         try {
-            // CRÍTICO: Obtener el estado actual del formulario antes de guardar
-            $formData = $this->form->getState();
+            // Logging muy visible para debug
+            \Log::emergency("🔥 CreateAgreementWizard::saveStepData - EJECUTÁNDOSE", [
+                'step' => $step,
+                'currentStep' => $this->currentStep,
+                'agreementId' => $this->agreementId,
+                'timestamp' => now()->format('Y-m-d H:i:s')
+            ]);
+            
+            // También mostrar notificación inmediata para debug
+            Notification::make()
+                ->title("🔥 DEBUG: saveStepData ejecutándose")
+                ->body("Paso: {$step} | Agreement: {$this->agreementId}")
+                ->warning()
+                ->duration(8000)
+                ->send();
+            
+            // CRÍTICO: Obtener datos sin validación para evitar errores de campos obligatorios
+            try {
+                $formData = $this->form->getRawState();
+            } catch (\Exception $e) {
+                // Si falla getRawState(), usar los datos actuales
+                \Log::warning("CreateAgreementWizard::saveStepData - Error al obtener datos del formulario", [
+                    'error' => $e->getMessage(),
+                    'step' => $step
+                ]);
+                $formData = $this->data ?? [];
+            }
             
             // Actualizar $this->data con los datos del formulario
             $this->data = array_merge($this->data ?? [], $formData);
+            
+            \Log::info("CreateAgreementWizard::saveStepData - Datos del formulario obtenidos", [
+                'formDataKeys' => array_keys($formData),
+                'dataKeys' => array_keys($this->data)
+            ]);
             
             if (!$this->agreementId) {
                 \Log::error('CreateAgreementWizard: No se encontró agreementId en saveStepData');
@@ -944,12 +1079,38 @@ class CreateAgreementWizard extends Page implements HasForms
                 return;
             }
             
-            // Actualizar datos del convenio
-            $updated = $agreement->update([
-                'current_step' => $step,
-                'wizard_data' => $this->data,
-                'updated_at' => now(),
-            ]);
+            // Actualizar la propiedad currentStep local
+            $this->currentStep = $step;
+            
+            // Actualizar datos del convenio con manejo de errores
+            try {
+                $updated = $agreement->update([
+                    'current_step' => $step,
+                    'wizard_data' => $this->data,
+                    'updated_at' => now(),
+                ]);
+                
+                \Log::info("CreateAgreementWizard::saveStepData - Actualización exitosa", [
+                    'step' => $step,
+                    'agreementId' => $this->agreementId,
+                    'dataCount' => count($this->data)
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error("CreateAgreementWizard::saveStepData - Error en actualización BD", [
+                    'error' => $e->getMessage(),
+                    'step' => $step,
+                    'agreementId' => $this->agreementId
+                ]);
+                
+                Notification::make()
+                    ->title('⚠️ Error de guardado')
+                    ->body('Error al guardar en BD: ' . $e->getMessage())
+                    ->danger()
+                    ->duration(8000)
+                    ->send();
+                return;
+            }
             
             if (!$updated) {
                 \Log::error("CreateAgreementWizard: Error al actualizar Agreement ID {$this->agreementId}");
@@ -974,13 +1135,17 @@ class CreateAgreementWizard extends Page implements HasForms
             // Mostrar notificación de guardado automático
             if ($step >= 1) {
                 Notification::make()
-                    ->title('✅ Progreso guardado')
-                    ->body("Paso {$step} guardado exitosamente: " . $agreement->getCurrentStepName())
+                    ->title('✅ Guardado exitoso')
+                    ->body("Paso {$step} guardado correctamente con " . count($this->data) . " campos")
                     ->success()
-                    ->duration(3000)
+                    ->duration(4000)
                     ->send();
                     
-                \Log::info("CreateAgreementWizard: Paso {$step} guardado para Agreement ID {$this->agreementId}");
+                \Log::info("CreateAgreementWizard::saveStepData - GUARDADO EXITOSO", [
+                    'step' => $step,
+                    'agreementId' => $this->agreementId,
+                    'fieldsCount' => count($this->data)
+                ]);
             }
             
             // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
@@ -1441,6 +1606,130 @@ class CreateAgreementWizard extends Page implements HasForms
         $html .= '</div>';
         
         return $html;
+    }
+    
+    public function handleStepChange($step): void
+    {
+        \Log::info("CreateAgreementWizard::handleStepChange - Listener ejecutado", [
+            'step' => $step,
+            'currentStep' => $this->currentStep
+        ]);
+        
+        if ($step >= 1) {
+            $this->saveStepData($step);
+        }
+    }
+    
+    /**
+     * Método que se ejecuta cuando se actualiza cualquier propiedad del componente
+     */
+    public function updated($propertyName)
+    {
+        // Si se actualiza el currentStep, guardar automáticamente
+        if ($propertyName === 'currentStep' && $this->currentStep >= 1) {
+            \Log::info("CreateAgreementWizard::updated - currentStep cambió", [
+                'newStep' => $this->currentStep,
+                'propertyName' => $propertyName
+            ]);
+            
+            $this->saveStepData($this->currentStep);
+        }
+    }
+    
+    /**
+     * Método para forzar guardado manual (para testing)
+     */
+    public function forceSave(): void
+    {
+        Notification::make()
+            ->title('🔧 Forzando guardado manual...')
+            ->body("Ejecutando saveStepData({$this->currentStep})")
+            ->info()
+            ->duration(3000)
+            ->send();
+            
+        $this->saveStepData($this->currentStep);
+    }
+    
+    /**
+     * Método de debug para verificar el estado del wizard
+     */
+    public function debugWizardState(): void
+    {
+        $agreement = Agreement::find($this->agreementId);
+        
+        \Log::info("CreateAgreementWizard::debugWizardState", [
+            'currentStep_local' => $this->currentStep,
+            'currentStep_db' => $agreement?->current_step,
+            'agreementId' => $this->agreementId,
+            'dataKeys' => array_keys($this->data ?? []),
+            'url' => request()->url(),
+            'queryParams' => request()->query()
+        ]);
+        
+        Notification::make()
+            ->title('🔍 Debug Wizard State')
+            ->body("Paso Local: {$this->currentStep} | Paso DB: " . ($agreement?->current_step ?? 'N/A'))
+            ->info()
+            ->duration(10000)
+            ->send();
+    }
+    
+    /**
+     * Precarga los datos del cliente desde un objeto Client directamente en $this->data
+     */
+    private function preloadClientDataFromObject(Client $client): void
+    {
+        // Datos generales
+        $this->data['xante_id'] = $client->xante_id;
+        
+        // Datos personales titular
+        $this->data['holder_name'] = $client->name;
+        $this->data['holder_birthdate'] = $client->birthdate;
+        $this->data['holder_curp'] = $client->curp;
+        $this->data['holder_rfc'] = $client->rfc;
+        $this->data['holder_email'] = $client->email;
+        $this->data['holder_phone'] = $client->phone;
+        $this->data['holder_delivery_file'] = $client->delivery_file;
+        $this->data['holder_civil_status'] = $client->civil_status;
+        $this->data['holder_regime_type'] = $client->regime_type;
+        $this->data['holder_occupation'] = $client->occupation;
+        $this->data['holder_office_phone'] = $client->office_phone;
+        $this->data['holder_additional_contact_phone'] = $client->additional_contact_phone;
+        $this->data['current_address'] = $client->current_address;
+        $this->data['holder_house_number'] = $client->house_number;
+        $this->data['neighborhood'] = $client->neighborhood;
+        $this->data['postal_code'] = $client->postal_code;
+        $this->data['municipality'] = $client->municipality;
+        $this->data['state'] = $client->state;
+        
+        // Datos cónyuge
+        $this->data['spouse_name'] = $client->spouse_name;
+        $this->data['spouse_birthdate'] = $client->spouse_birthdate;
+        $this->data['spouse_curp'] = $client->spouse_curp;
+        $this->data['spouse_rfc'] = $client->spouse_rfc;
+        $this->data['spouse_email'] = $client->spouse_email;
+        $this->data['spouse_phone'] = $client->spouse_phone;
+        $this->data['spouse_delivery_file'] = $client->spouse_delivery_file;
+        $this->data['spouse_civil_status'] = $client->spouse_civil_status;
+        $this->data['spouse_regime_type'] = $client->spouse_regime_type;
+        $this->data['spouse_occupation'] = $client->spouse_occupation;
+        $this->data['spouse_office_phone'] = $client->spouse_office_phone;
+        $this->data['spouse_additional_contact_phone'] = $client->spouse_additional_contact_phone;
+        $this->data['spouse_current_address'] = $client->spouse_current_address;
+        $this->data['spouse_house_number'] = $client->spouse_house_number;
+        $this->data['spouse_neighborhood'] = $client->spouse_neighborhood;
+        $this->data['spouse_postal_code'] = $client->spouse_postal_code;
+        $this->data['spouse_municipality'] = $client->spouse_municipality;
+        $this->data['spouse_state'] = $client->spouse_state;
+        
+        // Contactos AC/Presidente
+        $this->data['ac_name'] = $client->ac_name;
+        $this->data['ac_phone'] = $client->ac_phone;
+        $this->data['ac_quota'] = $client->ac_quota;
+        $this->data['private_president_name'] = $client->private_president_name;
+        $this->data['private_president_phone'] = $client->private_president_phone;
+        $this->data['private_president_quota'] = $client->private_president_quota;
     }
 
     public function submit(): void

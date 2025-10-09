@@ -15,7 +15,7 @@ class ListWizards extends ListRecords
     {
         return [
             Action::make('new_wizard')
-                ->label('Nuevo Convenio Wizard')
+                ->label('Nuevo Convenio')
                 ->icon('heroicon-o-plus')
                 ->color('primary')
                 ->url('/admin/convenios/crear')

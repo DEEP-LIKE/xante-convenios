@@ -13,9 +13,8 @@ use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Blade;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use App\Filament\Widgets\StatsOverview;
+use App\Filament\Widgets\AgreementsChart;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -39,6 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->darkModeBrandLogo(fn () => view('filament.brand.logo-dark'))
             ->brandLogoHeight('5rem')
             ->sidebarCollapsibleOnDesktop()
+            ->globalSearch(false)
             
             // Paleta de colores corporativos de Xante
             ->colors([
@@ -52,6 +52,7 @@ class AdminPanelProvider extends PanelProvider
             
             // Usar fuente del sistema por ahora para evitar problemas
             // ->font('Franie')
+            // ->viteTheme('resources/css/filament/admin/theme.css') // Comentado para evitar conflictos
             
             ->navigationGroups([
                 NavigationGroup::make('Configuraciones')->collapsed(true),
@@ -64,8 +65,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
                 StatsOverview::class,
+                AgreementsChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,
