@@ -37,20 +37,20 @@ use BackedEnum;
 class CreateAgreementWizard extends Page implements HasForms
 {
     use InteractsWithForms;
-    
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-plus';
     protected static ?string $title = 'Nuevo Convenio';
     protected static ?string $navigationLabel = 'Crear Convenio';
     protected static bool $shouldRegisterNavigation = false;
     protected static ?string $slug = 'convenios/crear';
-    
+
     public string $view = 'filament.pages.create-agreement-wizard';
-    
+
     public ?array $data = [];
     public ?int $agreementId = null;
     public int $currentStep = 1;
     public int $totalSteps = 5;
-    
+
     protected $listeners = [
         'stepChanged' => 'handleStepChange',
     ];
@@ -59,51 +59,36 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         // Intentar obtener el agreement desde parámetro o query string
         $agreementId = $agreement ?? request()->get('agreement');
-        
+
         // Verificar si viene un client_id para preseleccionar
         $clientId = request()->get('client_id');
-        
+
         if ($agreementId) {
             $this->agreementId = $agreementId;
             $agreementModel = Agreement::findOrFail($agreementId);
-            
-            \Log::info("CreateAgreementWizard::mount - Cargando convenio existente", [
-                'agreementId' => $agreementId,
-                'current_step_db' => $agreementModel->current_step,
-                'wizard_data_keys' => array_keys($agreementModel->wizard_data ?? [])
-            ]);
-            
+
+
             // Cargar datos del wizard_data
             $this->data = $agreementModel->wizard_data ?? [];
-            
+
             // Pre-cargar valores de configuración ANTES de llenar el formulario
             $this->loadCalculatorDefaults();
-            
+
             // Cargar el paso actual donde se quedó el usuario
             $this->currentStep = $agreementModel->current_step ?? 1;
-            
-            \Log::info("CreateAgreementWizard::mount - Paso actual configurado", [
-                'currentStep' => $this->currentStep
-            ]);
-            
+
+
             // Llenar el formulario con los datos cargados
             $this->form->fill($this->data);
-            
+
             // Notificar al usuario que se cargaron los datos
-            Notification::make()
-                ->title('✅ Datos cargados')
-                ->body("Continuando desde el paso {$this->currentStep}: " . $agreementModel->getCurrentStepName())
-                ->success()
-                ->duration(5000)
-                ->send();
-                
-            // Debug: Mostrar estado actual
-            Notification::make()
-                ->title('🔍 DEBUG: Estado del Wizard')
-                ->body("Agreement ID: {$this->agreementId} | Paso: {$this->currentStep} | Datos: " . count($this->data) . " campos")
-                ->info()
-                ->duration(8000)
-                ->send();
+            // Notification::make()
+            //     ->title('✅ Datos cargados')
+            //     ->body("Continuando desde el paso {$this->currentStep}: " . $agreementModel->getCurrentStepName())
+            //     ->success()
+            //     ->duration(5000)
+            //     ->send();
+
         } else {
             // Crear nuevo convenio
             $newAgreement = Agreement::create([
@@ -113,24 +98,24 @@ class CreateAgreementWizard extends Page implements HasForms
             ]);
             $this->agreementId = $newAgreement->id;
             $this->data = [];
-            
+
             // Si viene un client_id, preseleccionar el cliente y saltar al paso 2
             if ($clientId) {
                 $client = Client::where('xante_id', $clientId)->first();
                 if ($client) {
                     // Precargar datos del cliente
                     $this->preloadClientDataFromObject($client);
-                    
+
                     // Actualizar el convenio con la relación del cliente
                     $newAgreement->update([
                         'client_xante_id' => $client->xante_id,
                         'current_step' => 2,
                         'wizard_data' => $this->data
                     ]);
-                    
+
                     // Saltar al paso 2
                     $this->currentStep = 2;
-                    
+
                     // Notificar al usuario
                     Notification::make()
                         ->title('Cliente preseleccionado')
@@ -140,7 +125,7 @@ class CreateAgreementWizard extends Page implements HasForms
                         ->send();
                 } else {
                     $this->currentStep = 1;
-                    
+
                     Notification::make()
                         ->title('Cliente no encontrado')
                         ->body("No se encontró el cliente con ID: {$clientId}")
@@ -150,10 +135,10 @@ class CreateAgreementWizard extends Page implements HasForms
             } else {
                 $this->currentStep = 1;
             }
-            
+
             // Pre-cargar valores de configuración
             $this->loadCalculatorDefaults();
-            
+
             // Llenar el formulario con los datos
             $this->form->fill($this->data);
         }
@@ -179,28 +164,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         $this->searchClient();
                                     }
                                 }),
-                                
-                            // Botones temporales para testing
-                            Placeholder::make('testing_buttons')
-                                ->label('🧪 Herramientas de Testing')
-                                ->content(new \Illuminate\Support\HtmlString('
-                                    <div class="flex gap-4 justify-center">
-                                        <button 
-                                            type="button"
-                                            wire:click="forceSave"
-                                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-                                        >
-                                            🔧 TEST: Forzar Guardado
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            wire:click="debugWizardState"
-                                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                                        >
-                                            🔍 TEST: Debug Estado
-                                        </button>
-                                    </div>
-                                ')),
+
                             Select::make('client_id')
                                 ->label('Cliente Seleccionado')
                                 ->options(Client::limit(50)->pluck('name', 'id'))
@@ -247,7 +211,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
+
                             // DATOS PERSONALES TITULAR
                             Section::make('DATOS PERSONALES TITULAR:')
                                 ->schema([
@@ -333,7 +297,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
+
                             // DATOS PERSONALES COACREDITADO / CÓNYUGE
                             Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE:')
                                 ->description('Información del cónyuge o coacreditado')
@@ -351,12 +315,12 @@ class CreateAgreementWizard extends Page implements HasForms
                                             $set('spouse_postal_code', $get('postal_code'));
                                             $set('spouse_municipality', $get('municipality'));
                                             $set('spouse_state', $get('state'));
-                                            
+
                                             // Copiar datos de teléfono
                                             $set('spouse_phone', $get('holder_phone'));
                                             $set('spouse_office_phone', $get('holder_office_phone'));
                                             $set('spouse_additional_contact_phone', $get('holder_additional_contact_phone'));
-                                            
+
                                             Notification::make()
                                                 ->title('Datos copiados exitosamente')
                                                 ->body('Los datos de domicilio y teléfono del titular han sido copiados al cónyuge.')
@@ -442,7 +406,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
+
                             // CONTACTO AC Y/O PRESIDENTE DE PRIVADA
                             Section::make('CONTACTO AC Y/O PRESIDENTE DE PRIVADA')
                                 ->schema([
@@ -505,7 +469,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
+
                             Section::make('DATOS ADICIONALES')
                                 ->description('Información complementaria de la propiedad')
                                 ->schema([
@@ -614,7 +578,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
+
                             // Campo Principal: Valor Convenio
                             Section::make('VALOR PRINCIPAL DEL CONVENIO')
                                 ->description('Campo principal que rige todos los cálculos financieros')
@@ -640,9 +604,9 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
-                          
-                                
+
+
+
                             // Configuración de Parámetros
                             Section::make('PARÁMETROS DE CÁLCULO')
                                 ->description('Configuración de porcentajes y valores base')
@@ -713,7 +677,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                                
+
                             // Valores Calculados Automáticamente
                             Section::make('VALORES CALCULADOS')
                                 ->description('Estos valores se calculan automáticamente al ingresar el Valor Convenio')
@@ -751,7 +715,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ]),
                                 ])
                                 ->collapsible(),
-                            
+
                             // Costos de Operación
                             Section::make('COSTOS DE OPERACIÓN')
                                 ->description('Campos editables para gastos adicionales')
@@ -848,7 +812,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ->collapsible()
                                         ->collapsed(false),
                                 ]),
-                            
+
                             // SECCIÓN 4: CALCULADORA FINANCIERA (ancho completo)
                             Section::make('💰 RESUMEN FINANCIERO')
                                 ->description('Cálculos realizados en Paso 4')
@@ -862,7 +826,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                 ->collapsible()
                                 ->collapsed(false)
                                 ->columnSpanFull(),
-                            
+
                             // SECCIÓN DE CONFIRMACIÓN
                             Section::make('CONFIRMACIÓN FINAL')
                                 ->schema([
@@ -887,7 +851,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                             </div>
                                         '))
                                         ->hiddenLabel(),
-                                    
+
                                     Checkbox::make('confirm_data_correct')
                                         ->label('✓ Confirmo que he revisado toda la información y es correcta')
                                         ->required()
@@ -902,11 +866,23 @@ class CreateAgreementWizard extends Page implements HasForms
                                 ->columnSpanFull(),
                         ]),
                 ])
-                ->submitAction(Action::make('submit')
-                    ->label('Validar y Generar Documentos')
-                    ->icon('heroicon-o-document-plus')
-                    ->color('danger')
-                    ->action('generateDocumentsAndProceed'))
+                ->submitAction(
+                    // 💡 CORRECCIÓN: Definir el Action aquí y aplicar requiereConfirmation()
+                    Action::make('submit')
+                        // 1. Asignar la acción real del componente Livewire
+                        ->action('generateDocumentsAndProceed') 
+                        // 2. Personalizar el botón de envío
+                        ->label('Validar y Generar Documentos')
+                        ->icon('heroicon-o-document-plus')
+                        ->color('danger')
+                        // 3. AGREGAR LA CONFIRMACIÓN AQUÍ
+                        ->requiresConfirmation()
+                        // Opcional: Personalizar el contenido del modal
+                        ->modalHeading('Confirmar Envío')
+                        ->modalDescription('¿Estás seguro de que desea finalizar y generar los documentos?')
+                        ->modalSubmitActionLabel('Sí, Confirmar')
+                )
+
                 ->nextAction(fn (Action $action) => $action->label('Siguiente'))
                 ->previousAction(fn (Action $action) => $action->label('Anterior'))
                 ->cancelAction('Cancelar')
@@ -925,7 +901,7 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         // Obtener valores de configuración solo para parámetros, NO para valores calculados
         $configValues = ConfigurationCalculator::whereIn('key', [
-            'comision_sin_iva_default', 
+            'comision_sin_iva_default',
             'comision_iva_incluido_default',
             'precio_promocion_multiplicador_default',
             'isr_default',
@@ -963,35 +939,35 @@ class CreateAgreementWizard extends Page implements HasForms
         $cancelacion = (float) ($get('cancelacion_hipoteca') ?? 0);
         $totalGastosFi = (float) ($get('total_gastos_fi_venta') ?? 20000);
         $montoCredito = (float) ($get('monto_credito') ?? 800000);
-        
+
         if ($valorConvenio > 0) {
             // 1. Precio Promoción = Valor Convenio × Multiplicador Precio Promoción
             $precioPromocion = round($valorConvenio * $multiplicadorPrecioPromocion, 0);
             $set('precio_promocion', number_format($precioPromocion, 0, '.', ','));
-            
+
             // 2. Valor CompraVenta = Valor Convenio (espejo)
             $set('valor_compraventa', number_format($valorConvenio, 2, '.', ','));
-            
+
             // 3. Monto Comisión (Sin IVA) = Valor Convenio × % Comisión ÷ 100
             $montoComisionSinIva = round(($valorConvenio * $porcentajeComision) / 100, 2);
             $set('monto_comision_sin_iva', number_format($montoComisionSinIva, 2, '.', ','));
-            
+
             // 4. Comisión Total Pagar = Valor Convenio × % Comisión IVA Incluido ÷ 100
             $comisionTotalPagar = round(($valorConvenio * $porcentajeComisionIvaIncluido) / 100, 2);
             $set('comision_total_pagar', number_format($comisionTotalPagar, 2, '.', ','));
-            
+
             // 5. Total Gastos FI (Venta) = ISR + Cancelación de Hipoteca
             // Fórmula Excel: =SUMA(F33:G34)
             $totalGastosFi = round($isr + $cancelacion, 2);
             $set('total_gastos_fi_venta', number_format($totalGastosFi, 2, '.', ','));
-            
+
             // 6. Ganancia Final = Valor CompraVenta - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
             // Fórmula Excel: +C33-F33-F34-C34-F23
             $gananciaFinal = round($valorConvenio - $isr - $cancelacion - $comisionTotalPagar - $montoCredito, 2);
             $set('ganancia_final', number_format($gananciaFinal, 2, '.', ','));
         }
     }
-    
+
     /**
      * Limpia todos los campos calculados cuando no hay Valor Convenio
      */
@@ -1004,7 +980,7 @@ class CreateAgreementWizard extends Page implements HasForms
         $set('total_gastos_fi_venta', '');
         $set('ganancia_final', '');
     }
-    
+
     /**
      * Método legacy mantenido para compatibilidad
      */
@@ -1017,45 +993,21 @@ class CreateAgreementWizard extends Page implements HasForms
     public function saveStepData(int $step): void
     {
         try {
-            // Logging muy visible para debug
-            \Log::emergency("🔥 CreateAgreementWizard::saveStepData - EJECUTÁNDOSE", [
-                'step' => $step,
-                'currentStep' => $this->currentStep,
-                'agreementId' => $this->agreementId,
-                'timestamp' => now()->format('Y-m-d H:i:s')
-            ]);
-            
-            // También mostrar notificación inmediata para debug
-            Notification::make()
-                ->title("🔥 DEBUG: saveStepData ejecutándose")
-                ->body("Paso: {$step} | Agreement: {$this->agreementId}")
-                ->warning()
-                ->duration(8000)
-                ->send();
-            
+
             // CRÍTICO: Obtener datos sin validación para evitar errores de campos obligatorios
             try {
                 $formData = $this->form->getRawState();
             } catch (\Exception $e) {
                 // Si falla getRawState(), usar los datos actuales
-                \Log::warning("CreateAgreementWizard::saveStepData - Error al obtener datos del formulario", [
-                    'error' => $e->getMessage(),
-                    'step' => $step
-                ]);
                 $formData = $this->data ?? [];
             }
-            
+
             // Actualizar $this->data con los datos del formulario
             $this->data = array_merge($this->data ?? [], $formData);
-            
-            \Log::info("CreateAgreementWizard::saveStepData - Datos del formulario obtenidos", [
-                'formDataKeys' => array_keys($formData),
-                'dataKeys' => array_keys($this->data)
-            ]);
-            
+
+
             if (!$this->agreementId) {
-                \Log::error('CreateAgreementWizard: No se encontró agreementId en saveStepData');
-                
+
                 Notification::make()
                     ->title('Error de guardado')
                     ->body('No se pudo identificar el convenio. Por favor, intente nuevamente.')
@@ -1064,12 +1016,11 @@ class CreateAgreementWizard extends Page implements HasForms
                     ->send();
                 return;
             }
-            
+
             $agreement = Agreement::find($this->agreementId);
-            
+
             if (!$agreement) {
-                \Log::error("CreateAgreementWizard: Agreement ID {$this->agreementId} no encontrado");
-                
+
                 Notification::make()
                     ->title('Error de guardado')
                     ->body('No se encontró el convenio en la base de datos.')
@@ -1078,10 +1029,10 @@ class CreateAgreementWizard extends Page implements HasForms
                     ->send();
                 return;
             }
-            
+
             // Actualizar la propiedad currentStep local
             $this->currentStep = $step;
-            
+
             // Actualizar datos del convenio con manejo de errores
             try {
                 $updated = $agreement->update([
@@ -1089,20 +1040,10 @@ class CreateAgreementWizard extends Page implements HasForms
                     'wizard_data' => $this->data,
                     'updated_at' => now(),
                 ]);
-                
-                \Log::info("CreateAgreementWizard::saveStepData - Actualización exitosa", [
-                    'step' => $step,
-                    'agreementId' => $this->agreementId,
-                    'dataCount' => count($this->data)
-                ]);
-                
+
+
             } catch (\Exception $e) {
-                \Log::error("CreateAgreementWizard::saveStepData - Error en actualización BD", [
-                    'error' => $e->getMessage(),
-                    'step' => $step,
-                    'agreementId' => $this->agreementId
-                ]);
-                
+
                 Notification::make()
                     ->title('⚠️ Error de guardado')
                     ->body('Error al guardar en BD: ' . $e->getMessage())
@@ -1111,10 +1052,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     ->send();
                 return;
             }
-            
+
             if (!$updated) {
-                \Log::error("CreateAgreementWizard: Error al actualizar Agreement ID {$this->agreementId}");
-                
+
                 Notification::make()
                     ->title('Error de guardado')
                     ->body('No se pudieron guardar los datos. Por favor, intente nuevamente.')
@@ -1123,48 +1063,39 @@ class CreateAgreementWizard extends Page implements HasForms
                     ->send();
                 return;
             }
-            
+
             // Calcular porcentaje de completitud usando el método del modelo
             $agreement->calculateCompletionPercentage();
-            
+
             // Actualizar la URL para incluir el agreement ID (solo si no está presente)
             if (!request()->has('agreement')) {
                 $this->dispatch('update-query-string', ['agreement' => $this->agreementId]);
             }
-            
+
             // Mostrar notificación de guardado automático
             if ($step >= 1) {
                 Notification::make()
-                    ->title('✅ Guardado exitoso')
-                    ->body("Paso {$step} guardado correctamente con " . count($this->data) . " campos")
+                    ->title("Guardando")
+                    ->body("Se ha guardado el paso #{$step}")
+                    ->icon('heroicon-o-server')
                     ->success()
                     ->duration(4000)
                     ->send();
-                    
-                \Log::info("CreateAgreementWizard::saveStepData - GUARDADO EXITOSO", [
-                    'step' => $step,
-                    'agreementId' => $this->agreementId,
-                    'fieldsCount' => count($this->data)
-                ]);
+
             }
-            
+
             // Si estamos en el paso 2 y hay un cliente seleccionado, actualizar sus datos
             if ($step === 2 && isset($this->data['client_id']) && $this->data['client_id']) {
                 $this->updateClientData($this->data['client_id']);
             }
-            
+
             // Si estamos llegando al paso 4 (Calculadora), precargar datos de propiedad
-            if ($step === 3) {
-                $this->preloadPropertyDataForCalculator();
-            }
-            
+            // if ($step === 3) {
+            //     $this->preloadPropertyDataForCalculator();
+            // }
+
         } catch (\Exception $e) {
-            \Log::error('CreateAgreementWizard::saveStepData - Error: ' . $e->getMessage(), [
-                'step' => $step,
-                'agreementId' => $this->agreementId,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
+
             Notification::make()
                 ->title('Error inesperado')
                 ->body('Ocurrió un error al guardar: ' . $e->getMessage())
@@ -1173,14 +1104,14 @@ class CreateAgreementWizard extends Page implements HasForms
                 ->send();
         }
     }
-    
+
     public function updateClientData(int $clientId): void
     {
         $client = Client::find($clientId);
-        
+
         if ($client) {
             $updateData = [];
-            
+
             // Mapear campos del wizard a campos del cliente
             $fieldMapping = [
                 // Datos personales titular
@@ -1201,7 +1132,7 @@ class CreateAgreementWizard extends Page implements HasForms
                 'postal_code' => 'holder_postal_code',
                 'municipality' => 'holder_municipality',
                 'state' => 'holder_state',
-                
+
                 // Datos cónyuge
                 'spouse_name' => 'spouse_name',
                 'spouse_birthdate' => 'spouse_birthdate',
@@ -1220,7 +1151,7 @@ class CreateAgreementWizard extends Page implements HasForms
                 'spouse_postal_code' => 'spouse_postal_code',
                 'spouse_municipality' => 'spouse_municipality',
                 'spouse_state' => 'spouse_state',
-                
+
                 // Contactos AC/Presidente
                 'ac_name' => 'ac_name',
                 'ac_phone' => 'ac_phone',
@@ -1229,17 +1160,17 @@ class CreateAgreementWizard extends Page implements HasForms
                 'private_president_phone' => 'private_president_phone',
                 'private_president_quota' => 'private_president_quota',
             ];
-            
+
             // Solo actualizar campos que han cambiado
             foreach ($fieldMapping as $clientField => $wizardField) {
                 if (isset($this->data[$wizardField]) && $this->data[$wizardField] !== null) {
                     $updateData[$clientField] = $this->data[$wizardField];
                 }
             }
-            
+
             if (!empty($updateData)) {
                 $client->update($updateData);
-                
+
                 Notification::make()
                     ->title('Cliente actualizado')
                     ->body('Los datos del cliente han sido actualizados exitosamente.')
@@ -1248,29 +1179,29 @@ class CreateAgreementWizard extends Page implements HasForms
             }
         }
     }
-    
+
     /**
      * Precarga los datos de la propiedad desde el paso 3 al llegar al paso 4 (Calculadora)
      */
-    protected function preloadPropertyDataForCalculator(): void
-    {
-        // Los datos ya están en $this->data, solo necesitamos asegurar que estén disponibles
-        // para la calculadora. Filament manejará automáticamente la sincronización.
-        
-        // Notificar al usuario que los datos han sido precargados
-        if (!empty($this->data['domicilio_convenio']) || !empty($this->data['comunidad'])) {
-            Notification::make()
-                ->title('Datos de propiedad precargados')
-                ->body('Los datos de la propiedad han sido precargados desde el paso anterior.')
-                ->success()
-                ->send();
-        }
-    }
+    // protected function preloadPropertyDataForCalculator(): void
+    // {
+    //     // Los datos ya están en $this->data, solo necesitamos asegurar que estén disponibles
+    //     // para la calculadora. Filament manejará automáticamente la sincronización.
+
+    //     // Notificar al usuario que los datos han sido precargados
+    //     if (!empty($this->data['domicilio_convenio']) || !empty($this->data['comunidad'])) {
+    //         Notification::make()
+    //             ->title('Datos de propiedad precargados')
+    //             ->body('Los datos de la propiedad han sido precargados desde el paso anterior.')
+    //             ->success()
+    //             ->send();
+    //     }
+    // }
 
     public function searchClient(): void
     {
         $searchTerm = $this->data['search_term'] ?? '';
-        
+
         if (!empty($searchTerm)) {
             // Buscar clientes que coincidan
             $clients = Client::where('name', 'like', "%{$searchTerm}%")
@@ -1278,17 +1209,17 @@ class CreateAgreementWizard extends Page implements HasForms
                 ->orWhere('xante_id', 'like', "%{$searchTerm}%")
                 ->limit(10)
                 ->get();
-            
+
             if ($clients->count() > 0) {
                 // Si encontramos clientes, auto-seleccionar el primero
                 $firstClient = $clients->first();
                 $this->data['client_id'] = $firstClient->id;
-                
+
                 // Precargar todos los datos del cliente
                 $this->preloadClientData($firstClient->id, function($field, $value) {
                     $this->data[$field] = $value;
                 });
-                
+
                 Notification::make()
                     ->title('Cliente encontrado y precargado')
                     ->body("Se encontró: {$firstClient->name}. Los datos han sido precargados en el paso 2.")
@@ -1303,15 +1234,15 @@ class CreateAgreementWizard extends Page implements HasForms
             }
         }
     }
-    
+
     public function preloadClientData(int $clientId, callable $set): void
     {
         $client = Client::find($clientId);
-        
+
         if ($client) {
             // Datos generales
             $set('xante_id', $client->xante_id);
-            
+
             // Datos personales titular
             $set('holder_name', $client->name);
             $set('holder_birthdate', $client->birthdate);
@@ -1330,7 +1261,7 @@ class CreateAgreementWizard extends Page implements HasForms
             $set('holder_postal_code', $client->postal_code);
             $set('holder_municipality', $client->municipality);
             $set('holder_state', $client->state);
-            
+
             // Datos cónyuge
             $set('spouse_name', $client->spouse_name);
             $set('spouse_birthdate', $client->spouse_birthdate);
@@ -1349,7 +1280,7 @@ class CreateAgreementWizard extends Page implements HasForms
             $set('spouse_postal_code', $client->spouse_postal_code);
             $set('spouse_municipality', $client->spouse_municipality);
             $set('spouse_state', $client->spouse_state);
-            
+
             // Contactos AC/Presidente
             $set('ac_name', $client->ac_name);
             $set('ac_phone', $client->ac_phone);
@@ -1357,7 +1288,7 @@ class CreateAgreementWizard extends Page implements HasForms
             $set('private_president_name', $client->private_president_name);
             $set('private_president_phone', $client->private_president_phone);
             $set('private_president_quota', $client->private_president_quota);
-            
+
             Notification::make()
                 ->title('Datos precargados')
                 ->body('La información del cliente ha sido precargada. Puede editarla en el paso 2 si es necesario.')
@@ -1376,7 +1307,6 @@ class CreateAgreementWizard extends Page implements HasForms
             $formData = $this->form->getState();
             $this->data = array_merge($this->data ?? [], $formData);
         } catch (\Exception $e) {
-            \Log::error('Error al obtener estado del formulario: ' . $e->getMessage());
         }
 
         // VALIDACIÓN: Verificar que el checkbox de confirmación esté marcado
@@ -1400,7 +1330,7 @@ class CreateAgreementWizard extends Page implements HasForms
         }
 
         $agreement = Agreement::find($this->agreementId);
-        
+
         if (!$agreement) {
             Notification::make()
                 ->title('Error')
@@ -1425,25 +1355,25 @@ class CreateAgreementWizard extends Page implements HasForms
             // Generar documentos de forma síncrona
             $pdfService = app(PdfGenerationService::class);
             $documents = $pdfService->generateAllDocuments($agreement);
-            
+
             Notification::make()
                 ->title('📄 Documentos Generados')
                 ->body('Se generaron exitosamente ' . count($documents) . ' documentos')
                 ->success()
                 ->duration(5000)
                 ->send();
-                
+
         } catch (\Exception $e) {
             // Si hay error, actualizar estado y mostrar error
             $agreement->update(['status' => 'error_generating_documents']);
-            
+
             Notification::make()
                 ->title('❌ Error al Generar Documentos')
                 ->body('Error: ' . $e->getMessage())
                 ->danger()
                 ->duration(8000)
                 ->send();
-                
+
             return; // No redirigir si hay error
         }
 
@@ -1457,7 +1387,7 @@ class CreateAgreementWizard extends Page implements HasForms
     protected function renderHolderSummary(array $data): string
     {
         $html = '<div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">';
-        
+
         if (!empty($data['holder_name'])) {
             $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
             $html .= '<div><strong class="text-blue-700">Nombre:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
@@ -1468,18 +1398,18 @@ class CreateAgreementWizard extends Page implements HasForms
             $html .= '<div><strong class="text-blue-700">RFC:</strong> ' . ($data['holder_rfc'] ?? 'N/A') . '</div>';
             $html .= '<div><strong class="text-blue-700">Estado Civil:</strong> ' . ($data['holder_civil_status'] ?? 'N/A') . '</div>';
             $html .= '<div><strong class="text-blue-700">Ocupación:</strong> ' . ($data['holder_occupation'] ?? 'N/A') . '</div>';
-            
+
             // Domicilio del titular
             if (!empty($data['current_address'])) {
                 $html .= '<div class="col-span-2 mt-3 pt-3 border-t border-blue-200">';
                 $html .= '<h5 class="font-semibold text-blue-700 mb-2 flex items-center"><span class="mr-1">📍</span> Domicilio</h5>';
-                
+
                 $address = $data['current_address'];
                 if (!empty($data['holder_house_number'])) {
                     $address .= ' #' . $data['holder_house_number'];
                 }
                 $html .= '<div class="mb-2"><strong class="text-blue-700">Dirección:</strong> ' . $address . '</div>';
-                
+
                 $html .= '<div class="grid grid-cols-2 gap-2">';
                 if (!empty($data['neighborhood'])) {
                     $html .= '<div><strong class="text-blue-700">Colonia:</strong> ' . $data['neighborhood'] . '</div>';
@@ -1496,12 +1426,12 @@ class CreateAgreementWizard extends Page implements HasForms
                 $html .= '</div>';
                 $html .= '</div>';
             }
-            
+
             $html .= '</div>';
         } else {
             $html .= '<div class="text-center text-gray-500 py-4">📝 No se capturó información del titular</div>';
         }
-        
+
         $html .= '</div>';
         return $html;
     }
@@ -1512,7 +1442,7 @@ class CreateAgreementWizard extends Page implements HasForms
     protected function renderSpouseSummary(array $data): string
     {
         $html = '<div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">';
-        
+
         if (!empty($data['spouse_name'])) {
             $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
             $html .= '<div><strong class="text-green-700">Nombre:</strong> ' . ($data['spouse_name'] ?? 'N/A') . '</div>';
@@ -1523,18 +1453,18 @@ class CreateAgreementWizard extends Page implements HasForms
             $html .= '<div><strong class="text-green-700">RFC:</strong> ' . ($data['spouse_rfc'] ?? 'N/A') . '</div>';
             $html .= '<div><strong class="text-green-700">Estado Civil:</strong> ' . ($data['spouse_civil_status'] ?? 'N/A') . '</div>';
             $html .= '<div><strong class="text-green-700">Ocupación:</strong> ' . ($data['spouse_occupation'] ?? 'N/A') . '</div>';
-            
+
             // Domicilio del cónyuge
             if (!empty($data['spouse_current_address'])) {
                 $html .= '<div class="col-span-2 mt-3 pt-3 border-t border-green-200">';
                 $html .= '<h5 class="font-semibold text-green-700 mb-2 flex items-center"><span class="mr-1">📍</span> Domicilio</h5>';
-                
+
                 $address = $data['spouse_current_address'];
                 if (!empty($data['spouse_house_number'])) {
                     $address .= ' #' . $data['spouse_house_number'];
                 }
                 $html .= '<div class="mb-2"><strong class="text-green-700">Dirección:</strong> ' . $address . '</div>';
-                
+
                 $html .= '<div class="grid grid-cols-2 gap-2">';
                 if (!empty($data['spouse_neighborhood'])) {
                     $html .= '<div><strong class="text-green-700">Colonia:</strong> ' . $data['spouse_neighborhood'] . '</div>';
@@ -1551,14 +1481,14 @@ class CreateAgreementWizard extends Page implements HasForms
                 $html .= '</div>';
                 $html .= '</div>';
             }
-            
+
             $html .= '</div>';
         } else {
             $html .= '<div class="text-center text-gray-500 py-4 italic">';
             $html .= '📝 No se capturó información del cónyuge / coacreditado';
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
         return $html;
     }
@@ -1569,12 +1499,12 @@ class CreateAgreementWizard extends Page implements HasForms
     protected function renderPropertySummary(array $data): string
     {
         $html = '<div class="space-y-3">';
-        
+
         $html .= '<div><strong>Domicilio:</strong> ' . ($data['domicilio_convenio'] ?? 'N/A') . '</div>';
         $html .= '<div><strong>Comunidad:</strong> ' . ($data['comunidad'] ?? 'N/A') . '</div>';
         $html .= '<div><strong>Tipo de Vivienda:</strong> ' . ($data['tipo_vivienda'] ?? 'N/A') . '</div>';
         $html .= '<div><strong>Prototipo:</strong> ' . ($data['prototipo'] ?? 'N/A') . '</div>';
-        
+
         if (!empty($data['lote']) || !empty($data['manzana']) || !empty($data['etapa'])) {
             $html .= '<div><strong>Ubicación:</strong> ';
             if (!empty($data['lote'])) $html .= 'Lote ' . $data['lote'] . ' ';
@@ -1582,7 +1512,7 @@ class CreateAgreementWizard extends Page implements HasForms
             if (!empty($data['etapa'])) $html .= 'Etapa ' . $data['etapa'];
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
         return $html;
     }
@@ -1596,7 +1526,7 @@ class CreateAgreementWizard extends Page implements HasForms
         $precioPromocion = floatval(str_replace(',', '', $data['precio_promocion'] ?? 0));
         $comisionTotal = floatval(str_replace(',', '', $data['comision_total_pagar'] ?? 0));
         $gananciaFinal = floatval(str_replace(',', '', $data['ganancia_final'] ?? 0));
-        
+
         $html = '<div class="bg-gray-50 p-4 rounded-lg space-y-2">';
         $html .= '<div class="flex justify-between"><span><strong>Valor del Convenio:</strong></span><span class="font-bold text-blue-600">$' . number_format($valorConvenio, 2) . '</span></div>';
         $html .= '<div class="flex justify-between"><span><strong>Precio de Promoción:</strong></span><span class="font-bold text-green-600">$' . number_format($precioPromocion, 2) . '</span></div>';
@@ -1604,22 +1534,18 @@ class CreateAgreementWizard extends Page implements HasForms
         $html .= '<hr class="my-2">';
         $html .= '<div class="flex justify-between text-lg"><span><strong>Ganancia Final:</strong></span><span class="font-bold text-green-700">$' . number_format($gananciaFinal, 2) . '</span></div>';
         $html .= '</div>';
-        
+
         return $html;
     }
-    
+
     public function handleStepChange($step): void
     {
-        \Log::info("CreateAgreementWizard::handleStepChange - Listener ejecutado", [
-            'step' => $step,
-            'currentStep' => $this->currentStep
-        ]);
-        
+
         if ($step >= 1) {
             $this->saveStepData($step);
         }
     }
-    
+
     /**
      * Método que se ejecuta cuando se actualiza cualquier propiedad del componente
      */
@@ -1627,54 +1553,12 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         // Si se actualiza el currentStep, guardar automáticamente
         if ($propertyName === 'currentStep' && $this->currentStep >= 1) {
-            \Log::info("CreateAgreementWizard::updated - currentStep cambió", [
-                'newStep' => $this->currentStep,
-                'propertyName' => $propertyName
-            ]);
-            
+
             $this->saveStepData($this->currentStep);
         }
     }
-    
-    /**
-     * Método para forzar guardado manual (para testing)
-     */
-    public function forceSave(): void
-    {
-        Notification::make()
-            ->title('🔧 Forzando guardado manual...')
-            ->body("Ejecutando saveStepData({$this->currentStep})")
-            ->info()
-            ->duration(3000)
-            ->send();
-            
-        $this->saveStepData($this->currentStep);
-    }
-    
-    /**
-     * Método de debug para verificar el estado del wizard
-     */
-    public function debugWizardState(): void
-    {
-        $agreement = Agreement::find($this->agreementId);
-        
-        \Log::info("CreateAgreementWizard::debugWizardState", [
-            'currentStep_local' => $this->currentStep,
-            'currentStep_db' => $agreement?->current_step,
-            'agreementId' => $this->agreementId,
-            'dataKeys' => array_keys($this->data ?? []),
-            'url' => request()->url(),
-            'queryParams' => request()->query()
-        ]);
-        
-        Notification::make()
-            ->title('🔍 Debug Wizard State')
-            ->body("Paso Local: {$this->currentStep} | Paso DB: " . ($agreement?->current_step ?? 'N/A'))
-            ->info()
-            ->duration(10000)
-            ->send();
-    }
-    
+
+
     /**
      * Precarga los datos del cliente desde un objeto Client directamente en $this->data
      */
@@ -1682,7 +1566,7 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         // Datos generales
         $this->data['xante_id'] = $client->xante_id;
-        
+
         // Datos personales titular
         $this->data['holder_name'] = $client->name;
         $this->data['holder_birthdate'] = $client->birthdate;
@@ -1702,7 +1586,7 @@ class CreateAgreementWizard extends Page implements HasForms
         $this->data['postal_code'] = $client->postal_code;
         $this->data['municipality'] = $client->municipality;
         $this->data['state'] = $client->state;
-        
+
         // Datos cónyuge
         $this->data['spouse_name'] = $client->spouse_name;
         $this->data['spouse_birthdate'] = $client->spouse_birthdate;
@@ -1722,7 +1606,7 @@ class CreateAgreementWizard extends Page implements HasForms
         $this->data['spouse_postal_code'] = $client->spouse_postal_code;
         $this->data['spouse_municipality'] = $client->spouse_municipality;
         $this->data['spouse_state'] = $client->spouse_state;
-        
+
         // Contactos AC/Presidente
         $this->data['ac_name'] = $client->ac_name;
         $this->data['ac_phone'] = $client->ac_phone;

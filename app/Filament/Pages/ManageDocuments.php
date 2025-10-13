@@ -22,7 +22,6 @@ use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ClientDocument;
 use App\Models\ConfigurationCalculator;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\UploadedFile;
@@ -216,27 +215,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
     private function getStepOneSchema(): array
     {
         return [
-            // Botones temporales para testing del Wizard 2
-            Placeholder::make('testing_buttons_wizard2')
-                ->label('🧪 Herramientas de Testing - Wizard 2')
-                ->content(new \Illuminate\Support\HtmlString('
-                    <div class="flex gap-4 justify-center mb-6">
-                        <button 
-                            type="button"
-                            wire:click="saveStepData(1)"
-                            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-                        >
-                            🔧 TEST: Forzar Guardado Paso 1
-                        </button>
-                        <button 
-                            type="button"
-                            wire:click="debugWizard2State"
-                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                        >
-                            🔍 TEST: Debug Estado Wizard 2
-                        </button>
-                    </div>
-                ')),
                 
             Section::make('Información del Convenio')
                 ->icon('heroicon-o-document-text') // Usamos el icono oficial de Heroicons
@@ -1064,10 +1042,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->send();
 
         } catch (\Exception $e) {
-            Log::error('Error marking agreement as completed', [
-                'agreement_id' => $this->agreement->id,
-                'error' => $e->getMessage()
-            ]);
 
             Notification::make()
                 ->title('Error')
@@ -1127,10 +1101,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
             }
 
         } catch (\Exception $e) {
-            Log::error('Error downloading all documents', [
-                'agreement_id' => $this->agreement->id ?? 'unknown',
-                'error' => $e->getMessage()
-            ]);
 
             Notification::make()
                 ->title('❌ Error en Descarga')
@@ -1155,13 +1125,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
     private function saveClientDocument(string $fieldName, $filePath, string $documentName, string $category): void
     {
         try {
-            Log::info('Guardando documento del cliente', [
-                'field_name' => $fieldName,
-                'file_path' => $filePath,
-                'document_name' => $documentName,
-                'category' => $category,
-                'agreement_id' => $this->agreement->id
-            ]);
 
             $documentTypeMap = [
                 'holder_ine' => 'titular_ine',
@@ -1210,7 +1173,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     $fileSize = filesize($filePath->getRealPath());
                 } else {
                     $properties = get_object_vars($filePath);
-                    Log::info('Propiedades del objeto recibido', $properties);
                     throw new \Exception('Objeto no reconocido: ' . get_class($filePath));
                 }
             }
@@ -1236,38 +1198,18 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 'uploaded_at' => now(),
             ]);
 
-            Log::info('Documento guardado exitosamente', [
-                'file_path' => $finalFilePath,
-                'file_name' => $fileName,
-                'file_size' => $fileSize,
-                'document_type' => $documentType,
-                'category' => $category
-            ]);
-
         } catch (\Exception $e) {
-            Log::error('Error guardando documento del cliente', [
-                'agreement_id' => $this->agreement->id,
-                'field_name' => $fieldName,
-                'error' => $e->getMessage()
-            ]);
             throw $e;
         }
     }
 
     private function deleteClientDocument(string $fieldName, string $category): void
     {
-        Log::info('Documento eliminado', [
-            'field_name' => $fieldName,
-            'category' => $category,
-            'agreement_id' => $this->agreement->id
-        ]);
+        // Método para eliminar documentos del cliente si es necesario
     }
 
     private function loadExistingDocuments(): void
     {
-        Log::info('Cargando documentos existentes', [
-            'agreement_id' => $this->agreement->id
-        ]);
     }
 
     /**
@@ -1276,23 +1218,8 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public function saveStepData(int $step): void
     {
         try {
-            // Logging muy visible para debug
-            \Log::emergency("🔥 ManageDocuments::saveStepData - EJECUTÁNDOSE", [
-                'step' => $step,
-                'agreementId' => $this->agreement?->id,
-                'timestamp' => now()->format('Y-m-d H:i:s')
-            ]);
-            
-            // También mostrar notificación inmediata para debug
-            Notification::make()
-                ->title("🔥 DEBUG: Wizard 2 saveStepData ejecutándose")
-                ->body("Paso: {$step} | Agreement: {$this->agreement?->id}")
-                ->warning()
-                ->duration(8000)
-                ->send();
             
             if (!$this->agreement) {
-                \Log::error('ManageDocuments: No se encontró agreement en saveStepData');
                 return;
             }
 
@@ -1301,20 +1228,12 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 $formData = $this->form->getRawState();
             } catch (\Exception $e) {
                 // Si falla getRawState(), usar los datos actuales
-                \Log::warning("ManageDocuments::saveStepData - Error al obtener datos del formulario", [
-                    'error' => $e->getMessage(),
-                    'step' => $step
-                ]);
                 $formData = $this->data ?? [];
             }
             
             // Actualizar $this->data con los datos del formulario
             $this->data = array_merge($this->data ?? [], $formData);
             
-            \Log::info("ManageDocuments::saveStepData - Datos del formulario obtenidos", [
-                'formDataKeys' => array_keys($formData),
-                'dataKeys' => array_keys($this->data)
-            ]);
 
             // Actualizar datos del convenio con manejo de errores
             try {
@@ -1324,18 +1243,8 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     'updated_at' => now(),
                 ]);
                 
-                \Log::info("ManageDocuments::saveStepData - Actualización exitosa", [
-                    'step' => $step,
-                    'agreementId' => $this->agreement->id,
-                    'dataCount' => count($this->data)
-                ]);
                 
             } catch (\Exception $e) {
-                \Log::error("ManageDocuments::saveStepData - Error en actualización BD", [
-                    'error' => $e->getMessage(),
-                    'step' => $step,
-                    'agreementId' => $this->agreement->id
-                ]);
                 
                 Notification::make()
                     ->title('⚠️ Error de guardado')
@@ -1349,25 +1258,16 @@ class ManageDocuments extends Page implements HasForms, HasActions
             // Mostrar notificación de guardado automático
             if ($step >= 1) {
                 Notification::make()
-                    ->title('✅ Wizard 2 - Guardado exitoso')
-                    ->body("Paso {$step} guardado correctamente con " . count($this->data) . " campos")
+                    ->title("Guardando")
+                    ->body("Se ha guardado el paso #{$step}")
+                    ->icon('heroicon-o-server')
                     ->success()
                     ->duration(4000)
                     ->send();
                     
-                \Log::info("ManageDocuments::saveStepData - GUARDADO EXITOSO", [
-                    'step' => $step,
-                    'agreementId' => $this->agreement->id,
-                    'fieldsCount' => count($this->data)
-                ]);
             }
 
         } catch (\Exception $e) {
-            \Log::error("ManageDocuments::saveStepData - Error general", [
-                'step' => $step,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
             
             Notification::make()
                 ->title('Error inesperado')
@@ -1378,31 +1278,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
         }
     }
 
-    /**
-     * Método de debug para Wizard 2
-     */
-    public function debugWizard2State(): void
-    {
-        $debugInfo = [
-            'agreementId' => $this->agreement?->id,
-            'agreementStatus' => $this->agreement?->status,
-            'currentWizard' => $this->agreement?->current_wizard,
-            'dataKeys' => array_keys($this->data ?? []),
-            'url' => request()->url(),
-            'queryParams' => request()->query(),
-            'generatedDocuments' => $this->agreement?->generatedDocuments?->count() ?? 0,
-            'clientDocuments' => $this->agreement?->clientDocuments?->count() ?? 0,
-        ];
-
-        \Log::info("ManageDocuments::debugWizard2State", $debugInfo);
-
-        Notification::make()
-            ->title('🔍 DEBUG: Estado del Wizard 2')
-            ->body("Agreement: {$this->agreement?->id} | Status: {$this->agreement?->status} | Docs: {$debugInfo['generatedDocuments']}")
-            ->info()
-            ->duration(8000)
-            ->send();
-    }
 
     protected function getActions(): array
     {

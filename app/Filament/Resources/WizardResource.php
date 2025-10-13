@@ -201,10 +201,7 @@ class WizardResource extends Resource
                 SelectFilter::make('status')
                     ->label('Estado')
                     ->options([
-                        // Estados originales
-                        'sin_convenio' => 'Sin Convenio',
-                        'expediente_incompleto' => 'Expediente Incompleto',
-                        'expediente_completo' => 'Expediente Completo',
+                        // Estados originales mantenidos para compatibilidad
                         'convenio_proceso' => 'Convenio en Proceso',
                         'convenio_firmado' => 'Convenio Firmado',
                         // Nuevos estados del sistema de dos wizards
