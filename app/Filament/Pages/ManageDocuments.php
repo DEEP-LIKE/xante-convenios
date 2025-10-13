@@ -18,6 +18,10 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section as InfolistSection;
 use Filament\Infolists\Components\Grid as InfolistGrid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Wizard;
+use Filament\Schemas\Components\Wizard\Step;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ClientDocument;
@@ -33,10 +37,6 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Checkbox;
 use App\Jobs\GenerateAgreementDocumentsJob;
 use Illuminate\Support\HtmlString;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Wizard;
-use Filament\Schemas\Components\Wizard\Step;
 use App\Services\PdfGenerationService;
 use App\Mail\DocumentsReadyMail;
 use ZipArchive;
@@ -360,13 +360,19 @@ class ManageDocuments extends Page implements HasForms, HasActions
     private function getStepTwoSchema(): array
     {
         return [
-            Section::make('📋 Documentos Requeridos del Cliente')
+            Section::make('Documentos Requeridos del Cliente')
+            
                 ->description('Gestionar documentos que debe proporcionar el cliente')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->iconColor('info')
                 ->schema([
-                    Grid::make(2)
+                    Grid::make(1)
                         ->schema([
-                            Section::make('👤 DOCUMENTACIÓN TITULAR')
+                            Section::make('DOCUMENTACIÓN TITULAR')
+                                ->icon('heroicon-o-user')
                                 ->description('Todos los documentos son obligatorios')
+                                ->iconColor('primary')
+                                ->columns(2) 
                                 ->schema([
                                     FileUpload::make('holder_ine')
                                         ->label('1. INE (A color, tamaño original, no fotos)')
@@ -386,8 +392,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_ine', $state, 'INE', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_curp')
                                         ->label('2. CURP (Mes corriente)')
@@ -407,8 +412,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_curp', $state, 'CURP', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_fiscal_status')
                                         ->label('3. Constancia de Situación Fiscal (Mes corriente, completa)')
@@ -426,8 +430,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_fiscal_status', $state, 'Constancia de Situación Fiscal', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_proof_address_home')
                                         ->label('4. Comprobante de Domicilio Vivienda (Mes corriente)')
@@ -447,8 +450,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_proof_address_home', $state, 'Comprobante de Domicilio Vivienda', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_proof_address_titular')
                                         ->label('5. Comprobante de Domicilio Titular (Mes corriente)')
@@ -468,8 +470,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_proof_address_titular', $state, 'Comprobante de Domicilio Titular', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_birth_certificate')
                                         ->label('6. Acta Nacimiento')
@@ -487,8 +488,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_birth_certificate', $state, 'Acta Nacimiento', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_marriage_certificate')
                                         ->label('7. Acta Matrimonio (Si aplica)')
@@ -505,8 +505,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_marriage_certificate', $state, 'Acta Matrimonio', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('holder_bank_statement')
                                         ->label('8. Carátula Estado de Cuenta Bancario con Datos Fiscales (Mes corriente)')
@@ -524,13 +523,15 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('holder_bank_statement', $state, 'Carátula Estado de Cuenta Bancario', 'titular');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                 ])
                                 ->collapsible(),
                                 
-                            Section::make('🏠 DOCUMENTACIÓN PROPIEDAD')
+                            Section::make('DOCUMENTACIÓN PROPIEDAD')
+                                ->icon('heroicon-o-home')
                                 ->description('Todos los documentos son obligatorios')
+                                ->iconColor('primary')
+                                ->columns(2) 
                                 ->schema([
                                     FileUpload::make('property_notarial_instrument')
                                         ->label('1. Instrumento Notarial con Antecedentes Registrales (Datos Registrales y Traslado de Dominio) Escaneada, visible')
@@ -548,8 +549,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('property_notarial_instrument', $state, 'Instrumento Notarial', 'propiedad');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('property_tax_receipt')
                                         ->label('2. Recibo predial (Mes corriente)')
@@ -569,8 +569,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('property_tax_receipt', $state, 'Recibo Predial', 'propiedad');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('property_water_receipt')
                                         ->label('3. Recibo de Agua (Mes corriente)')
@@ -590,8 +589,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('property_water_receipt', $state, 'Recibo de Agua', 'propiedad');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                         
                                     FileUpload::make('property_cfe_receipt')
                                         ->label('4. Recibo CFE con datos fiscales (Mes corriente)')
@@ -611,8 +609,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             if ($state) {
                                                 $this->saveClientDocument('property_cfe_receipt', $state, 'Recibo CFE', 'propiedad');
                                             }
-                                        })
-                                        ->hint('📄 Documento privado guardado'),
+                                        }),
                                 ])
                                 ->collapsible(),
                         ]),
@@ -635,7 +632,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         ];
     }
     
-    // PASO 3: Cierre Exitoso
+   // PASO 3: Cierre Exitoso
     private function getStepThreeSchema(): array
     {
         $agreement = $this->agreement ?? new Agreement();
@@ -650,26 +647,17 @@ class ManageDocuments extends Page implements HasForms, HasActions
         }
 
         return [
-            Section::make('🎉 Convenio Completado Exitosamente')
+            Section::make('¡Convenio Finalizado con Éxito!')
+                ->icon('heroicon-o-check-badge')
+                ->iconColor('success')
                 ->description('El proceso de gestión documental ha finalizado correctamente')
                 ->schema([
-                    // Header celebratorio con información del convenio
-                    Placeholder::make('celebration_header')
-                        ->content(new HtmlString('
-                            <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
-                                <div class="text-center">
-                                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                                        <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                    </div>
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-2">¡Convenio Finalizado con Éxito!</h3>
-                                    <p class="text-gray-600">El proceso de gestión documental se ha completado correctamente.</p>
-                                </div>
-                            </div>
-                        ')),
+                    // Mensaje de celebración
+                    Placeholder::make('celebration')
+                        ->content('✅ El convenio se ha completado exitosamente. Todos los documentos han sido procesados.')
+                        ->columnSpanFull(),
                         
-                    // Resumen del proceso
+                    // Información del convenio
                     Grid::make(3)
                         ->schema([
                             Placeholder::make('completion_date')
@@ -684,93 +672,78 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                 ->label('✅ Estado Final')
                                 ->content('Completado')
                         ]),
+                ]),
+                
+            // Section::make('Resumen del Proceso')
+            //     ->icon('heroicon-o-clipboard-document-check')
+            //     ->iconColor('info')
+            //     ->description('Pasos completados durante el proceso')
+            //     ->schema([
+            //         Placeholder::make('process_step_1')
+            //             ->label('✓ Paso 1')
+            //             ->content('Captura de información completada'),
                         
-                    // Timeline del proceso
-                    Placeholder::make('process_timeline')
-                        ->label('📋 Resumen del Proceso')
-                        ->content(new HtmlString('
-                            <div class="bg-white rounded-lg border p-4">
-                                <div class="space-y-3">
-                                    <div class="flex items-center text-sm">
-                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                                        <span class="text-gray-600">Wizard 1: Captura de información completada</span>
-                                    </div>
-                                    <div class="flex items-center text-sm">
-                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                                        <span class="text-gray-600">Documentos PDF generados automáticamente</span>
-                                    </div>
-                                    <div class="flex items-center text-sm">
-                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                                        <span class="text-gray-600">Documentos enviados al cliente</span>
-                                    </div>
-                                    <div class="flex items-center text-sm">
-                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                                        <span class="text-gray-600">Documentos del cliente recibidos y validados</span>
-                                    </div>
-                                    <div class="flex items-center text-sm">
-                                        <div class="flex-shrink-0 w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                                        <span class="text-gray-600 font-semibold">Convenio cerrado exitosamente</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ')),
+            //         Placeholder::make('process_step_2')
+            //             ->label('✓ Paso 2')
+            //             ->content('Documentos PDF generados automáticamente'),
                         
-                    // Botones de acción funcionales
-                    Placeholder::make('final_actions')
-                        ->label('🔧 Acciones Disponibles')
-                        ->content(new HtmlString('
-                            <div class="bg-gray-50 rounded-xl p-6 space-y-4">
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <!-- Descargar Todos los Documentos -->
-                                    <button wire:click="downloadAllDocuments" 
-                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
-                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        <span class="font-semibold text-sm">Descargar Todos</span>
-                                        <span class="text-xs opacity-90">los Documentos PDF</span>
-                                    </button>
-                                    
-                                    <!-- Enviar Correos -->
-                                    <button wire:click="sendDocumentsToClient" 
-                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
-                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                        </svg>
-                                        <span class="font-semibold text-sm">Enviar Correos</span>
-                                        <span class="text-xs opacity-90">Reenviar Documentos</span>
-                                    </button>
-                                    
-                                    <!-- Ver Datos del Cliente -->
-                                    <button wire:click="mountAction(\"viewClientData\")"
-                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
-                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                        </svg>
-                                        <span class="font-semibold text-sm">Ver Datos</span>
-                                        <span class="text-xs opacity-90">del Cliente</span>
-                                    </button>
-                                    
-                                    <!-- Regresar a Inicio -->
-                                    <button wire:click="returnToHome" 
-                                            class="flex flex-col items-center p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
-                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                                        </svg>
-                                        <span class="font-semibold text-sm">Regresar a Inicio</span>
-                                        <span class="text-xs opacity-90">Dashboard Principal</span>
-                                    </button>
-                                </div>
-                                
-                                <div class="text-center">
-                                    <p class="text-sm text-gray-600">
-                                        <strong>¡Felicidades!</strong> El convenio se ha procesado exitosamente. 
-                                        Todos los documentos están disponibles para descarga.
-                                    </p>
-                                </div>
-                            </div>
-                        '))
-                ])
+            //         Placeholder::make('process_step_3')
+            //             ->label('✓ Paso 3')
+            //             ->content('Documentos enviados al cliente'),
+                        
+            //         Placeholder::make('process_step_4')
+            //             ->label('✓ Paso 4')
+            //             ->content('Documentos del cliente recibidos y validados'),
+                        
+            //         Placeholder::make('process_step_5')
+            //             ->label('✓ Paso 5')
+            //             ->content('Convenio cerrado exitosamente')
+            //             ->extraAttributes(['class' => 'font-semibold']),
+            //     ])
+            //     ->columns(5),
+                
+            Section::make('Acciones Disponibles')
+            ->icon('heroicon-o-wrench-screwdriver')
+            ->iconColor('warning')
+            ->description('Opciones para gestionar el convenio completado')
+            ->schema([
+                Grid::make(3)
+                    ->schema([
+                        // Card: Descargar Todos los Documentos
+                        Placeholder::make('action_download')
+                            ->label('📥 Descargar Documentos')
+                            ->content(fn() => view('components.action-button', [
+                                'icon' => 'heroicon-o-arrow-down-tray',
+                                'label' => 'Descargar Todos',
+                                'sublabel' => 'los Documentos PDF',
+                                'action' => 'downloadAllDocuments',
+                                'color' => 'success'
+                            ])),
+                            
+                        // Card: Enviar Correos
+                        Placeholder::make('action_email')
+                            ->label('📧 Enviar por Email')
+                            ->content(fn() => view('components.action-button', [
+                                'icon' => 'heroicon-o-envelope',
+                                'label' => 'Enviar Correos',
+                                'sublabel' => 'Reenviar Documentos',
+                                'action' => 'sendDocumentsToClient',
+                                'color' => 'info',
+                                'confirm' => '¿Está seguro de reenviar los documentos al cliente?'
+                            ])),
+                            
+                        // Card: Regresar a Inicio
+                        Placeholder::make('action_home')
+                            ->label('🏠 Regresar al Dashboard')
+                            ->content(fn() => view('components.action-button', [
+                                'icon' => 'heroicon-o-home',
+                                'label' => 'Volver al Inicio',
+                                'sublabel' => 'Dashboard Principal',
+                                'action' => 'returnToHome',
+                                'color' => 'primary'
+                            ])),
+                    ]),
+            ]),
         ];
     }
 
@@ -1279,30 +1252,30 @@ class ManageDocuments extends Page implements HasForms, HasActions
     }
 
 
-    protected function getActions(): array
-    {
-        return [
-            Action::make('viewClientData')
-                ->label('Ver Datos del Cliente')
-                ->icon('heroicon-o-user')
-                ->color('primary')
-                ->modalHeading('Datos Completos del Cliente')
-                ->modalDescription('Información detallada del convenio')
-                ->modalContent(fn () => $this->getClientDataModalContent())
-                ->modalWidth('7xl')
-                ->visible(fn () => $this->agreement && $this->agreement->wizard_data),
-        ];
-    }
+    // protected function getActions(): array
+    // {
+    //     return [
+    //         Action::make('viewClientData')
+    //             ->label('Ver Datos del Cliente')
+    //             ->icon('heroicon-o-user')
+    //             ->color('primary')
+    //             ->modalHeading('Datos Completos del Cliente')
+    //             ->modalDescription('Información detallada del convenio')
+    //             ->modalContent(fn () => $this->getClientDataModalContent())
+    //             ->modalWidth('7xl')
+    //             ->visible(fn () => $this->agreement && $this->agreement->wizard_data),
+    //     ];
+    // }
 
-    protected function getClientDataModalContent()
-    {
-        if (!$this->agreement || !$this->agreement->wizard_data) {
-            return view('components.no-data-available');
-        }
+    // protected function getClientDataModalContent()
+    // {
+    //     if (!$this->agreement || !$this->agreement->wizard_data) {
+    //         return view('components.no-data-available');
+    //     }
 
-        return view('components.client-data-modal-content', [
-            'agreement' => $this->agreement,
-            'data' => $this->agreement->wizard_data
-        ]);
-    }
+    //     return view('components.client-data-modal-content', [
+    //         'agreement' => $this->agreement,
+    //         'data' => $this->agreement->wizard_data
+    //     ]);
+    // }
 }
