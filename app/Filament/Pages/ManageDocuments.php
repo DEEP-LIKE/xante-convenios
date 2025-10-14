@@ -60,26 +60,30 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public string $view = 'filament.pages.manage-documents';
 
     public ?Agreement $agreement = null;
-    public ?array $data = [];
+    public array $data = [];
 
-    // Propiedades para los campos de FileUpload con ->live()
+    // Propiedades para los campos de FileUpload con ->live() - inicializadas como arrays vacíos
     // DOCUMENTACIÓN TITULAR
-    public $holder_ine = null;
-    public $holder_curp = null;
-    public $holder_fiscal_status = null;
-    public $holder_proof_address_home = null;
-    public $holder_proof_address_titular = null;
-    public $holder_birth_certificate = null;
-    public $holder_marriage_certificate = null;
-    public $holder_bank_statement = null;
+    public array $holder_ine = [];
+    public array $holder_curp = [];
+    public array $holder_fiscal_status = [];
+    public array $holder_proof_address_home = [];
+    public array $holder_proof_address_titular = [];
+    public array $holder_birth_certificate = [];
+    public array $holder_marriage_certificate = [];
+    public array $holder_bank_statement = [];
     
     // DOCUMENTACIÓN PROPIEDAD
-    public $property_notarial_instrument = null;
-    public $property_tax_receipt = null;
-    public $property_water_receipt = null;
-    public $property_cfe_receipt = null;
+    public array $property_notarial_instrument = [];
+    public array $property_tax_receipt = [];
+    public array $property_water_receipt = [];
+    public array $property_cfe_receipt = [];
     public int $currentStep = 1;
     public int $totalSteps = 3;
+    
+    // Control de eliminaciones múltiples - SIMPLIFICADO (sin static para Livewire)
+    public array $processingDeletions = [];
+    public bool $isDeletingDocuments = false;
     private function getCurrentUrlStep(): ?int
     {
         $currentUrl = request()->url();
@@ -143,8 +147,25 @@ class ManageDocuments extends Page implements HasForms, HasActions
         $this->agreement->refresh();
         $this->agreement->load(['generatedDocuments', 'clientDocuments']);
 
-        // Inicializar el formulario con datos vacíos
-        $this->form->fill([]);
+        // Limpiar archivos huérfanos antes de cargar documentos
+        $this->cleanOrphanFiles();
+
+        // Cargar documentos del cliente y llenar el formulario SOLO UNA VEZ
+        $existingDocuments = $this->loadClientDocuments();
+        if (!empty($existingDocuments)) {
+            $this->form->fill($existingDocuments);
+        }
+        
+        // Notificar si se cargaron documentos existentes
+        if (!empty($existingDocuments)) {
+            $documentCount = count($existingDocuments);
+            Notification::make()
+                ->title('Documentos Cargados')
+                ->body("Se han recuperado {$documentCount} documentos previamente subidos")
+                ->success()
+                ->duration(4000)
+                ->send();
+        }
 
         // Notificación informativa sobre el estado actual
         $statusMessages = [
@@ -361,8 +382,9 @@ class ManageDocuments extends Page implements HasForms, HasActions
     {
         return [
             Section::make('Documentos Requeridos del Cliente')
-            
-                ->description('Gestionar documentos que debe proporcionar el cliente')
+                ->description(new HtmlString(
+                        'Gestionar documentos que debe proporcionar el cliente <br> <span class="font-semibold text-gray-700">Documento cargado previamente se mostrará automáticamente</span>'
+                    ))                      
                 ->icon('heroicon-o-clipboard-document-list')
                 ->iconColor('info')
                 ->schema([
@@ -383,15 +405,14 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         ->disk('private')
                                         ->image()
                                         ->imageEditor()
+                                        ->placeholder('📄 Arrastra tu archivo aquí o haz clic para seleccionar')
                                         ->getUploadedFileNameForStorageUsing(function ($file) {
                                             $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
                                             return 'ine_' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_ine', $state, 'INE', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_ine', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_curp')
@@ -409,9 +430,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_curp', $state, 'CURP', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_curp', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_fiscal_status')
@@ -427,9 +446,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_fiscal_status', $state, 'Constancia de Situación Fiscal', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_fiscal_status', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_proof_address_home')
@@ -447,9 +464,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_proof_address_home', $state, 'Comprobante de Domicilio Vivienda', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_proof_address_home', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_proof_address_titular')
@@ -467,9 +482,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_proof_address_titular', $state, 'Comprobante de Domicilio Titular', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_proof_address_titular', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_birth_certificate')
@@ -485,9 +498,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_birth_certificate', $state, 'Acta Nacimiento', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_birth_certificate', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_marriage_certificate')
@@ -502,9 +513,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_marriage_certificate', $state, 'Acta Matrimonio', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_marriage_certificate', 'titular', $state);
                                         }),
                                         
                                     FileUpload::make('holder_bank_statement')
@@ -520,9 +529,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('holder_bank_statement', $state, 'Carátula Estado de Cuenta Bancario', 'titular');
-                                            }
+                                            $this->handleDocumentStateChange('holder_bank_statement', 'titular', $state);
                                         }),
                                 ])
                                 ->collapsible(),
@@ -546,9 +553,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('property_notarial_instrument', $state, 'Instrumento Notarial', 'propiedad');
-                                            }
+                                            $this->handleDocumentStateChange('property_notarial_instrument', 'propiedad', $state);
                                         }),
                                         
                                     FileUpload::make('property_tax_receipt')
@@ -566,9 +571,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('property_tax_receipt', $state, 'Recibo Predial', 'propiedad');
-                                            }
+                                            $this->handleDocumentStateChange('property_tax_receipt', 'propiedad', $state);
                                         }),
                                         
                                     FileUpload::make('property_water_receipt')
@@ -586,9 +589,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('property_water_receipt', $state, 'Recibo de Agua', 'propiedad');
-                                            }
+                                            $this->handleDocumentStateChange('property_water_receipt', 'propiedad', $state);
                                         }),
                                         
                                     FileUpload::make('property_cfe_receipt')
@@ -606,9 +607,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         })
                                         ->live()
                                         ->afterStateUpdated(function ($state) {
-                                            if ($state) {
-                                                $this->saveClientDocument('property_cfe_receipt', $state, 'Recibo CFE', 'propiedad');
-                                            }
+                                            $this->handleDocumentStateChange('property_cfe_receipt', 'propiedad', $state);
                                         }),
                                 ])
                                 ->collapsible(),
@@ -1159,31 +1158,251 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 $fileName = $documentName . '_' . time() . '.' . $extension;
             }
 
-            // Guardar en la base de datos
-            ClientDocument::create([
-                'agreement_id' => $this->agreement->id,
-                'document_type' => $documentType,
-                'document_name' => $documentName,
-                'file_path' => $finalFilePath,
-                'file_name' => $fileName,
-                'file_size' => $fileSize,
-                'category' => $category,
-                'uploaded_at' => now(),
-            ]);
+            // Buscar si ya existe un documento de este tipo para evitar duplicados
+            $existingDocument = ClientDocument::where('agreement_id', $this->agreement->id)
+                ->where('document_type', $documentType)
+                ->first();
+
+            if ($existingDocument) {
+                // Eliminar el archivo anterior del disco
+                if (!empty($existingDocument->file_path) && Storage::disk('private')->exists($existingDocument->file_path)) {
+                    Storage::disk('private')->delete($existingDocument->file_path);
+                }
+                
+                // Actualizar el registro existente
+                $existingDocument->update([
+                    'document_name' => $documentName,
+                    'file_path' => $finalFilePath,
+                    'file_name' => $fileName,
+                    'file_size' => $fileSize,
+                    'uploaded_at' => now(),
+                ]);
+            } else {
+                // Crear nuevo registro si no existe
+                ClientDocument::create([
+                    'agreement_id' => $this->agreement->id,
+                    'document_type' => $documentType,
+                    'document_name' => $documentName,
+                    'file_path' => $finalFilePath,
+                    'file_name' => $fileName,
+                    'file_size' => $fileSize,
+                    'category' => $category,
+                    'uploaded_at' => now(),
+                ]);
+            }
 
         } catch (\Exception $e) {
             throw $e;
         }
     }
 
+    /**
+     * Maneja cambios de estado de documentos SIN debounce para evitar parpadeo
+     */
+    private function handleDocumentStateChange(string $fieldName, string $category, $state): void
+    {
+        if ($state) {
+            // Documento subido - guardar inmediatamente
+            $this->saveClientDocument($fieldName, $state, $this->getDocumentDisplayName($fieldName), $category);
+        } else {
+            // Documento eliminado - procesar inmediatamente SIN cola
+            $this->deleteClientDocumentImmediate($fieldName, $category);
+        }
+    }
+
+    /**
+     * Obtiene el nombre de visualización del documento
+     */
+    private function getDocumentDisplayName(string $fieldName): string
+    {
+        $displayNames = [
+            'holder_ine' => 'INE',
+            'holder_curp' => 'CURP',
+            'holder_fiscal_status' => 'Constancia de Situación Fiscal',
+            'holder_proof_address_home' => 'Comprobante de Domicilio Vivienda',
+            'holder_proof_address_titular' => 'Comprobante de Domicilio Titular',
+            'holder_birth_certificate' => 'Acta Nacimiento',
+            'holder_marriage_certificate' => 'Acta Matrimonio',
+            'holder_bank_statement' => 'Carátula Estado de Cuenta Bancario',
+            'property_notarial_instrument' => 'Instrumento Notarial',
+            'property_tax_receipt' => 'Recibo Predial',
+            'property_water_receipt' => 'Recibo de Agua',
+            'property_cfe_receipt' => 'Recibo CFE',
+        ];
+
+        return $displayNames[$fieldName] ?? $fieldName;
+    }
+
+    /**
+     * Elimina un documento inmediatamente sin cola para evitar parpadeo
+     */
+    private function deleteClientDocumentImmediate(string $fieldName, string $category): void
+    {
+        // Crear clave única para evitar eliminaciones duplicadas
+        $deletionKey = $this->agreement->id . '_' . $fieldName;
+        
+        // Si ya se está procesando esta eliminación, salir
+        if (isset($this->processingDeletions[$deletionKey])) {
+            return;
+        }
+        
+        // Marcar como en proceso
+        $this->processingDeletions[$deletionKey] = true;
+        
+        try {
+            // Mapeo de nombres de campo a tipos de documento
+            $documentTypeMap = [
+                'holder_ine' => 'titular_ine',
+                'holder_curp' => 'titular_curp',
+                'holder_fiscal_status' => 'titular_constancia_fiscal',
+                'holder_proof_address_home' => 'titular_comprobante_domicilio_vivienda',
+                'holder_proof_address_titular' => 'titular_comprobante_domicilio_titular',
+                'holder_birth_certificate' => 'titular_acta_nacimiento',
+                'holder_marriage_certificate' => 'titular_acta_matrimonio',
+                'holder_bank_statement' => 'titular_estado_cuenta_bancario',
+                'property_notarial_instrument' => 'propiedad_instrumento_notarial',
+                'property_tax_receipt' => 'propiedad_recibo_predial',
+                'property_water_receipt' => 'propiedad_recibo_agua',
+                'property_cfe_receipt' => 'propiedad_recibo_cfe',
+            ];
+
+            $documentType = $documentTypeMap[$fieldName] ?? $fieldName;
+
+            // Buscar el documento en la base de datos
+            $clientDocument = ClientDocument::where('agreement_id', $this->agreement->id)
+                ->where('document_type', $documentType)
+                ->first();
+
+            if ($clientDocument) {
+                $documentName = $clientDocument->document_name;
+                
+                // Eliminar el archivo físico del disco
+                if (!empty($clientDocument->file_path) && Storage::disk('private')->exists($clientDocument->file_path)) {
+                    Storage::disk('private')->delete($clientDocument->file_path);
+                }
+
+                // Eliminar el registro de la base de datos
+                $clientDocument->delete();
+
+                // Notificación de eliminación exitosa
+                Notification::make()
+                    ->title('🗑️ Documento Eliminado')
+                    ->body('El documento "' . $documentName . '" ha sido eliminado correctamente')
+                    ->success()
+                    ->duration(3000)
+                    ->send();
+            }
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('❌ Error al Eliminar')
+                ->body('Error al eliminar el documento: ' . $e->getMessage())
+                ->danger()
+                ->duration(4000)
+                ->send();
+        } finally {
+            // Liberar el bloqueo
+            unset($this->processingDeletions[$deletionKey]);
+        }
+    }
+
+    /**
+     * Método legacy - mantenido para compatibilidad
+     */
     private function deleteClientDocument(string $fieldName, string $category): void
     {
-        // Método para eliminar documentos del cliente si es necesario
+        $this->deleteClientDocumentImmediate($fieldName, $category);
+    }
+
+    /**
+     * Carga los documentos del cliente desde la base de datos
+     */
+    private function loadClientDocuments(): array
+    {
+        $documents = [];
+        
+        // Mapeo de tipos de documento a nombres de campo
+        $fieldMap = [
+            'titular_ine' => 'holder_ine',
+            'titular_curp' => 'holder_curp',
+            'titular_constancia_fiscal' => 'holder_fiscal_status',
+            'titular_comprobante_domicilio_vivienda' => 'holder_proof_address_home',
+            'titular_comprobante_domicilio_titular' => 'holder_proof_address_titular',
+            'titular_acta_nacimiento' => 'holder_birth_certificate',
+            'titular_acta_matrimonio' => 'holder_marriage_certificate',
+            'titular_estado_cuenta_bancario' => 'holder_bank_statement',
+            'propiedad_instrumento_notarial' => 'property_notarial_instrument',
+            'propiedad_recibo_predial' => 'property_tax_receipt',
+            'propiedad_recibo_agua' => 'property_water_receipt',
+            'propiedad_recibo_cfe' => 'property_cfe_receipt',
+        ];
+
+        // Obtener documentos del cliente desde la base de datos
+        $clientDocuments = ClientDocument::where('agreement_id', $this->agreement->id)->get();
+        $documentsToDelete = [];
+
+        foreach ($clientDocuments as $document) {
+            $fieldName = $fieldMap[$document->document_type] ?? null;
+            if ($fieldName && !empty($document->file_path)) {
+                // Verificar que el archivo existe físicamente
+                if (Storage::disk('private')->exists($document->file_path)) {
+                    $documents[$fieldName] = [$document->file_path];
+                } else {
+                    // El archivo no existe físicamente, marcar para eliminar de BD
+                    $documentsToDelete[] = $document->id;
+                }
+            }
+        }
+
+        // Limpiar registros huérfanos (que no tienen archivo físico)
+        if (!empty($documentsToDelete)) {
+            ClientDocument::whereIn('id', $documentsToDelete)->delete();
+        }
+
+        return $documents;
     }
 
     private function loadExistingDocuments(): void
     {
+        // Método legacy - ahora usamos loadClientDocuments()
     }
+
+    /**
+     * Limpia archivos huérfanos del disco que no tienen registro en BD
+     */
+    private function cleanOrphanFiles(): void
+    {
+        try {
+            $clientDocumentPaths = [
+                'client_documents/' . $this->agreement->id . '/titular',
+                'client_documents/' . $this->agreement->id . '/propiedad'
+            ];
+
+            // Obtener todos los file_path de la BD para este convenio
+            $dbFilePaths = ClientDocument::where('agreement_id', $this->agreement->id)
+                ->pluck('file_path')
+                ->toArray();
+
+            foreach ($clientDocumentPaths as $path) {
+                if (Storage::disk('private')->exists($path)) {
+                    $files = Storage::disk('private')->files($path);
+                    
+                    foreach ($files as $file) {
+                        // Si el archivo no está en la BD, eliminarlo
+                        if (!in_array($file, $dbFilePaths)) {
+                            Storage::disk('private')->delete($file);
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Silencioso - no queremos interrumpir el flujo por limpieza
+        }
+    }
+
+    /**
+     * Método eliminado para evitar parpadeo - Filament maneja automáticamente
+     */
 
     /**
      * Método mejorado de guardado automático para Wizard 2
