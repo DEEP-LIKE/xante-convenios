@@ -17,7 +17,7 @@ use Filament\Tables\Columns\TextColumn;
 use BackedEnum;
 use UnitEnum;
 use Filament\Actions\Action;
-
+// use Filament\Tables\Filters\SelectFilter; // <-- Importación eliminada por filtro de búsqueda global
 
 class ConfigurationCalculatorResource extends Resource
 
@@ -28,11 +28,11 @@ class ConfigurationCalculatorResource extends Resource
 
     protected static UnitEnum | string | null $navigationGroup = 'Configuraciones';
 
-    protected static ?string $navigationLabel = '% Calculadora';
+    protected static ?string $navigationLabel = 'Calculadora';
     
     protected static ?string $modelLabel = '% Calculadora';
     
-    protected static ?string $pluralModelLabel = '% Calculadora';
+    protected static ?string $pluralModelLabel = 'Valores de la Calculadora';
 
     protected static ?int $navigationSort = 999;
 
@@ -86,11 +86,22 @@ class ConfigurationCalculatorResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('group')->label('Grupo'),
-                TextColumn::make('name')->label('Nombre'),
-                TextColumn::make('key')->label('Clave'),
-                TextColumn::make('value')->label('Valor'),
-                TextColumn::make('updated_at')->label('Actualizado')->dateTime(),
+                // TextColumn::make('group')->label('Grupo')->badge(), // <-- Mostrar el grupo como "badge"
+                TextColumn::make('name')
+                    ->label('Nombre')
+                    ->sortable()
+                    ->searchable(), // <-- Ahora el nombre es searchable
+                TextColumn::make('value')
+                    ->sortable()
+                    ->label('Valor'),
+                TextColumn::make('updated_at')
+                    ->label('Actualizado')
+                    ->sortable()
+                    ->searchable() // <-- Ahora el nombre es searchable
+                    ->dateTime(),
+            ])
+            ->filters([
+                // Dejamos este arreglo vacío para evitar el botón de filtros y usar solo el buscador global.
             ])
             ->recordActions([
                 Action::make('edit')
@@ -104,7 +115,7 @@ class ConfigurationCalculatorResource extends Resource
     {
         return [
             'index' => Pages\ListConfigurationCalculator::route('/'),
-            'create' => Pages\CreateConfigurationCalculator::route('/create'),
+            // 'create' => Pages\CreateConfigurationCalculator::route('/create'),
             'edit' => Pages\EditConfigurationCalculator::route('/{record}/edit'),
         ];
     }

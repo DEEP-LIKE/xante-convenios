@@ -22,25 +22,28 @@ class AgreementsChart extends ChartWidget
 
     protected function getData(): array
     {
+        // Usamos now() para determinar el contexto de los últimos tres meses
         $now = Carbon::now();
         $months = [];
         $newAgreements = [];
         $completedAgreements = [];
 
-        // Generar datos para los últimos 3 meses
+        // Generar datos para los últimos 3 meses (i=2 es hace dos meses, i=0 es el mes actual)
         for ($i = 2; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
-            $monthName = $month->locale('es')->format('M Y');
+            // Formateo del nombre del mes en español (ej: "Oct 2025")
+            $monthName = $month->locale('es')->monthName . ' ' . $month->format('Y'); 
             $months[] = $monthName;
 
-            // Convenios nuevos (creados en ese mes)
+            // 1. Convenios nuevos (creados en ese mes)
             $newCount = Agreement::whereYear('created_at', $month->year)
                 ->whereMonth('created_at', $month->month)
                 ->count();
             $newAgreements[] = $newCount;
 
-            // Convenios cerrados (completados en ese mes)
+            // 2. Convenios cerrados/completados (actualizados en ese mes)
             $completedCount = Agreement::whereIn('status', ['completed', 'convenio_firmado'])
+                // Es crucial filtrar por updated_at o el campo que marque el estado de "cerrado"
                 ->whereYear('updated_at', $month->year)
                 ->whereMonth('updated_at', $month->month)
                 ->count();
@@ -54,7 +57,7 @@ class AgreementsChart extends ChartWidget
                     'data' => $newAgreements,
                     'backgroundColor' => '#BDCE0F', // Verde Xante
                     'borderColor' => '#BDCE0F',
-                    'borderWidth' => 2,
+                    'borderWidth' => 3, // Mayor ancho para la línea
                     'fill' => false,
                 ],
                 [
@@ -62,7 +65,7 @@ class AgreementsChart extends ChartWidget
                     'data' => $completedAgreements,
                     'backgroundColor' => '#6C2582', // Morado Xante
                     'borderColor' => '#6C2582',
-                    'borderWidth' => 2,
+                    'borderWidth' => 3, // Mayor ancho para la línea
                     'fill' => false,
                 ],
             ],
@@ -72,7 +75,8 @@ class AgreementsChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        // CAMBIADO: Usar 'line' para visualizar la tendencia en el tiempo.
+        return 'line'; 
     }
 
     protected function getOptions(): array
@@ -80,13 +84,34 @@ class AgreementsChart extends ChartWidget
         return [
             'responsive' => true,
             'maintainAspectRatio' => false,
+            // Opciones para suavizar la línea y mostrar los puntos de datos
+            'elements' => [
+                'line' => [
+                    'tension' => 0.4, // Suaviza las líneas (efecto "curva")
+                ],
+                'point' => [
+                    'radius' => 4,    // Hace visibles los puntos de datos
+                    'hoverRadius' => 6,
+                ],
+            ],
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
                     'ticks' => [
+                        // Asegura que solo se muestren números enteros, ya que son conteos
+                        'precision' => 0, 
                         'stepSize' => 1,
                     ],
+                    'title' => [
+                        'display' => true,
+                        'text' => 'Cantidad de Convenios',
+                    ]
                 ],
+                'x' => [
+                    'grid' => [
+                        'display' => false, // Oculta las líneas de la cuadrícula vertical
+                    ]
+                ]
             ],
             'plugins' => [
                 'legend' => [

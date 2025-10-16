@@ -151,9 +151,9 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Identificación')
                         ->description('Búsqueda y selección del cliente')
                         ->icon('heroicon-o-magnifying-glass')
-                        ->afterValidation(function () {
-                            $this->saveStepData(1);
-                        })
+                        // ->afterValidation(function () {
+                        //     $this->saveStepData(1);
+                        // })
                         ->schema([
                             TextInput::make('search_term')
                                 ->label('Buscar Cliente')
@@ -175,14 +175,32 @@ class CreateAgreementWizard extends Page implements HasForms
                                         $this->preloadClientData($state, $set);
                                     }
                                 })
-                                ->createOptionForm([
-                                    TextInput::make('name')->required(),
-                                    TextInput::make('email')->email(),
-                                    TextInput::make('phone'),
-                                ])
-                                ->createOptionUsing(function (array $data) {
-                                    return Client::create($data)->id;
-                                }),
+                                // ->createOptionForm([
+                                //     TextInput::make('name')->required(),
+                                //     TextInput::make('email')->email(),
+                                //     TextInput::make('phone'),
+                                // ])
+                                // ->createOptionUsing(function (array $data) {
+                                //     return Client::create($data)->id;
+                                // })
+                                ->suffixAction(
+                                    Action::make('sync_search')
+                                        ->label('Sincronizar') // Etiqueta más corta
+                                        ->icon('heroicon-o-arrow-path')
+                                        ->color('success') // Verde Lima Xante
+                                        ->action(function () {
+                                            // Lógica de sincronización. 
+                                            // Idealmente, esta acción llamaría a un método del Livewire para ejecutar la sincronización
+                                            // y luego actualizar la lista de opciones del select 'client_id'
+
+                                            Notification::make()
+                                                ->title('Sincronización Iniciada')
+                                                ->body('La sincronización con Hubspot de la fuente de datos externa ha comenzado.')
+                                                ->warning() // CAMBIADO A COLOR AMARILLO/WARNING
+                                                ->icon('heroicon-o-arrow-path') // AÑADIDO ÍCONO DE SINCRONIZACIÓN
+                                                ->send();
+                                        })
+                                ),
                         ]),
 
                     Step::make('Cliente')
@@ -885,7 +903,7 @@ class CreateAgreementWizard extends Page implements HasForms
 
                 ->nextAction(fn (Action $action) => $action->label('Siguiente'))
                 ->previousAction(fn (Action $action) => $action->label('Anterior'))
-                ->cancelAction('Cancelar')
+                // ->cancelAction('Cancelar')
                 ->persistStepInQueryString()
                 ->startOnStep($this->currentStep)
                 ->skippable(false)
