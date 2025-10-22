@@ -61,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 \App\Filament\Pages\CreateAgreementWizard::class,
+                \App\Filament\Pages\QuoteCalculatorPage::class,
                 \App\Filament\Pages\ManageDocuments::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')

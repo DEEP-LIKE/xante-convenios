@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agreements', function (Blueprint $table) {
-            $table->timestamp('completed_at')->nullable()->after('updated_at');
+            if (!Schema::hasColumn('agreements', 'completed_at')) {
+                $table->timestamp('completed_at')->nullable()->after('updated_at');
+            }
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('agreements', function (Blueprint $table) {
-            $table->dropColumn('completed_at');
+            if (Schema::hasColumn('agreements', 'completed_at')) {
+                $table->dropColumn('completed_at');
+            }
         });
     }
 };

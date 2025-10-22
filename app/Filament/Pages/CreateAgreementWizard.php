@@ -30,6 +30,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use App\Services\PdfGenerationService;
+use App\Services\AgreementCalculatorService;
 
 use BackedEnum;
 
@@ -51,9 +52,16 @@ class CreateAgreementWizard extends Page implements HasForms
     public int $currentStep = 1;
     public int $totalSteps = 5;
 
+    protected AgreementCalculatorService $calculatorService;
+
     protected $listeners = [
         'stepChanged' => 'handleStepChange',
     ];
+
+    public function boot(AgreementCalculatorService $calculatorService): void
+    {
+        $this->calculatorService = $calculatorService;
+    }
 
     public function mount(?int $agreement = null): void
     {
@@ -917,28 +925,8 @@ class CreateAgreementWizard extends Page implements HasForms
 
     protected function loadCalculatorDefaults(): void
     {
-        // Obtener valores de configuración solo para parámetros, NO para valores calculados
-        $configValues = ConfigurationCalculator::whereIn('key', [
-            'comision_sin_iva_default',
-            'comision_iva_incluido_default',
-            'precio_promocion_multiplicador_default',
-            'isr_default',
-            'cancelacion_hipoteca_default',
-            'monto_credito_default',
-        ])->pluck('value', 'key');
-
-        // Solo aplicar valores por defecto para parámetros de configuración
-        $defaults = [
-            'porcentaje_comision_sin_iva' => $configValues['comision_sin_iva_default'] ?? 6.50,
-            'porcentaje_comision_iva_incluido' => $configValues['comision_iva_incluido_default'] ?? 7.54,
-            'precio_promocion_multiplicador' => $configValues['precio_promocion_multiplicador_default'] ?? 1.09,
-            'isr' => $configValues['isr_default'] ?? 0,
-            'cancelacion_hipoteca' => $configValues['cancelacion_hipoteca_default'] ?? 20000,
-            'monto_credito' => $configValues['monto_credito_default'] ?? 800000,
-        ];
-
-        // NO precargar valores calculados - estos se calcularán solo cuando se ingrese el valor_convenio
-        // Los campos calculados permanecerán vacíos hasta que el usuario ingrese el Valor Convenio
+        // Usar el servicio para obtener la configuración por defecto
+        $defaults = $this->calculatorService->getDefaultConfiguration();
 
         // Solo aplicar defaults si no hay datos existentes (para no sobrescribir datos cargados)
         $this->data = array_merge($defaults, $this->data);
@@ -950,39 +938,29 @@ class CreateAgreementWizard extends Page implements HasForms
     protected function recalculateAllFinancials(callable $set, callable $get): void
     {
         $valorConvenio = (float) ($get('valor_convenio') ?? 0);
-        $porcentajeComision = (float) ($get('porcentaje_comision_sin_iva') ?? 6.50);
-        $porcentajeComisionIvaIncluido = (float) ($get('porcentaje_comision_iva_incluido') ?? 7.54);
-        $multiplicadorPrecioPromocion = (float) ($get('precio_promocion_multiplicador') ?? 1.09);
-        $isr = (float) ($get('isr') ?? 0);
-        $cancelacion = (float) ($get('cancelacion_hipoteca') ?? 0);
-        $totalGastosFi = (float) ($get('total_gastos_fi_venta') ?? 20000);
-        $montoCredito = (float) ($get('monto_credito') ?? 800000);
+        
+        if ($valorConvenio <= 0) {
+            $this->clearCalculatedFields($set);
+            return;
+        }
 
-        if ($valorConvenio > 0) {
-            // 1. Precio Promoción = Valor Convenio × Multiplicador Precio Promoción
-            $precioPromocion = round($valorConvenio * $multiplicadorPrecioPromocion, 0);
-            $set('precio_promocion', number_format($precioPromocion, 0, '.', ','));
+        // Obtener parámetros actuales del formulario
+        $parameters = [
+            'porcentaje_comision_sin_iva' => (float) ($get('porcentaje_comision_sin_iva') ?? 6.50),
+            'porcentaje_comision_iva_incluido' => (float) ($get('porcentaje_comision_iva_incluido') ?? 7.54),
+            'precio_promocion_multiplicador' => (float) ($get('precio_promocion_multiplicador') ?? 1.09),
+            'isr' => (float) ($get('isr') ?? 0),
+            'cancelacion_hipoteca' => (float) ($get('cancelacion_hipoteca') ?? 20000),
+            'monto_credito' => (float) ($get('monto_credito') ?? 800000),
+        ];
 
-            // 2. Valor CompraVenta = Valor Convenio (espejo)
-            $set('valor_compraventa', number_format($valorConvenio, 2, '.', ','));
+        // Usar el servicio para calcular
+        $calculations = $this->calculatorService->calculateAllFinancials($valorConvenio, $parameters);
+        $formattedValues = $this->calculatorService->formatCalculationsForUI($calculations);
 
-            // 3. Monto Comisión (Sin IVA) = Valor Convenio × % Comisión ÷ 100
-            $montoComisionSinIva = round(($valorConvenio * $porcentajeComision) / 100, 2);
-            $set('monto_comision_sin_iva', number_format($montoComisionSinIva, 2, '.', ','));
-
-            // 4. Comisión Total Pagar = Valor Convenio × % Comisión IVA Incluido ÷ 100
-            $comisionTotalPagar = round(($valorConvenio * $porcentajeComisionIvaIncluido) / 100, 2);
-            $set('comision_total_pagar', number_format($comisionTotalPagar, 2, '.', ','));
-
-            // 5. Total Gastos FI (Venta) = ISR + Cancelación de Hipoteca
-            // Fórmula Excel: =SUMA(F33:G34)
-            $totalGastosFi = round($isr + $cancelacion, 2);
-            $set('total_gastos_fi_venta', number_format($totalGastosFi, 2, '.', ','));
-
-            // 6. Ganancia Final = Valor CompraVenta - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
-            // Fórmula Excel: +C33-F33-F34-C34-F23
-            $gananciaFinal = round($valorConvenio - $isr - $cancelacion - $comisionTotalPagar - $montoCredito, 2);
-            $set('ganancia_final', number_format($gananciaFinal, 2, '.', ','));
+        // Aplicar valores calculados al formulario
+        foreach ($formattedValues as $field => $value) {
+            $set($field, $value);
         }
     }
 
