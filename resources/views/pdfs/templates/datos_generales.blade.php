@@ -282,7 +282,7 @@
                 <tr>
                     <td class="data-label">CURP</td>
                     <td class="data-value">{{ $holder_curp ?? '' }}</td>
-                    <td class="data-label">Bajo ¿qué régimen?</td>
+                    <td class="data-label">Régimen Fiscal</td>
                     <td class="data-value">{{ $holder_regime_type ?? '' }}</td>
                 </tr>
                 <tr>
@@ -351,7 +351,7 @@
                 <tr>
                     <td class="data-label">CURP</td>
                     <td class="data-value">{{ $spouse_curp ?? '' }}</td>
-                    <td class="data-label">Bajo ¿qué régimen?</td>
+                    <td class="data-label">Régimen Fiscal</td>
                     <td class="data-value">{{ $spouse_regime_type ?? '' }}</td>
                 </tr>
                 <tr>

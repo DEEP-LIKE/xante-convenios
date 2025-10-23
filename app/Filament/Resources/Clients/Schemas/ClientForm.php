@@ -60,7 +60,7 @@ class ClientForm
                                 'union_libre' => 'Unión Libre',
                             ]),
                         TextInput::make('regime_type')
-                            ->label('Bajo ¿qué régimen?')
+                            ->label('Régimen Fiscal')
                             ->maxLength(255),
                         TextInput::make('occupation')
                             ->label('Ocupación')
@@ -130,7 +130,7 @@ class ClientForm
                                 'union_libre' => 'Unión Libre',
                             ]),
                         TextInput::make('spouse_regime_type')
-                            ->label('Bajo ¿qué régimen?')
+                            ->label('Régimen Fiscal')
                             ->maxLength(255),
                         TextInput::make('spouse_occupation')
                             ->label('Ocupación')

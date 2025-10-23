@@ -490,7 +490,7 @@ class AgreementResource extends Resource
                             ->disabled()
                             ->dehydrated(false),
                         Forms\Components\TextInput::make('holder_regime_type')
-                            ->label('Bajo ¿qué régimen?')
+                            ->label('Régimen Fiscal')
                             ->disabled()
                             ->dehydrated(false),
                         Forms\Components\TextInput::make('holder_occupation')

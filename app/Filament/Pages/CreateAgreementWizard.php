@@ -31,6 +31,7 @@ use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use App\Services\PdfGenerationService;
 use App\Services\AgreementCalculatorService;
+use Illuminate\Support\Carbon;
 
 use BackedEnum;
 
@@ -84,6 +85,8 @@ class CreateAgreementWizard extends Page implements HasForms
 
             // Cargar el paso actual donde se quedó el usuario
             $this->currentStep = $agreementModel->current_step ?? 1;
+            
+            $this->currentStep = $this->currentStep + 1;
 
 
             // Llenar el formulario con los datos cargados
@@ -163,20 +166,21 @@ class CreateAgreementWizard extends Page implements HasForms
                         //     $this->saveStepData(1);
                         // })
                         ->schema([
-                            TextInput::make('search_term')
-                                ->label('Buscar Cliente')
-                                ->placeholder('ID Xante, nombre, email, CURP')
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function ($state) {
-                                    if (!empty($state)) {
-                                        $this->searchClient();
-                                    }
-                                }),
+                            // TextInput::make('search_term')
+                            //     ->label('Buscar Cliente')
+                            //     ->placeholder('ID Xante, nombre, email, CURP')
+                            //     ->live(onBlur: true)
+                            //     ->afterStateUpdated(function ($state) {
+                            //         if (!empty($state)) {
+                            //             $this->searchClient();
+                            //         }
+                            //     }),
 
                             Select::make('client_id')
                                 ->label('Cliente Seleccionado')
                                 ->options(Client::limit(50)->pluck('name', 'id'))
                                 ->searchable()
+                                ->required()
                                 ->live()
                                 ->afterStateUpdated(function ($state, callable $set) {
                                     if ($state) {
@@ -250,10 +254,14 @@ class CreateAgreementWizard extends Page implements HasForms
                                             TextInput::make('holder_delivery_file')
                                                 ->label('Entrega expediente')
                                                 ->maxLength(100),
-                                            DatePicker::make('holder_birthdate')
+                                            DatePicker::make('spouse_birthdate')
                                                 ->native(false)
-                                                ->label('Fecha de Nacimiento')
+                                                ->label('Fecha de Nacimiento (min 18 años)')
                                                 ->displayFormat('d/m/Y')
+                                                ->maxDate(Carbon::today()->subYears(18))
+                                                ->validationMessages([
+                                                    'max' => 'El titular debe ser mayor de 18 años.',
+                                                ])
                                                 ->suffixIcon(Heroicon::Calendar),
                                             Select::make('holder_civil_status')
                                                 ->label('Estado civil')
@@ -269,7 +277,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                                 ->maxLength(18)
                                                 ->minLength(18),
                                             TextInput::make('holder_regime_type')
-                                                ->label('Bajo ¿qué régimen?')
+                                                ->label('Régimen Fiscal')
                                                 ->maxLength(100),
                                             TextInput::make('holder_rfc')
                                                 ->label('RFC')
@@ -367,8 +375,12 @@ class CreateAgreementWizard extends Page implements HasForms
                                                 ->maxLength(100),
                                             DatePicker::make('spouse_birthdate')
                                                 ->native(false)
-                                                ->label('Fecha de Nacimiento')
+                                                ->label('Fecha de Nacimiento (min 18 años)')
                                                 ->displayFormat('d/m/Y')
+                                                ->maxDate(Carbon::today()->subYears(18))
+                                                ->validationMessages([
+                                                    'max' => 'El titular debe ser mayor de 18 años.',
+                                                ])
                                                 ->suffixIcon(Heroicon::Calendar),
                                             Select::make('spouse_civil_status')
                                                 ->label('Estado civil')
@@ -384,7 +396,7 @@ class CreateAgreementWizard extends Page implements HasForms
                                                 ->maxLength(18)
                                                 ->minLength(18),
                                             TextInput::make('spouse_regime_type')
-                                                ->label('Bajo ¿qué régimen?')
+                                                ->label('Régimen Fiscal')
                                                 ->maxLength(100),
                                             TextInput::make('spouse_rfc')
                                                 ->label('RFC')
@@ -528,11 +540,15 @@ class CreateAgreementWizard extends Page implements HasForms
                                     Grid::make(1)
                                         ->schema([
                                             DatePicker::make('fecha_propiedad')
-                                                ->label('Fecha')
+                                                ->label('Fecha escrituración')
                                                 ->native(false)
                                                 ->displayFormat('d/m/Y')
                                                 ->suffixIcon(Heroicon::Calendar)
-                                                ->required(),
+                                                ->required()
+                                                ->maxDate(Carbon::today()->subYears(3)) // ✅ Esta línea hace la validación
+                                                ->validationMessages([
+                                                    'max' => 'La propiedad debe tener una antigüedad mínima de 3 años.' // ✅ Y este es el mensaje
+                                                ]),
                                         ]),
                                 ])
                                 ->collapsible(),
