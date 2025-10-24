@@ -16,6 +16,7 @@ use Filament\Actions\Action;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ConfigurationCalculator;
+use App\Models\Proposal;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -88,6 +89,10 @@ class CreateAgreementWizard extends Page implements HasForms
             
             $this->currentStep = $this->currentStep + 1;
 
+            // NUEVO: Si estamos en paso 4 o superior y hay propuesta previa, precargar
+            if ($this->currentStep >= 4) {
+                $this->preloadProposalDataIfExists();
+            }
 
             // Llenar el formulario con los datos cargados
             $this->form->fill($this->data);
@@ -149,6 +154,11 @@ class CreateAgreementWizard extends Page implements HasForms
 
             // Pre-cargar valores de configuración
             $this->loadCalculatorDefaults();
+
+            // NUEVO: Si hay cliente preseleccionado, verificar propuesta previa
+            if ($clientId) {
+                $this->preloadProposalDataIfExists();
+            }
 
             // Llenar el formulario con los datos
             $this->form->fill($this->data);
@@ -560,6 +570,78 @@ class CreateAgreementWizard extends Page implements HasForms
                             $this->saveStepData(4);
                         })
                         ->schema([
+                            // ⭐ NUEVO: Indicador de Pre-cálculo Previo
+                            Section::make('💡 PRE-CÁLCULO DETECTADO')
+                                ->description('Este cliente ya tiene una cotización previa registrada')
+                                ->schema([
+                                    Placeholder::make('existing_proposal_alert')
+                                        ->label('')
+                                        ->content(function () {
+                                            $proposalInfo = $this->hasExistingProposal();
+                                            
+                                            if (!$proposalInfo) {
+                                                return ''; // No mostrar nada si no existe
+                                            }
+                                            
+                                            $valorConvenio = $proposalInfo['valor_convenio'] ?? 0;
+                                            $gananciaFinal = $proposalInfo['ganancia_final'] ?? 0;
+                                            $fechaCalculo = $proposalInfo['created_at']->format('d/m/Y H:i');
+                                            
+                                            return new HtmlString('
+                                                <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); 
+                                                            border-left: 4px solid #F59E0B; 
+                                                            padding: 20px; 
+                                                            border-radius: 12px;
+                                                            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                                                    <div style="display: flex; align-items: start; gap: 16px;">
+                                                        <!-- Icono -->
+                                                        <div style="flex-shrink: 0;">
+                                                            <svg style="width: 32px; height: 32px; color: #D97706;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            </svg>
+                                                        </div>
+                                                        
+                                                        <!-- Contenido -->
+                                                        <div style="flex: 1;">
+                                                            <h3 style="font-size: 18px; font-weight: 700; color: #92400E; margin: 0 0 12px 0;">
+                                                                ✅ Pre-cálculo Previo Detectado
+                                                            </h3>
+                                                            
+                                                            <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                                                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
+                                                                    <div>
+                                                                        <strong style="color: #78350F;">📅 Fecha del cálculo:</strong><br>
+                                                                        <span style="color: #92400E;">' . $fechaCalculo . '</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <strong style="color: #78350F;">💰 Valor Convenio:</strong><br>
+                                                                        <span style="color: #92400E; font-weight: 600;">$' . number_format($valorConvenio, 2) . '</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <strong style="color: #78350F;">💵 Ganancia Estimada:</strong><br>
+                                                                        <span style="color: #059669; font-weight: 700; font-size: 16px;">$' . number_format($gananciaFinal, 2) . '</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <strong style="color: #78350F;">📊 Estado:</strong><br>
+                                                                        <span style="background: #D97706; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;">ENLAZADO</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <p style="font-size: 13px; color: #B45309; margin: 0; font-style: italic;">
+                                                                ℹ️ Los valores han sido precargados automáticamente desde la calculadora previa. Puede modificarlos si es necesario.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ');
+                                        })
+                                        ->html(),
+                                ])
+                                ->visible(fn () => $this->hasExistingProposal() !== null)
+                                ->collapsible()
+                                ->collapsed(false),
+
                             // Información de la Propiedad (Precargada)
                             Section::make('INFORMACIÓN DE LA PROPIEDAD')
                                 ->description('Datos precargados desde pasos anteriores')
@@ -1632,5 +1714,71 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         // Método legacy - redirigir al nuevo método
         $this->generateDocumentsAndProceed();
+    }
+
+    /**
+     * Verifica si el cliente actual tiene un pre-cálculo previo
+     */
+    protected function hasExistingProposal(): ?array
+    {
+        // Obtener el client_id del cliente seleccionado
+        $clientId = $this->data['client_id'] ?? null;
+        
+        if (!$clientId) {
+            return null;
+        }
+        
+        $client = Client::find($clientId);
+        
+        if (!$client || !$client->xante_id) {
+            return null;
+        }
+        
+        // Buscar propuesta enlazada
+        $proposal = Proposal::where('idxante', $client->xante_id)
+            ->where('linked', true)
+            ->latest()
+            ->first();
+        
+        if (!$proposal) {
+            return null;
+        }
+        
+        // Retornar datos de la propuesta
+        return [
+            'exists' => true,
+            'created_at' => $proposal->created_at,
+            'valor_convenio' => $proposal->valor_convenio,
+            'ganancia_final' => $proposal->ganancia_final,
+            'data' => $proposal->data,
+            'resumen' => $proposal->resumen,
+        ];
+    }
+
+    /**
+     * Precarga datos de propuesta existente si existe y los campos están vacíos
+     */
+    protected function preloadProposalDataIfExists(): void
+    {
+        $proposalInfo = $this->hasExistingProposal();
+        
+        if (!$proposalInfo || empty($proposalInfo['data'])) {
+            return;
+        }
+
+        // Solo precargar si los campos calculadores están vacíos
+        $shouldPreload = empty($this->data['valor_convenio']) || $this->data['valor_convenio'] == 0;
+        
+        if ($shouldPreload) {
+            // Mezclar datos de la propuesta con datos actuales
+            $this->data = array_merge($this->data, $proposalInfo['data']);
+            
+            Notification::make()
+                ->title('🔄 Pre-cálculo Cargado')
+                ->body('Se han precargado los valores de la cotización previa del cliente')
+                ->info()
+                ->duration(5000)
+                ->send();
+        }
     }
 }

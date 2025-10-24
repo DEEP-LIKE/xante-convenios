@@ -18,9 +18,9 @@
         }
         
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'DejaVu Sans', sans-serif;
             padding: 40px;
-            font-size: 11pt;
+            font-size: 10pt;
             line-height: 1.4;
             color: #000;
         }
@@ -34,8 +34,9 @@
         /* HEADER */
         .header {
             text-align: right;
-            margin-bottom: 25px;
+            margin-bottom: 5px;
             font-size: 10pt;
+            height: 0px;
         }
         
         .header .fecha {
@@ -45,13 +46,13 @@
         /* LOGO */
         .logo-section {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 0px;
         }
         
         .logo {
             width: 120px;
             height: auto;
-            margin-bottom: 10px;
+            margin-bottom: 0px;
         }
         
         /* TÍTULO */
@@ -95,10 +96,13 @@
             font-weight: bold;
             display: inline-block;
             min-width: 80px;
+            margin-top: 10px;
         }
         
         .client-box .value {
             text-decoration: underline;
+            display: inline-block;
+            margin-top: -20px;
         }
         
         .client-location {
@@ -156,6 +160,26 @@
             border: 2px solid #000;
             vertical-align: middle;
         }
+
+        .checkbox-checked {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #000;
+            background-color: #fff;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        .checkbox-checked::after {
+            content: "✓";
+            color: #000;
+            font-size: 24px;
+            font-weight: bold;
+            position: absolute;
+            top: -17px;
+            left: -2px;
+        }
         
         /* NOTAS */
         .notes-section {
@@ -202,6 +226,14 @@
 <body>
     <div class="page-container">
         
+        {{-- Función helper para verificar si documento está cargado --}}
+        @php
+            $isChecked = function($documentType) use ($uploadedDocuments, $isUpdated) {
+                if (!isset($isUpdated) || !$isUpdated) return false; // Paso 1: nada marcado
+                return in_array($documentType, $uploadedDocuments ?? []);
+            };
+        @endphp
+        
         {{-- FECHA EN HEADER --}}
         <div class="header">
             <span class="fecha">{{ $day ?? '__' }} de {{ $month ?? '__________' }} de {{ $year ?? '2025' }}</span>
@@ -242,8 +274,7 @@
             <div>
                 <span class="label">CLIENTE:</span>
                 <span class="value">{{ strtoupper($holder_name ?? '____________________') }}</span>
-            </div>
-            <div class="client-location">
+           
                 <span class="value">{{ strtoupper($comunidad ?? 'REAL ________') }}</span>, 
                 <span class="value">{{ strtoupper($property_community ?? 'PRIVADA ________') }}</span>.
             </div>
@@ -257,42 +288,58 @@
                 <tr>
                     <td class="doc-number">1</td>
                     <td class="doc-name">INE (A color, tamaño original, no fotos)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_ine') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">2</td>
                     <td class="doc-name">CURP (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_curp') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">3</td>
                     <td class="doc-name">Constancia de Situación Fiscal (Mes corriente, completa)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_constancia_fiscal') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">4</td>
                     <td class="doc-name">Comprobante de Domicilio Vivienda (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_comprobante_domicilio_vivienda') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">5</td>
                     <td class="doc-name">Comprobante de Domicilio Titular (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_comprobante_domicilio_titular') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">6</td>
                     <td class="doc-name">Acta Nacimiento</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_acta_nacimiento') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">7</td>
                     <td class="doc-name">Acta Matrimonio (Si aplica)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_acta_matrimonio') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">8</td>
                     <td class="doc-name">Caratula Estado de Cuenta Bancario con Datos Fiscales (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_estado_cuenta_bancario') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
             </table>
         </div>
@@ -308,22 +355,30 @@
                         Instrumento Notarial con Antecedentes Registrales (Datos Registrales y<br>
                         Traslado de Dominio) Escaneada, visible
                     </td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('propiedad_instrumento_notarial') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">2</td>
                     <td class="doc-name">Recibo predial (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('propiedad_recibo_predial') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">3</td>
                     <td class="doc-name">Recibo de Agua (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('propiedad_recibo_agua') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="doc-number">4</td>
                     <td class="doc-name">Recibo CFE con datos fiscales (Mes corriente)</td>
-                    <td class="doc-checkbox"><span class="checkbox-square"></span></td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('propiedad_recibo_cfe') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
                 </tr>
             </table>
         </div>

@@ -84,6 +84,9 @@ class ManageDocuments extends Page implements HasForms, HasActions
     // Control de eliminaciones múltiples - SIMPLIFICADO (sin static para Livewire)
     public array $processingDeletions = [];
     public bool $isDeletingDocuments = false;
+    
+    // Propiedad para el checkbox de validación de documentos
+    public bool $documents_validated = false;
     private function getCurrentUrlStep(): ?int
     {
         $currentUrl = request()->url();
@@ -155,6 +158,9 @@ class ManageDocuments extends Page implements HasForms, HasActions
         if (!empty($existingDocuments)) {
             $this->form->fill($existingDocuments);
         }
+        
+        // Inicializar el checkbox de validación de documentos
+        $this->documents_validated = $this->agreement->status === 'completed';
         
         // Notificar si se cargaron documentos existentes
         if (!empty($existingDocuments)) {
@@ -381,15 +387,27 @@ class ManageDocuments extends Page implements HasForms, HasActions
     private function getStepTwoSchema(): array
     {
         return [
+          
             Section::make('Documentos Requeridos del Cliente')
                 ->description(new HtmlString(
                         'Gestionar documentos que debe proporcionar el cliente <br> <span class="font-semibold text-gray-700">Documento cargado previamente se mostrará automáticamente</span>'
                     ))                      
                 ->icon('heroicon-o-clipboard-document-list')
                 ->iconColor('info')
+                ->headerActions([
+                    // ⭐ BOTÓN usando Filament Actions nativo
+                    \Filament\Actions\Action::make('downloadUpdatedChecklist')
+                        ->label('Descargar Lista Actualizada')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(function () {
+                            return $this->downloadUpdatedChecklistAction();
+                        })
+                ])
                 ->schema([
                     Grid::make(1)
                         ->schema([
+                           
                             Section::make('DOCUMENTACIÓN TITULAR')
                                 ->icon('heroicon-o-user')
                                 ->description('Todos los documentos son obligatorios')
@@ -1094,6 +1112,62 @@ class ManageDocuments extends Page implements HasForms, HasActions
         return $this->redirect('/admin');
     }
 
+    /**
+     * Descarga el checklist actualizado con documentos marcados
+     */
+    public function downloadUpdatedChecklist()
+    {
+        try {
+            if (!$this->agreement) {
+                throw new \Exception('No se encontró el convenio');
+            }
+
+            // Obtener documentos cargados del cliente
+            $uploadedDocuments = ClientDocument::where('agreement_id', $this->agreement->id)
+                ->pluck('document_type')
+                ->toArray();
+
+            // Generar PDF con datos actualizados usando el servicio
+            $pdfService = app(PdfGenerationService::class);
+            
+            // Generar checklist con flag de actualización
+            $pdf = $pdfService->generateChecklist(
+                $this->agreement,
+                $uploadedDocuments, // Lista de tipos de documentos ya cargados
+                true // Flag: isUpdatedVersion
+            );
+
+            // Nombre del archivo con timestamp
+            $fileName = 'checklist_actualizado_' . $this->agreement->id . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+            // Notificación de éxito
+            Notification::make()
+                ->title('📋 Lista Actualizada Generada')
+                ->body('El checklist con documentos marcados ha sido generado exitosamente')
+                ->success()
+                ->duration(4000)
+                ->send();
+
+            // Descargar PDF
+            return response()->streamDownload(
+                fn() => print($pdf->output()),
+                $fileName,
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
+                ]
+            );
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('❌ Error al Generar')
+                ->body('No se pudo generar el checklist: ' . $e->getMessage())
+                ->danger()
+                ->duration(6000)
+                ->send();
+        }
+    }
+
     private function saveClientDocument(string $fieldName, $filePath, string $documentName, string $category): void
     {
         try {
@@ -1497,4 +1571,31 @@ class ManageDocuments extends Page implements HasForms, HasActions
     //         'data' => $this->agreement->wizard_data
     //     ]);
     // }
+
+    /**
+     * Método de acción para descargar checklist actualizado usando Filament Actions
+     */
+    public function downloadUpdatedChecklistAction()
+    {
+        try {
+            $agreementId = $this->agreement->id;
+            
+            // Notificación de inicio
+            Notification::make()
+                ->title('Generando PDF...')
+                ->body('El checklist actualizado se está generando')
+                ->info()
+                ->send();
+
+            // Redirigir a la descarga
+            return redirect()->route('download.updated.checklist', ['agreement' => $agreementId]);
+            
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error al Generar')
+                ->body('No se pudo generar el checklist: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
 }

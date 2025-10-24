@@ -36,6 +36,39 @@ Route::middleware(['auth'])->group(function () {
     // Ruta para descargar documentos generados (mantener compatibilidad)
     Route::get('/documents/{document}/download', [App\Http\Controllers\DocumentDownloadController::class, 'download'])
         ->name('documents.download');
+    
+    // Ruta para descargar checklist actualizado
+    Route::get('/admin/download-updated-checklist/{agreement}', function ($agreementId) {
+        $agreement = \App\Models\Agreement::findOrFail($agreementId);
+        
+        // Obtener documentos cargados del cliente
+        $uploadedDocuments = \App\Models\ClientDocument::where('agreement_id', $agreement->id)
+            ->pluck('document_type')
+            ->toArray();
+
+        // Generar PDF con datos actualizados usando el servicio
+        $pdfService = app(\App\Services\PdfGenerationService::class);
+        
+        // Generar checklist con flag de actualización
+        $pdf = $pdfService->generateChecklist(
+            $agreement,
+            $uploadedDocuments, // Lista de tipos de documentos ya cargados
+            true // Flag: isUpdatedVersion
+        );
+
+        // Nombre del archivo con timestamp
+        $fileName = 'checklist_actualizado_' . $agreement->id . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        // Descargar PDF
+        return response()->streamDownload(
+            fn() => print($pdf->output()),
+            $fileName,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
+            ]
+        );
+    })->name('download.updated.checklist');
 });
 
 require __DIR__.'/auth.php';

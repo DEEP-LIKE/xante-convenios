@@ -62,6 +62,9 @@ class AgreementCalculatorService
 
         // Realizar cálculos
         $calculations = [];
+        
+        // 0. Valor Convenio (valor base)
+        $calculations['valor_convenio'] = $valorConvenio;
 
         // 1. Precio Promoción = Valor Convenio × Multiplicador Precio Promoción
         $calculations['precio_promocion'] = round($valorConvenio * $multiplicadorPrecioPromocion, 0);
@@ -123,6 +126,7 @@ class AgreementCalculatorService
     public function getEmptyCalculation(): array
     {
         return [
+            'valor_convenio' => 0,
             'precio_promocion' => 0,
             'valor_compraventa' => 0,
             'monto_comision_sin_iva' => 0,

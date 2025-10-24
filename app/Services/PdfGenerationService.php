@@ -175,6 +175,12 @@ class PdfGenerationService
             // Preparar datos para la plantilla
             $data = $this->prepareTemplateData($agreement);
             
+            // Para el checklist, agregar variables específicas
+            if ($type === 'checklist_expediente') {
+                $data['uploadedDocuments'] = []; // Lista vacía inicialmente
+                $data['isUpdated'] = false; // Paso 1: nada marcado
+            }
+            
             Log::info("Datos preparados para plantilla", [
                 'agreement_id' => $agreement->id,
                 'document_type' => $type,
@@ -210,7 +216,7 @@ class PdfGenerationService
         $pdf = Pdf::loadHTML($html)
             ->setPaper('letter')
             ->setOptions([
-                'defaultFont' => 'Arial',
+                'defaultFont' => 'DejaVu Sans',
                 'isRemoteEnabled' => true,
                 'isHtml5ParserEnabled' => true,
             ]);
@@ -468,6 +474,67 @@ class PdfGenerationService
     public function getTotalDocumentsSize(Agreement $agreement): int
     {
         return $agreement->generatedDocuments()->sum('file_size');
+    }
+
+    /**
+     * Genera el checklist de documentos con marcado dinámico
+     */
+    public function generateChecklist(Agreement $agreement, array $uploadedDocuments = [], bool $isUpdated = false)
+    {
+        try {
+            // Preparar datos para la plantilla
+            $data = $this->prepareTemplateData($agreement);
+            
+            // Agregar datos específicos para el checklist actualizado
+            $data['uploadedDocuments'] = $uploadedDocuments;
+            $data['isUpdated'] = $isUpdated;
+            
+            Log::info("Generando checklist dinámico", [
+                'agreement_id' => $agreement->id,
+                'is_updated' => $isUpdated,
+                'uploaded_documents_count' => count($uploadedDocuments),
+                'uploaded_documents' => $uploadedDocuments
+            ]);
+            
+            // Verificar que la vista existe
+            $viewPath = "pdfs.templates.checklist_expediente";
+            if (!view()->exists($viewPath)) {
+                throw new \Exception("La plantilla Blade no existe: {$viewPath}");
+            }
+            
+            // Renderizar HTML desde Blade
+            $html = view($viewPath, $data)->render();
+            
+            Log::info("HTML del checklist renderizado exitosamente", [
+                'agreement_id' => $agreement->id,
+                'html_length' => strlen($html)
+            ]);
+            
+            // Configurar PDF
+            $pdf = Pdf::loadHTML($html)
+                ->setPaper('letter')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isRemoteEnabled' => true,
+                    'isHtml5ParserEnabled' => true,
+                ]);
+            
+            Log::info("PDF del checklist generado exitosamente", [
+                'agreement_id' => $agreement->id,
+                'is_updated' => $isUpdated
+            ]);
+            
+            return $pdf;
+            
+        } catch (\Exception $e) {
+            Log::error("Error generando checklist dinámico para Agreement #{$agreement->id}: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'is_updated' => $isUpdated,
+                'uploaded_documents' => $uploadedDocuments
+            ]);
+            throw $e;
+        }
     }
 
     /**

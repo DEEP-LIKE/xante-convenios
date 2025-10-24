@@ -320,8 +320,10 @@ class QuoteCalculatorPage extends Page implements HasForms
         $calculations = $this->calculatorService->calculateAllFinancials($valorConvenio, $this->data);
         $formattedValues = $this->calculatorService->formatCalculationsForUI($calculations);
 
-        // Actualizar campos calculados
+        // Actualizar campos calculados con valores formateados para UI
         $this->data = array_merge($this->data, $formattedValues);
+        
+        // Guardar también los valores numéricos para el guardado en BD
         $this->calculationResults = $calculations;
         $this->showResults = true;
 
@@ -408,6 +410,14 @@ class QuoteCalculatorPage extends Page implements HasForms
             $formData = $this->form->getState();
             $this->data = array_merge($this->data, $formData);
 
+            // Preparar datos para guardar: usar valores numéricos en lugar de formateados
+            $dataToSave = $this->data;
+            
+            // Si tenemos cálculos, usar los valores numéricos
+            if (!empty($this->calculationResults)) {
+                $dataToSave = array_merge($dataToSave, $this->calculationResults);
+            }
+
             // Crear o actualizar propuesta
             $proposal = Proposal::updateOrCreate(
                 [
@@ -416,7 +426,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                 ],
                 [
                     'client_id' => $this->selectedClientId,
-                    'data' => $this->data,
+                    'data' => $dataToSave,
                     'created_by' => Auth::id(),
                 ]
             );
