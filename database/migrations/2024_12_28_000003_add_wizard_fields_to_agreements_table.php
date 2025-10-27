@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('agreements', function (Blueprint $table) {
             // Campos para el sistema de dos wizards
-            $table->timestamp('documents_generated_at')->nullable()->after('completed_at');
+            $table->timestamp('documents_generated_at')->nullable();
             $table->timestamp('documents_sent_at')->nullable()->after('documents_generated_at');
             $table->boolean('can_return_to_wizard1')->default(true)->after('documents_sent_at');
             $table->tinyInteger('current_wizard')->default(1)->after('can_return_to_wizard1');
