@@ -188,7 +188,13 @@ class CreateAgreementWizard extends Page implements HasForms
 
                             Select::make('client_id')
                                 ->label('Cliente Seleccionado')
-                                ->options(Client::limit(50)->pluck('name', 'id'))
+                                ->placeholder('Busque por nombre o ID Xante...')
+                                ->options(function () {
+                                    return Client::query()
+                                        ->selectRaw("id, CONCAT(name, ' — ', xante_id) as display_name")
+                                        ->pluck('display_name', 'id')
+                                        ->toArray();
+                                })
                                 ->searchable()
                                 ->required()
                                 ->live()
@@ -259,6 +265,8 @@ class CreateAgreementWizard extends Page implements HasForms
                                         ->schema([
                                             TextInput::make('holder_name')
                                                 ->label('Nombre Cliente')
+                                                ->disabled()
+                                                ->dehydrated(false)
                                                 ->required()
                                                 ->maxLength(255),
                                             TextInput::make('holder_delivery_file')
