@@ -324,41 +324,69 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                 })
                                 ->html(),
                         ]),
-                        Placeholder::make('send_button_css')
-                            ->label('')
-                            ->content(function () {
-                                if ($this->agreement->status === 'documents_sent') {
-                                    return '<div style="text-align: center;">
-                                        <div style="display: inline-flex; align-items: center; padding: 16px 32px; background: linear-gradient(135deg, #C9D534 0%, #BDCE0F 100%); border: 2px solid #BDCE0F; color: #342970; font-weight: 600; border-radius: 16px; font-family: \'Franie\', sans-serif; box-shadow: 0 8px 32px rgba(189, 206, 15, 0.3);">
-                                            <svg style="width: 24px; height: 24px; margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        
+                        // ⭐ BOTÓN para enviar documentos (estilo atractivo como botón principal)
+                        Placeholder::make('send_button')
+                        ->label('')
+                        ->content(function () {
+                            $sendUrl = route('documents.send-to-client', ['agreement' => $this->agreement->id]);
+                            
+                            // Colores
+                            $color_bg = '#FF6B35'; 
+                            $color_hover = '#E55A2B'; 
+                            $color_text = '#FFFFFF';
+                            
+                            // Retorna la cadena de HTML directamente (SIN new HtmlString)
+                            return '
+                                <div style="display: flex; justify-content: center; width: 100%; margin: 16px 0;">
+                                    <a href="' . $sendUrl . '"
+                                        target="_self"
+                                        style="
+                                            display: inline-flex; 
+                                            align-items: center; 
+                                            padding: 10px 16px; 
+                                            background-color: ' . $color_bg . '; 
+                                            color: ' . $color_text . '; 
+                                            border: none;
+                                            border-radius: 8px; 
+                                            font-weight: 600; 
+                                            font-size: 12px;
+                                            text-transform: uppercase;
+                                            text-decoration: none;
+                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                            transition: background-color 0.15s ease-in-out;
+                                        "
+                                        onmouseover="this.style.backgroundColor=\'' . $color_hover . '\';"
+                                        onmouseout="this.style.backgroundColor=\'' . $color_bg . '\';"
+                                                
+                                       >
+                                        
+                                        <span id="send-btn-content" style="display: inline-flex; align-items: center;">
+                                            <svg style="width: 24px; height: 24px; margin-right: 12px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                                             </svg>
-                                            ✅ Documentos Enviados Exitosamente
-                                        </div>
-                                    </div>';
-                                }
+                                            📧 Enviar Documentos al Cliente
+                                        </span>
+                                    </a>
+                                </div>
                                 
-                                return '<div style="text-align: left;">
-                                    <button wire:click="sendDocumentsToClient" 
-                                            wire:confirm="¿Está seguro de enviar todos los documentos al cliente por correo electrónico?"
-                                            style="display: inline-flex; align-items: center; padding: 16px 32px; background: linear-gradient(135deg, #6C2582 0%, #7C4794 100%); color: white; font-weight: 600; border-radius: 16px; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 32px rgba(108, 37, 130, 0.3); text-decoration: none; font-family: \'Franie\', sans-serif; font-size: 16px;"
-                                            onmouseover="this.style.background=\'linear-gradient(135deg, #7C4794 0%, #62257D 100%)\'; this.style.boxShadow=\'0 12px 48px rgba(108, 37, 130, 0.5)\'; this.style.transform=\'translateY(-3px) scale(1.05)\';"
-                                            onmouseout="this.style.background=\'linear-gradient(135deg, #6C2582 0%, #7C4794 100%)\'; this.style.boxShadow=\'0 8px 32px rgba(108, 37, 130, 0.3)\'; this.style.transform=\'translateY(0) scale(1)\';">
-                                        <svg style="width: 24px; height: 24px; margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
-                                        </svg>
-                                        📧 Enviar Documentos al Cliente
-                                    </button>
-                                </div>';
-                            })
-                            ->html()
-                ])
-                ->visible($this->agreement->generatedDocuments->isNotEmpty() && $this->agreement->status !== 'documents_sent'),
+                                <style>
+                                    @keyframes spin {
+                                        from { transform: rotate(0deg); }
+                                        to { transform: rotate(360deg); }
+                                    }
+                                </style>
+                            ';
+                        })
+                        ->html()
+                        ->visible(fn () => $this->agreement->status !== 'documents_sent')
+                                    ])
+                                    ->visible($this->agreement->generatedDocuments->isNotEmpty() && $this->agreement->status !== 'documents_sent'),
                 
             Section::make('Documentos Enviados')
-                ->description('Los documentos han sido enviados al cliente')
-                ->icon('heroicon-o-check') // Usamos el icono oficial de Heroicons
-                ->iconColor('success') // Le damos un color llamativo (verde)
+                ->description('Los documentos han sido enviados al cliente exitosamente')
+                ->icon('heroicon-o-check-circle')
+                ->iconColor('success')
                 ->schema([
                     Grid::make(2)
                         ->schema([
@@ -377,7 +405,40 @@ class ManageDocuments extends Page implements HasForms, HasActions
                             Placeholder::make('next_steps')
                                 ->label('📋 Próximos Pasos')
                                 ->content('El cliente debe revisar los documentos y enviar la documentación requerida. Proceda al siguiente paso para gestionar la recepción de documentos del cliente.')
-                        ])
+                        ]),
+                        
+                    // ⭐ BOTÓN para reenviar documentos si es necesario (estilo inline)
+                    Placeholder::make('resend_button')
+                        ->label('')
+                        ->content(function () {
+                            return '<div style="display: flex; justify-content: center; width: 100%; margin-top: 16px;">
+                                <button wire:click="sendDocumentsToClient" 
+                                        wire:confirm="¿Desea reenviar los documentos al cliente?"
+                                        style="
+                                            display: inline-flex; 
+                                            align-items: center; 
+                                            padding: 12px 24px; 
+                                            background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%); 
+                                            color: white; 
+                                            font-weight: 500; 
+                                            border-radius: 12px; 
+                                            border: none; 
+                                            cursor: pointer; 
+                                            transition: all 0.3s ease; 
+                                            box-shadow: 0 4px 16px rgba(107, 114, 128, 0.3); 
+                                            text-decoration: none; 
+                                            font-size: 14px;
+                                        "
+                                        onmouseover="this.style.background=\'linear-gradient(135deg, #4B5563 0%, #374151 100%)\'; this.style.boxShadow=\'0 8px 24px rgba(107, 114, 128, 0.5)\'; this.style.transform=\'translateY(-2px) scale(1.02)\';"
+                                        onmouseout="this.style.background=\'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)\'; this.style.boxShadow=\'0 4px 16px rgba(107, 114, 128, 0.3)\'; this.style.transform=\'translateY(0) scale(1)\';">
+                                    <svg style="width: 16px; height: 16px; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    🔄 Reenviar Documentos
+                                </button>
+                            </div>';
+                        })
+                        ->html()
                 ])
                 ->visible($this->agreement->status === 'documents_sent'),
         ];
@@ -794,7 +855,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                         return new HtmlString('
                                             <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; height: 100%;">
                                                 <a href="' . $downloadUrl . '"
-                                                    target="_blank"
+                                                    target="_self"
                                                     style="
                                                         display: inline-flex; 
                                                         align-items: center; 
@@ -940,49 +1001,109 @@ class ManageDocuments extends Page implements HasForms, HasActions
 
     public function sendDocumentsToClient()
     {
+        // Log para debugging
+        \Log::info('sendDocumentsToClient method called', [
+            'agreement_id' => $this->agreement->id,
+            'user_id' => auth()->id()
+        ]);
+        
         try {
+            // Validar que existen documentos generados
             if ($this->agreement->generatedDocuments->isEmpty()) {
                 Notification::make()
-                    ->title('Sin Documentos')
-                    ->body('No hay documentos generados para enviar')
+                    ->title('❌ Sin Documentos')
+                    ->body('No hay documentos generados para enviar. Por favor, genere los documentos primero.')
                     ->warning()
+                    ->duration(5000)
                     ->send();
                 return;
             }
 
+            // Validar email del cliente
             $clientEmail = $this->getClientEmail();
-            if ($clientEmail === 'No disponible') {
+            if ($clientEmail === 'No disponible' || empty($clientEmail)) {
                 Notification::make()
-                    ->title('Email No Disponible')
-                    ->body('El cliente no tiene un email registrado en el convenio')
+                    ->title('❌ Email No Disponible')
+                    ->body('El cliente no tiene un email registrado en el convenio. Por favor, actualice los datos del cliente.')
                     ->warning()
+                    ->duration(5000)
                     ->send();
                 return;
             }
 
+            // Validar que los archivos PDF existen físicamente
+            $documentsWithFiles = $this->agreement->generatedDocuments->filter(function ($document) {
+                return $document->fileExists();
+            });
+
+            if ($documentsWithFiles->isEmpty()) {
+                Notification::make()
+                    ->title('❌ Archivos No Encontrados')
+                    ->body('Los archivos PDF no se encontraron en el servidor. Por favor, regenere los documentos.')
+                    ->warning()
+                    ->duration(5000)
+                    ->send();
+                return;
+            }
+
+            // Obtener email del asesor (usuario autenticado)
+            $advisorEmail = auth()->user()->email;
+            $advisorName = auth()->user()->name ?? 'Asesor';
+
+            // Mostrar notificación de inicio de envío
+            Notification::make()
+                ->title('📤 Enviando Documentos...')
+                ->body("Enviando {$documentsWithFiles->count()} documentos a {$clientEmail} y al asesor {$advisorName}")
+                ->info()
+                ->duration(3000)
+                ->send();
+
+            // Actualizar estado del convenio
             $this->agreement->update([
                 'status' => 'documents_sent',
                 'documents_sent_at' => now(),
             ]);
 
-            Mail::to($clientEmail)->send(new DocumentsReadyMail($this->agreement));
+            // Enviar el correo al cliente con copia al asesor
+            Mail::to($clientEmail)
+                ->cc($advisorEmail)
+                ->send(new DocumentsReadyMail($this->agreement));
 
+            // Notificación de éxito
             Notification::make()
-                ->title('📤 Documentos Enviados')
-                ->body('Los documentos han sido enviados al cliente por correo electrónico')
+                ->title('✅ Documentos Enviados Exitosamente')
+                ->body("Los documentos han sido enviados a {$clientEmail} y al asesor {$advisorName} ({$advisorEmail}). Ambos recibirán {$documentsWithFiles->count()} archivos PDF adjuntos.")
                 ->success()
-                ->duration(5000)
+                ->duration(7000)
                 ->send();
 
+            // Emitir evento para restaurar el botón
+            $this->dispatch('email-sent');
+
+            // Actualizar paso actual y refrescar página
             $this->currentStep = 2;
+            
+            // Refrescar la página para mostrar el nuevo estado
             return $this->redirect(request()->url());
 
         } catch (\Exception $e) {
+            // Log del error para debugging
+            \Log::error('Error sending documents to client', [
+                'agreement_id' => $this->agreement->id,
+                'client_email' => $this->getClientEmail(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             Notification::make()
-                ->title('Error al Enviar')
-                ->body('Error: ' . $e->getMessage())
+                ->title('❌ Error al Enviar Documentos')
+                ->body('Ocurrió un error al enviar los documentos. Por favor, inténtelo nuevamente.')
                 ->danger()
+                ->duration(7000)
                 ->send();
+
+            // Emitir evento para restaurar el botón en caso de error
+            $this->dispatch('email-sent');
         }
     }
 

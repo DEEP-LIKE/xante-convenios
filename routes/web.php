@@ -37,6 +37,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/documents/{document}/download', [App\Http\Controllers\DocumentDownloadController::class, 'download'])
         ->name('documents.download');
     
+    // Ruta para enviar documentos al cliente
+    Route::get('/documents/send-to-client/{agreement}', [App\Http\Controllers\DocumentDownloadController::class, 'sendToClient'])
+        ->name('documents.send-to-client');
+    
     // Ruta para descargar checklist actualizado
     Route::get('/admin/download-updated-checklist/{agreement}', function ($agreementId) {
         $agreement = \App\Models\Agreement::findOrFail($agreementId);

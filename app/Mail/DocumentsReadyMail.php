@@ -11,7 +11,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Agreement;
 
-class DocumentsReadyMail extends Mailable implements ShouldQueue
+class DocumentsReadyMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -53,12 +53,44 @@ class DocumentsReadyMail extends Mailable implements ShouldQueue
     {
         $attachments = [];
         
-        foreach ($this->agreement->generatedDocuments as $document) {
-            if ($document->fileExists()) {
-                $attachments[] = Attachment::fromStorageDisk('private', $document->file_path)
-                    ->as($document->document_name . '.pdf')
-                    ->withMime('application/pdf');
+        try {
+            // Adjuntar documentos PDF generados (solo archivos menores a 4MB)
+            $maxFileSize = 4 * 1024 * 1024; // 4MB en bytes
+            $totalSize = 0;
+            
+            foreach ($this->agreement->generatedDocuments as $document) {
+                if ($document->fileExists()) {
+                    $fileSize = \Storage::disk('private')->size($document->file_path);
+                    
+                    // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
+                    if ($fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
+                        $attachments[] = Attachment::fromStorageDisk('private', $document->file_path)
+                            ->as($document->document_name . '.pdf')
+                            ->withMime('application/pdf');
+                        $totalSize += $fileSize;
+                    } else {
+                        \Log::info('Skipping large file attachment', [
+                            'document' => $document->document_name,
+                            'size' => $fileSize,
+                            'max_size' => $maxFileSize
+                        ]);
+                    }
+                }
             }
+            
+            // Adjuntar imagen de oferta desde public/images/oferta.jpg
+            $ofertaImagePath = public_path('images/oferta.jpg');
+            if (file_exists($ofertaImagePath)) {
+                $attachments[] = Attachment::fromPath($ofertaImagePath)
+                    ->as('Oferta_Especial_Xante.jpg')
+                    ->withMime('image/jpeg');
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the email
+            \Log::error('Error adding attachments to email', [
+                'agreement_id' => $this->agreement->id,
+                'error' => $e->getMessage()
+            ]);
         }
         
         return $attachments;

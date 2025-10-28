@@ -53,6 +53,25 @@ class GeneratedDocument extends Model
     /**
      * Obtiene el tamaño del archivo formateado
      */
+    public function getFileSize(): string
+    {
+        if (!$this->fileExists()) {
+            return 'N/A';
+        }
+
+        $bytes = Storage::disk('private')->size($this->file_path);
+        $units = ['B', 'KB', 'MB', 'GB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    /**
+     * Obtiene el tamaño del archivo formateado
+     */
     public function getFormattedSizeAttribute(): string
     {
         if (!$this->file_size) {
