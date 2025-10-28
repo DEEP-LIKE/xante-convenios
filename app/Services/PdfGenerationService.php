@@ -373,30 +373,60 @@ class PdfGenerationService
     }
     
     /**
-     * Convierte una imagen a formato base64 para usar en PDFs
+     * Convierte una imagen a formato base64 para usar en PDFs, con fallbacks.
      */
     private function getImageBase64(string $filename): string
     {
         $imagePath = resource_path("views/pdfs/images/{$filename}");
-        
+
         if (!file_exists($imagePath)) {
             Log::warning("Imagen no encontrada: {$imagePath}");
             return '';
         }
-        
+
         try {
             $imageData = file_get_contents($imagePath);
-            $mimeType = mime_content_type($imagePath);
-            $base64 = "data:{$mimeType};base64," . base64_encode($imageData);
+            $mimeType = '';
+
+            // Opción 1: Usar mime_content_type si existe (extensión fileinfo)
+            if (function_exists('mime_content_type')) {
+                $mimeType = mime_content_type($imagePath);
+            }
+            // Opción 2: Fallback a getimagesize si la primera falla (extensión GD)
+            elseif (function_exists('getimagesize')) {
+                $imageInfo = getimagesize($imagePath);
+                if ($imageInfo && isset($imageInfo['mime'])) {
+                    $mimeType = $imageInfo['mime'];
+                }
+            }
             
+            // Opción 3: Fallback a la extensión del archivo si todo lo demás falla
+            if (empty($mimeType)) {
+                $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+                $mimeTypes = [
+                    'png' => 'image/png',
+                    'jpg' => 'image/jpeg',
+                    'jpeg' => 'image/jpeg',
+                    'gif' => 'image/gif',
+                    'svg' => 'image/svg+xml',
+                ];
+                if (isset($mimeTypes[$extension])) {
+                    $mimeType = $mimeTypes[$extension];
+                } else {
+                    // Usar un tipo genérico si la extensión no se reconoce
+                    $mimeType = 'application/octet-stream';
+                }
+            }
+
+            $base64 = "data:{$mimeType};base64," . base64_encode($imageData);
+
             Log::info("Imagen convertida a base64", [
                 'filename' => $filename,
                 'path' => $imagePath,
                 'mime_type' => $mimeType,
                 'size' => strlen($imageData),
-                'base64_length' => strlen($base64)
             ]);
-            
+
             return $base64;
         } catch (\Exception $e) {
             Log::error("Error al convertir imagen a base64: {$filename}", ['error' => $e->getMessage()]);

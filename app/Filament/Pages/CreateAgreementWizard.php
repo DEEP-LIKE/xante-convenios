@@ -67,101 +67,57 @@ class CreateAgreementWizard extends Page implements HasForms
 
     public function mount(?int $agreement = null): void
     {
-        // Intentar obtener el agreement desde parámetro o query string
-        $agreementId = $agreement ?? request()->get('agreement');
+        // Prioridad 1: Recuperar desde la sesión para persistencia en recargas.
+        $agreementId = session('wizard_agreement_id');
 
-        // Verificar si viene un client_id para preseleccionar
+        // Prioridad 2: Recuperar desde el parámetro de la ruta o query string.
+        if (!$agreementId) {
+            $agreementId = $agreement ?? request()->get('agreement');
+        }
+
         $clientId = request()->get('client_id');
 
         if ($agreementId) {
             $this->agreementId = $agreementId;
-            $agreementModel = Agreement::findOrFail($agreementId);
+            // Guardar en sesión para persistencia
+            session(['wizard_agreement_id' => $agreementId]);
 
+            $agreementModel = Agreement::find($agreementId);
 
-            // Cargar datos del wizard_data
-            $this->data = $agreementModel->wizard_data ?? [];
+            if ($agreementModel) {
+                $this->data = $agreementModel->wizard_data ?? [];
+                $this->loadCalculatorDefaults();
+                $this->currentStep = $agreementModel->current_step ?? 1;
 
-            // Pre-cargar valores de configuración ANTES de llenar el formulario
-            $this->loadCalculatorDefaults();
-
-            // Cargar el paso actual donde se quedó el usuario
-            $this->currentStep = $agreementModel->current_step ?? 1;
-            
-            $this->currentStep = $this->currentStep + 1;
-
-            // NUEVO: Si estamos en paso 4 o superior y hay propuesta previa, precargar
-            if ($this->currentStep >= 4) {
-                $this->preloadProposalDataIfExists();
-            }
-
-            // Llenar el formulario con los datos cargados
-            $this->form->fill($this->data);
-
-            // Notificar al usuario que se cargaron los datos
-            // Notification::make()
-            //     ->title('✅ Datos cargados')
-            //     ->body("Continuando desde el paso {$this->currentStep}: " . $agreementModel->getCurrentStepName())
-            //     ->success()
-            //     ->duration(5000)
-            //     ->send();
-
-        } else {
-            // Crear nuevo convenio
-            $newAgreement = Agreement::create([
-                'status' => 'expediente_incompleto',
-                'current_step' => 1,
-                'created_by' => Auth::id(),
-            ]);
-            $this->agreementId = $newAgreement->id;
-            $this->data = [];
-
-            // Si viene un client_id, preseleccionar el cliente y saltar al paso 2
-            if ($clientId) {
-                $client = Client::where('xante_id', $clientId)->first();
-                if ($client) {
-                    // Precargar datos del cliente
-                    $this->preloadClientDataFromObject($client);
-
-                    // Actualizar el convenio con la relación del cliente
-                    $newAgreement->update([
-                        'client_xante_id' => $client->xante_id,
-                        'current_step' => 2,
-                        'wizard_data' => $this->data
-                    ]);
-
-                    // Saltar al paso 2
-                    $this->currentStep = 2;
-
-                    // Notificar al usuario
-                    Notification::make()
-                        ->title('Cliente preseleccionado')
-                        ->body("Cliente {$client->name} ({$client->xante_id}) seleccionado automáticamente")
-                        ->success()
-                        ->duration(5000)
-                        ->send();
-                } else {
-                    $this->currentStep = 1;
-
-                    Notification::make()
-                        ->title('Cliente no encontrado')
-                        ->body("No se encontró el cliente con ID: {$clientId}")
-                        ->warning()
-                        ->send();
+                if ($this->currentStep >= 4) {
+                    $this->preloadProposalDataIfExists();
                 }
+
+                $this->form->fill($this->data);
             } else {
+                // Si el ID no es válido, limpiar la sesión y empezar de nuevo.
+                session()->forget('wizard_agreement_id');
+                $this->agreementId = null;
+                $this->data = [];
                 $this->currentStep = 1;
+                $this->loadCalculatorDefaults();
+                $this->form->fill();
             }
-
-            // Pre-cargar valores de configuración
+        } else {
+            // Flujo para un nuevo convenio sin ID existente.
+            $this->agreementId = null;
+            $this->data = [];
+            $this->currentStep = 1;
             $this->loadCalculatorDefaults();
+            $this->form->fill();
 
-            // NUEVO: Si hay cliente preseleccionado, verificar propuesta previa
             if ($clientId) {
-                $this->preloadProposalDataIfExists();
+                 Notification::make()
+                    ->title('Funcionalidad en desarrollo')
+                    ->body("La preselección de clientes desde la URL se activará después de guardar el primer paso.")
+                    ->warning()
+                    ->send();
             }
-
-            // Llenar el formulario con los datos
-            $this->form->fill($this->data);
         }
     }
 
@@ -172,20 +128,30 @@ class CreateAgreementWizard extends Page implements HasForms
                     Step::make('Identificación')
                         ->description('Búsqueda y selección del cliente')
                         ->icon('heroicon-o-magnifying-glass')
-                        // ->afterValidation(function () {
-                        //     $this->saveStepData(1);
-                        // })
-                        ->schema([
-                            // TextInput::make('search_term')
-                            //     ->label('Buscar Cliente')
-                            //     ->placeholder('ID Xante, nombre, email, CURP')
-                            //     ->live(onBlur: true)
-                            //     ->afterStateUpdated(function ($state) {
-                            //         if (!empty($state)) {
-                            //             $this->searchClient();
-                            //         }
-                            //     }),
+                        ->afterValidation(function ($state) {
+                            // Si no tenemos un ID de convenio, es la primera vez que pasamos este paso.
+                            if (!$this->agreementId) {
+                                $client = Client::find($state['client_id']);
 
+                                // Crear el convenio por primera vez
+                                $agreement = Agreement::create([
+                                    'status' => 'expediente_incompleto',
+                                    'current_step' => 1,
+                                    'created_by' => Auth::id(),
+                                    'client_id' => $state['client_id'],
+                                    'client_xante_id' => $client ? $client->xante_id : null,
+                                ]);
+
+                                $this->agreementId = $agreement->id;
+
+                                // Guardar en sesión para persistencia en recargas
+                                session(['wizard_agreement_id' => $this->agreementId]);
+                            }
+
+                            // Guardar los datos del paso actual
+                            $this->saveStepData(1);
+                        })
+                        ->schema([
                             Select::make('client_id')
                                 ->label('Cliente Seleccionado')
                                 ->placeholder('Busque por nombre o ID Xante...')
@@ -203,29 +169,17 @@ class CreateAgreementWizard extends Page implements HasForms
                                         $this->preloadClientData($state, $set);
                                     }
                                 })
-                                // ->createOptionForm([
-                                //     TextInput::make('name')->required(),
-                                //     TextInput::make('email')->email(),
-                                //     TextInput::make('phone'),
-                                // ])
-                                // ->createOptionUsing(function (array $data) {
-                                //     return Client::create($data)->id;
-                                // })
                                 ->suffixAction(
                                     Action::make('sync_search')
                                         ->label('Sincronizar') // Etiqueta más corta
                                         ->icon('heroicon-o-arrow-path')
                                         ->color('success') // Verde Lima Xante
                                         ->action(function () {
-                                            // Lógica de sincronización. 
-                                            // Idealmente, esta acción llamaría a un método del Livewire para ejecutar la sincronización
-                                            // y luego actualizar la lista de opciones del select 'client_id'
-
                                             Notification::make()
                                                 ->title('Sincronización Iniciada')
                                                 ->body('La sincronización con Hubspot de la fuente de datos externa ha comenzado.')
-                                                ->warning() // CAMBIADO A COLOR AMARILLO/WARNING
-                                                ->icon('heroicon-o-arrow-path') // AÑADIDO ÍCONO DE SINCRONIZACIÓN
+                                                ->warning()
+                                                ->icon('heroicon-o-arrow-path')
                                                 ->send();
                                         })
                                 ),
@@ -1478,6 +1432,9 @@ class CreateAgreementWizard extends Page implements HasForms
 
             return; // No redirigir si hay error
         }
+
+        // Limpiar la sesión del wizard antes de redirigir
+        session()->forget('wizard_agreement_id');
 
         // Redirigir al Wizard 2 (nueva página migrada)
         $this->redirect("/admin/manage-documents/{$agreement->id}");
