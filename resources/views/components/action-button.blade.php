@@ -22,12 +22,14 @@
             'shadow' => 'rgba(139, 92, 246, 0.3)',
         ],
     ];
-    
+
     $theme = $colors[$color] ?? $colors['primary'];
+    $prevent = $prevent ?? true;
 @endphp
 
-<div 
-    wire:click="{{ $action }}"
+<button 
+    type="button"
+    wire:click="{{ $prevent ? 'prevent.' : '' }}{{ $action }}"
     @if(isset($confirm))
     wire:confirm="{{ $confirm }}"
     @endif
@@ -46,6 +48,8 @@
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
         min-height: 200px;
+        width: 100%; /* Make button take full width */
+        text-align: center; /* Ensure content is centered */
     "
     onmouseover="
         this.style.transform = 'translateY(-8px) scale(1.02)';
@@ -136,4 +140,4 @@
         background: {{ $theme['bg'] }};
         opacity: 0.8;
     "></div>
-</div>
+</button>

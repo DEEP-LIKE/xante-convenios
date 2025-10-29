@@ -187,12 +187,12 @@
             <!-- <div class="info-row">
                 <span class="info-label">Ganancia Final Estimada:</span>
                 <span class="info-value">${{ $gananciaFinal }} MXN</span>
-            </div> -->
+            </div>  -->
             <div class="info-row">
                 <span class="info-label">Fecha de Generación:</span>
                 <span class="info-value">{{ now()->format('d/m/Y H:i') }}</span>
             </div>
-        </div>
+        </div> 
 
         <div class="documents-section">
             <h3 style="margin-top: 0; color: #0056b3;">📎 Documentos Generados</h3>

@@ -92,10 +92,13 @@ class Agreement extends Model
         // Nuevos campos para sistema de dos wizards
         'documents_generated_at',
         'documents_sent_at',
+        'documents_received_at',
         'can_return_to_wizard1',
         'current_wizard',
         'wizard2_current_step',
         'completed_at',
+        'proposal_value',
+        'proposal_saved_at',
     ];
 
     protected function casts(): array
@@ -113,10 +116,13 @@ class Agreement extends Model
             // Nuevos casts para sistema de dos wizards
             'documents_generated_at' => 'datetime',
             'documents_sent_at' => 'datetime',
+            'documents_received_at' => 'datetime',
             'completed_at' => 'datetime',
             'can_return_to_wizard1' => 'boolean',
             'current_wizard' => 'integer',
             'wizard2_current_step' => 'integer',
+            'proposal_value' => 'decimal:2',
+            'proposal_saved_at' => 'datetime',
         ];
     }
 

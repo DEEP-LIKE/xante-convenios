@@ -12,6 +12,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
+use Filament\Actions\Actions;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Infolists\Infolist;
@@ -35,6 +36,7 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Support\Icons\Heroicon;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Hidden;
 use App\Jobs\GenerateAgreementDocumentsJob;
 use Illuminate\Support\HtmlString;
 use App\Services\PdfGenerationService;
@@ -43,12 +45,12 @@ use ZipArchive;
 
 use BackedEnum;
 
-
-
 class ManageDocuments extends Page implements HasForms, HasActions
 {
     use InteractsWithForms;
     use InteractsWithActions;
+
+    protected $listeners = ['stepChanged' => 'handleStepChange'];
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-check';
     protected static ?string $navigationLabel = 'Gestión de Documentos';
@@ -61,6 +63,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
 
     public ?Agreement $agreement = null;
     public array $data = [];
+    public ?float $proposal_value = null;
 
     // Propiedades para los campos de FileUpload con ->live() - inicializadas como arrays vacíos
     // DOCUMENTACIÓN TITULAR
@@ -155,6 +158,13 @@ class ManageDocuments extends Page implements HasForms, HasActions
 
         // Cargar documentos del cliente y llenar el formulario SOLO UNA VEZ
         $existingDocuments = $this->loadClientDocuments();
+        
+        // Agregar el proposal_value al formulario si existe
+        if ($this->agreement->proposal_value) {
+            $existingDocuments['proposal_value'] = $this->agreement->proposal_value;
+            $this->proposal_value = $this->agreement->proposal_value;
+        }
+        
         if (!empty($existingDocuments)) {
             $this->form->fill($existingDocuments);
         }
@@ -200,11 +210,37 @@ class ManageDocuments extends Page implements HasForms, HasActions
         return [
             Wizard::make([
                 Step::make('Envío de Documentos')
-                    ->description('Generar y enviar documentos al cliente')
+                    ->description('Enviar documentos al cliente por correo electrónico')
                     ->icon('heroicon-o-paper-airplane')
                     ->completedIcon('heroicon-o-check-circle')
                     ->schema($this->getStepOneSchema())
                     ->afterValidation(function () {
+                        // Solo enviar si no se han enviado previamente
+                        if ($this->agreement->status !== 'documents_sent' && !$this->agreement->documents_sent_at) {
+                            
+                            \Log::info('Sending documents from afterValidation', [
+                                'agreement_id' => $this->agreement->id,
+                                'current_status' => $this->agreement->status
+                            ]);
+                            
+                            // Enviar documentos después de validar el paso 1
+                            $this->sendDocumentsToClient();
+                            
+                            // Notificación de éxito
+                            Notification::make()
+                                ->title('✅ Documentos Enviados')
+                                ->body('Los documentos han sido enviados exitosamente al cliente y al asesor.')
+                                ->success()
+                                ->duration(5000)
+                                ->send();
+                        } else {
+                            \Log::info('Documents already sent, skipping', [
+                                'agreement_id' => $this->agreement->id,
+                                'status' => $this->agreement->status,
+                                'sent_at' => $this->agreement->documents_sent_at
+                            ]);
+                        }
+                        
                         $this->saveStepData(1);
                     }),
 
@@ -214,7 +250,65 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     ->completedIcon('heroicon-o-check-circle')
                     ->schema($this->getStepTwoSchema())
                     ->afterValidation(function () {
-                        $this->saveStepData(2);
+                        \Log::info('Step 2 afterValidation triggered', [
+                            'agreement_id' => $this->agreement->id,
+                            'current_status' => $this->agreement->status,
+                            'documents_received_at' => $this->agreement->documents_received_at
+                        ]);
+                        
+                        // Solo enviar correo si no se ha enviado previamente (basado únicamente en documents_received_at)
+                        if (!$this->agreement->documents_received_at) {
+                            
+                            \Log::info('Completing agreement from step 2 afterValidation', [
+                                'agreement_id' => $this->agreement->id,
+                                'current_status' => $this->agreement->status
+                            ]);
+                            
+                            try {
+                                // Marcar convenio como completado
+                                $this->agreement->update([
+                                    'status' => 'completed',
+                                    'documents_received_at' => now(),
+                                    'completion_percentage' => 100,
+                                ]);
+                                
+                                \Log::info('Agreement status updated, now sending confirmation email');
+                                
+                                // Enviar correo de confirmación (igual que en paso 1)
+                                $this->sendDocumentsReceivedConfirmation();
+                                
+                                \Log::info('Confirmation email sent successfully');
+                                
+                                // Notificación de éxito
+                                Notification::make()
+                                    ->title('🎉 Convenio Completado')
+                                    ->body('El convenio ha sido marcado como exitoso y se ha enviado la confirmación por correo.')
+                                    ->success()
+                                    ->duration(5000)
+                                    ->send();
+                                    
+                            } catch (\Exception $e) {
+                                \Log::error('Error in step 2 afterValidation', [
+                                    'error' => $e->getMessage(),
+                                    'trace' => $e->getTraceAsString()
+                                ]);
+                                
+                                Notification::make()
+                                    ->title('❌ Error al Completar')
+                                    ->body('Error: ' . $e->getMessage())
+                                    ->danger()
+                                    ->duration(7000)
+                                    ->send();
+                            }
+                        } else {
+                            \Log::info('Confirmation email already sent, skipping', [
+                                'agreement_id' => $this->agreement->id,
+                                'status' => $this->agreement->status,
+                                'documents_received_at' => $this->agreement->documents_received_at
+                            ]);
+                        }
+                        
+                        $this->saveStepData(3);
                     }),
 
                 Step::make('Cierre Exitoso')
@@ -226,7 +320,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                         $this->saveStepData(3);
                     }),
             ])
-            ->nextAction(fn (Action $action) => $action->label('Siguiente'))
+            ->nextAction(fn (Action $action) => $this->customizeNextActionForStep2($action))
             ->previousAction(fn (Action $action) => $action->label('Anterior'))
             ->startOnStep($this->currentStep)
             ->skippable(false)
@@ -237,6 +331,139 @@ class ManageDocuments extends Page implements HasForms, HasActions
         return $this->getStepOneSchema(); // Mostrar solo el primer paso
     }
 }
+
+    // Personalizar botón "Siguiente" para paso 2
+    private function customizeNextActionForStep2(Action $action): Action
+    {
+        if ($this->currentStep === 2) {
+            return $action
+                ->label('📧 Enviar Confirmación y Continuar')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('primary')
+                ->size('lg')
+                ->requiresConfirmation()
+                ->modalHeading('Confirmar Envío de Confirmación')
+                ->modalDescription('¿Está seguro de enviar la confirmación de documentos recibidos al cliente y asesor? Después del envío avanzará automáticamente al siguiente paso.')
+                ->modalSubmitActionLabel('Sí, Enviar y Continuar')
+                ->modalCancelActionLabel('Cancelar')
+                ->before(function () {
+                    // Verificar si ya se envió
+                    if ($this->agreement->documents_received_at) {
+                        Notification::make()
+                            ->title('ℹ️ Confirmación Ya Enviada')
+                            ->body('La confirmación ya fue enviada anteriormente. Avanzando al siguiente paso.')
+                            ->info()
+                            ->duration(3000)
+                            ->send();
+                        return;
+                    }
+                    
+                    // Mostrar notificación de inicio
+                    Notification::make()
+                        ->title('📤 Enviando Confirmación...')
+                        ->body('Enviando confirmación de documentos recibidos...')
+                        ->info()
+                        ->duration(3000)
+                        ->send();
+                });
+        }
+        
+        return $action->label('Siguiente');
+    }
+
+    // Manejar cambios de paso del wizard
+    public function handleStepChange($newStep, $oldStep)
+    {
+        \Log::info('Step change detected', [
+            'old_step' => $oldStep,
+            'new_step' => $newStep,
+            'agreement_id' => $this->agreement->id
+        ]);
+        
+        // Si estamos avanzando del paso 1 al paso 2, enviar documentos (solo si no se han enviado)
+        if ($oldStep === 1 && $newStep === 2 && $this->agreement->status !== 'documents_sent' && !$this->agreement->documents_sent_at) {
+            try {
+                \Log::info('Sending documents from handleStepChange (backup)', [
+                    'agreement_id' => $this->agreement->id,
+                    'current_status' => $this->agreement->status
+                ]);
+                
+                $this->sendDocumentsToClient();
+                
+                Notification::make()
+                    ->title('✅ Documentos Enviados')
+                    ->body('Los documentos han sido enviados exitosamente al cliente y al asesor.')
+                    ->success()
+                    ->duration(5000)
+                    ->send();
+                    
+            } catch (\Exception $e) {
+                \Log::error('Error sending documents on step change', [
+                    'error' => $e->getMessage(),
+                    'agreement_id' => $this->agreement->id
+                ]);
+                
+                Notification::make()
+                    ->title('❌ Error al Enviar Documentos')
+                    ->body('Error: ' . $e->getMessage())
+                    ->danger()
+                    ->duration(7000)
+                    ->send();
+            }
+        } else if ($oldStep === 1 && $newStep === 2) {
+            \Log::info('Documents already sent, advancing normally', [
+                'agreement_id' => $this->agreement->id,
+                'status' => $this->agreement->status,
+                'sent_at' => $this->agreement->documents_sent_at
+            ]);
+        }
+        
+        // Si estamos avanzando del paso 2 al paso 3, completar convenio (backup como en paso 1)
+        if ($oldStep === 2 && $newStep === 3 && !$this->agreement->documents_received_at) {
+            try {
+                \Log::info('Completing agreement from handleStepChange step 2->3 (backup)', [
+                    'agreement_id' => $this->agreement->id,
+                    'current_status' => $this->agreement->status
+                ]);
+                
+                // Marcar convenio como completado
+                $this->agreement->update([
+                    'status' => 'completed',
+                    'documents_received_at' => now(),
+                    'completion_percentage' => 100,
+                ]);
+                
+                // Enviar correo de confirmación
+                $this->sendDocumentsReceivedConfirmation();
+                
+                Notification::make()
+                    ->title('🎉 Convenio Completado')
+                    ->body('El convenio ha sido marcado como exitoso y se ha enviado la confirmación por correo.')
+                    ->success()
+                    ->duration(5000)
+                    ->send();
+                    
+            } catch (\Exception $e) {
+                \Log::error('Error completing agreement on step change 2->3', [
+                    'error' => $e->getMessage(),
+                    'agreement_id' => $this->agreement->id
+                ]);
+                
+                Notification::make()
+                    ->title('❌ Error al Completar Convenio')
+                    ->body('Error: ' . $e->getMessage())
+                    ->danger()
+                    ->duration(7000)
+                    ->send();
+            }
+        } else if ($oldStep === 2 && $newStep === 3) {
+            \Log::info('Agreement already completed, advancing normally from step 2->3', [
+                'agreement_id' => $this->agreement->id,
+                'status' => $this->agreement->status,
+                'completed_at' => $this->agreement->documents_received_at
+            ]);
+        }
+    }
 
     // PASO 1: Envío de Documentos
     private function getStepOneSchema(): array
@@ -320,66 +547,35 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                     $community = $this->getPropertyCommunity();
                                     $createdDate = $this->agreement->created_at->format('d/m/Y');
                                     
-                                    return "Valor: {$agreementValue}<br>Comunidad: {$community}<br>Creado: {$createdDate}";
+                                    $content = "Valor: {$agreementValue}<br>Comunidad: {$community}<br>Creado: {$createdDate}";
+                                    
+                                    // Agregar fecha de envío si los documentos ya fueron enviados
+                                    if ($this->agreement->documents_sent_at) {
+                                        $sentDate = $this->agreement->documents_sent_at->format('Y-m-d H:i:s');
+                                        $content .= "<br><span style='color: #10b981; font-weight: 600;'>📧 Enviado: {$sentDate}</span>";
+                                    }
+                                    
+                                    return $content;
                                 })
                                 ->html(),
                         ]),
                         
-                        // ⭐ BOTÓN para enviar documentos (estilo atractivo como botón principal)
-                        Placeholder::make('send_button')
-                        ->label('')
-                        ->content(function () {
-                            $sendUrl = route('documents.send-to-client', ['agreement' => $this->agreement->id]);
+                        // Información sobre el envío automático
+                        // Placeholder::make('send_info')
+                        //     ->label('📧 Envío Automático')
+                        //     ->content('Al presionar "Siguiente" se enviarán automáticamente todos los documentos al cliente y al asesor por correo electrónico.')
+                        //     ->visible(fn () => $this->agreement->status !== 'documents_sent'),
                             
-                            // Colores
-                            $color_bg = '#FF6B35'; 
-                            $color_hover = '#E55A2B'; 
-                            $color_text = '#FFFFFF';
-                            
-                            // Retorna la cadena de HTML directamente (SIN new HtmlString)
-                            return '
-                                <div style="display: flex; justify-content: center; width: 100%; margin: 16px 0;">
-                                    <a href="' . $sendUrl . '"
-                                        target="_self"
-                                        style="
-                                            display: inline-flex; 
-                                            align-items: center; 
-                                            padding: 10px 16px; 
-                                            background-color: ' . $color_bg . '; 
-                                            color: ' . $color_text . '; 
-                                            border: none;
-                                            border-radius: 8px; 
-                                            font-weight: 600; 
-                                            font-size: 12px;
-                                            text-transform: uppercase;
-                                            text-decoration: none;
-                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                                            transition: background-color 0.15s ease-in-out;
-                                        "
-                                        onmouseover="this.style.backgroundColor=\'' . $color_hover . '\';"
-                                        onmouseout="this.style.backgroundColor=\'' . $color_bg . '\';"
-                                                
-                                       >
-                                        
-                                        <span id="send-btn-content" style="display: inline-flex; align-items: center;">
-                                            <svg style="width: 24px; height: 24px; margin-right: 12px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                                            </svg>
-                                            📧 Enviar Documentos al Cliente
-                                        </span>
-                                    </a>
-                                </div>
-                                
-                                <style>
-                                    @keyframes spin {
-                                        from { transform: rotate(0deg); }
-                                        to { transform: rotate(360deg); }
-                                    }
-                                </style>
-                            ';
-                        })
-                        ->html()
-                        ->visible(fn () => $this->agreement->status !== 'documents_sent')
+                        // Mensaje de documentos ya enviados
+                        Placeholder::make('sent_info')
+                            ->label('✅ Documentos Enviados')
+                            ->content(function () {
+                                $sentDate = $this->agreement->documents_sent_at ? 
+                                    $this->agreement->documents_sent_at->format('d/m/Y H:i') : 
+                                    'Fecha no disponible';
+                                return "Los documentos fueron enviados exitosamente el {$sentDate}";
+                            })
+                            ->visible(fn () => $this->agreement->status === 'documents_sent')
                                     ])
                                     ->visible($this->agreement->generatedDocuments->isNotEmpty() && $this->agreement->status !== 'documents_sent'),
                 
@@ -706,7 +902,35 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                     }
                                 })
                         ])
-                ])
+                ]),
+                
+            // Información sobre el envío de confirmación (siempre visible)
+            Section::make('Estado de Confirmación')
+                ->description('Información sobre el correo de confirmación')
+                ->icon(fn () => $this->agreement->documents_received_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
+                ->iconColor(fn () => $this->agreement->documents_received_at ? 'success' : 'warning')
+                ->schema([
+                    Placeholder::make('confirmation_status')
+                        ->label('📧 Correo de Confirmación')
+                        ->content(function () {
+                            if ($this->agreement->documents_received_at) {
+                                $receivedDate = $this->agreement->documents_received_at->format('Y-m-d H:i:s');
+                                $clientEmail = $this->getClientEmail();
+                                $advisorEmail = auth()->user()->email ?? 'No disponible';
+                                
+                                return "✅ <strong>Correo de confirmación enviado</strong><br>" .
+                                       "📅 Fecha: {$receivedDate}<br>" .
+                                       "👤 Cliente: {$clientEmail}<br>" .
+                                       "🏢 Asesor: {$advisorEmail}<br>" .
+                                       "📋 Estado: Convenio completado exitosamente<br>" .
+                                       "🎯 <strong>Etapa: Proceso Completado Exitosamente</strong>";
+                            } else {
+                                return "⏳ <strong>Pendiente de envío</strong><br>" .
+                                       "El correo de confirmación se enviará automáticamente al avanzar al siguiente paso.";
+                            }
+                        })
+                        ->html()
+                ]),
         ];
     }
     
@@ -752,33 +976,89 @@ class ManageDocuments extends Page implements HasForms, HasActions
                         ]),
                 ]),
                 
-            // Section::make('Resumen del Proceso')
-            //     ->icon('heroicon-o-clipboard-document-check')
-            //     ->iconColor('info')
-            //     ->description('Pasos completados durante el proceso')
-            //     ->schema([
-            //         Placeholder::make('process_step_1')
-            //             ->label('✓ Paso 1')
-            //             ->content('Captura de información completada'),
+                
+            Section::make('💰 Valor de Cierre')
+                ->icon('heroicon-o-currency-dollar')
+                ->iconColor('success')
+                ->description('Registrar el valor final con el que se cerró el convenio')
+                ->schema([
+                    // Valores de Referencia Original
+                    Grid::make(3)
+                        ->schema([
+                            Placeholder::make('original_valor_compraventa')
+                                ->label('📋 Valor CompraVenta Original')
+                                ->content(fn() => $this->getOriginalValorCompraventa())
+                                ->html(),
+                                
+                            Placeholder::make('original_comision_total')
+                                ->label('💰 Comisión Total Original')
+                                ->content(fn() => $this->getOriginalComisionTotal())
+                                ->html(),
+                                
+                            Placeholder::make('original_ganancia_final')
+                                ->label('💵 Ganancia Final Original')
+                                ->content(fn() => $this->getOriginalGananciaFinal())
+                                ->html(),
+                        ])
+                        ->columnSpanFull(),
                         
-            //         Placeholder::make('process_step_2')
-            //             ->label('✓ Paso 2')
-            //             ->content('Documentos PDF generados automáticamente'),
+                    // Separador visual
+                    Placeholder::make('separator')
+                        ->label('')
+                        ->content('<hr style="border: 1px solid #e5e7eb; margin: 16px 0;">')
+                        ->html()
+                        ->columnSpanFull(),
                         
-            //         Placeholder::make('process_step_3')
-            //             ->label('✓ Paso 3')
-            //             ->content('Documentos enviados al cliente'),
+                    // Valor de Cierre Final
+                    Grid::make(2)
+                        ->schema([
+                            TextInput::make('proposal_value')
+                                ->label('🎯 Valor de Propuesta Final Ofrecido')
+                                ->numeric()
+                                ->prefix('$')
+                                ->step(0.01)
+                                ->placeholder('Ej: 14896545.50')
+                                ->helperText(fn() => $this->agreement->proposal_value 
+                                    ? 'Valor registrado el ' . $this->agreement->proposal_saved_at?->format('d/m/Y H:i')
+                                    : 'Ingrese el valor final con el que se cerró el convenio (contraoferta)'
+                                )
+                                ->default(fn() => $this->agreement->proposal_value ?? null)
+                                ->disabled(fn() => $this->agreement->proposal_value !== null)
+                                ->statePath('proposal_value'),
+                                
+                            Placeholder::make('proposal_status')
+                                ->label('Estado de Registro')
+                                ->content(fn() => $this->agreement->proposal_value 
+                                    ? '✅ Valor registrado: $' . number_format($this->agreement->proposal_value, 2)
+                                    : '⏳ Pendiente de registro'
+                                )
+                                ->html(),
+                        ]),
                         
-            //         Placeholder::make('process_step_4')
-            //             ->label('✓ Paso 4')
-            //             ->content('Documentos del cliente recibidos y validados'),
+                    // Comparación de valores
+                    // Grid::make(1)
+                    //     ->schema([
+                    //         Placeholder::make('value_comparison')
+                    //             ->label('📊 Comparación de Valores')
+                    //             ->content(fn() => $this->getValueComparison())
+                    //             ->html()
+                    //             ->visible(fn() => $this->agreement->proposal_value !== null),
+                    //     ])
+                    //     ->columnSpanFull(),
                         
-            //         Placeholder::make('process_step_5')
-            //             ->label('✓ Paso 5')
-            //             ->content('Convenio cerrado exitosamente')
-            //             ->extraAttributes(['class' => 'font-semibold']),
-            //     ])
-            //     ->columns(5),
+                    Placeholder::make('save_proposal_button')
+                        ->label('💾 Guardar Valor de Propuesta')
+                        ->content(fn() => view('components.action-button', [
+                            'icon' => 'heroicon-o-check-circle',
+                            'label' => 'Guardar Valor',
+                            'sublabel' => 'de Propuesta Final',
+                            'color' => 'success',
+                            'action' => 'saveProposalValue',
+                            'confirm' => '¿Desea guardar el valor de propuesta registrado?',
+                            'prevent' => false // Evitar el prevent. que causa conflictos con wire:confirm
+                        ]))
+                        ->visible(fn() => $this->agreement->proposal_value === null),
+                ]),
                 
             Section::make('Acciones Disponibles')
             ->icon('heroicon-o-wrench-screwdriver')
@@ -798,17 +1078,17 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                 'color' => 'success'
                             ])),
                             
-                        // Card: Enviar Correos
-                        Placeholder::make('action_email')
-                            ->label('📧 Enviar por Email')
-                            ->content(fn() => view('components.action-button', [
-                                'icon' => 'heroicon-o-envelope',
-                                'label' => 'Enviar Correos',
-                                'sublabel' => 'Reenviar Documentos',
-                                'action' => 'sendDocumentsToClient',
-                                'color' => 'info',
-                                'confirm' => '¿Está seguro de reenviar los documentos al cliente?'
-                            ])),
+                        // // Card: Enviar Correos
+                        // Placeholder::make('action_email')
+                        //     ->label('📧 Enviar por Email')
+                        //     ->content(fn() => view('components.action-button', [
+                        //         'icon' => 'heroicon-o-envelope',
+                        //         'label' => 'Enviar Correos',
+                        //         'sublabel' => 'Reenviar Documentos',
+                        //         'action' => 'sendDocumentsToClient',
+                        //         'color' => 'info',
+                        //         'confirm' => '¿Está seguro de reenviar los documentos al cliente?'
+                        //     ])),
                             
                         // Card: Regresar a Inicio
                         Placeholder::make('action_home')
@@ -995,7 +1275,133 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->title('Error')
                 ->body('Error al descargar: ' . $e->getMessage())
                 ->danger()
+                ->duration(7000)
                 ->send();
+        }
+    }
+
+    /**
+     * Limpiar nombre de archivo para evitar caracteres problemáticos en ZIP
+     */
+    private function cleanFileName(?string $fileName): string
+    {
+        // Manejar valores nulos o vacíos
+        if (empty($fileName)) {
+            return 'documento_' . time();
+        }
+        
+        // Enfoque ultra-simple: solo letras, números y guiones bajos
+        // Convertir todo a minúsculas y remover acentos
+        $cleanName = strtolower($fileName);
+        $cleanName = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $cleanName);
+        
+        // Reemplazar CUALQUIER cosa que no sea letra o número con guión bajo
+        $cleanName = preg_replace('/[^a-z0-9]/', '_', $cleanName);
+        
+        // Remover guiones bajos múltiples
+        $cleanName = preg_replace('/_+/', '_', $cleanName);
+        
+        // Remover guiones bajos al inicio y final
+        $cleanName = trim($cleanName, '_');
+        
+        // Limitar longitud
+        if (strlen($cleanName) > 50) {
+            $cleanName = substr($cleanName, 0, 50);
+        }
+        
+        // Asegurar que no esté vacío
+        if (empty($cleanName)) {
+            $cleanName = 'doc_' . time();
+        }
+        
+        return $cleanName;
+    }
+
+    // Enviar correo de confirmación de documentos recibidos
+    public function sendDocumentsReceivedConfirmation()
+    {
+        try {
+            // Log para debugging
+            \Log::info('sendDocumentsReceivedConfirmation method called', [
+                'agreement_id' => $this->agreement->id,
+                'user_id' => auth()->id(),
+                'current_status' => $this->agreement->status
+            ]);
+
+            // Validar email del cliente
+            $clientEmail = $this->getClientEmail();
+            if ($clientEmail === 'No disponible' || empty($clientEmail)) {
+                Notification::make()
+                    ->title('❌ Email No Disponible')
+                    ->body('El cliente no tiene un email registrado en el convenio.')
+                    ->warning()
+                    ->duration(5000)
+                    ->send();
+                return;
+            }
+
+            // Obtener email del asesor (usuario autenticado)
+            $advisorEmail = auth()->user()->email;
+            $advisorName = auth()->user()->name ?? 'Asesor';
+
+            // Obtener documentos del cliente recibidos
+            $clientDocuments = \App\Models\ClientDocument::where('agreement_id', $this->agreement->id)->get();
+
+            // Mostrar notificación de inicio de envío
+            Notification::make()
+                ->title('📤 Enviando Confirmación...')
+                ->body("Enviando confirmación de documentos recibidos a {$clientEmail} y al asesor {$advisorName}")
+                ->info()
+                ->duration(3000)
+                ->send();
+
+            // Log antes de enviar el correo
+            \Log::info('About to send confirmation email', [
+                'agreement_id' => $this->agreement->id,
+                'client_email' => $clientEmail,
+                'advisor_email' => $advisorEmail,
+                'documents_count' => $clientDocuments->count()
+            ]);
+
+            // Enviar el correo de confirmación al cliente con copia al asesor (inmediatamente, no en cola)
+            try {
+                Mail::to($clientEmail)
+                    ->cc($advisorEmail)
+                    ->send(new \App\Mail\DocumentsReceivedConfirmationMail($this->agreement, $clientDocuments));
+                    
+                \Log::info('Mail::send completed successfully');
+            } catch (\Exception $mailException) {
+                \Log::error('Error in Mail::send', [
+                    'error' => $mailException->getMessage(),
+                    'trace' => $mailException->getTraceAsString()
+                ]);
+                throw $mailException;
+            }
+
+            \Log::info('Documents received confirmation email sent successfully', [
+                'agreement_id' => $this->agreement->id,
+                'client_email' => $clientEmail,
+                'advisor_email' => $advisorEmail,
+                'documents_count' => $clientDocuments->count()
+            ]);
+
+        } catch (\Exception $e) {
+            // Log del error para debugging
+            \Log::error('Error sending documents received confirmation', [
+                'agreement_id' => $this->agreement->id,
+                'client_email' => $this->getClientEmail(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            Notification::make()
+                ->title('❌ Error al Enviar Confirmación')
+                ->body('Ocurrió un error al enviar la confirmación. Por favor, inténtelo nuevamente.')
+                ->danger()
+                ->duration(7000)
+                ->send();
+
+            throw $e;
         }
     }
 
@@ -1080,11 +1486,8 @@ class ManageDocuments extends Page implements HasForms, HasActions
             // Emitir evento para restaurar el botón
             $this->dispatch('email-sent');
 
-            // Actualizar paso actual y refrescar página
-            $this->currentStep = 2;
-            
-            // Refrescar la página para mostrar el nuevo estado
-            return $this->redirect(request()->url());
+            // No redirigir cuando se llama desde el wizard
+            // El wizard manejará el avance de paso
 
         } catch (\Exception $e) {
             // Log del error para debugging
@@ -1169,20 +1572,37 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 throw new \Exception('No se encontró el convenio');
             }
 
-            $documents = $this->agreement->generatedDocuments;
+            $generatedDocuments = $this->agreement->generatedDocuments;
+            $clientDocuments = \App\Models\ClientDocument::where('agreement_id', $this->agreement->id)->get();
             
-            if ($documents->isEmpty()) {
+            // Log para debugging
+            \Log::info('downloadAllDocuments - Documents found', [
+                'agreement_id' => $this->agreement->id,
+                'generated_count' => $generatedDocuments->count(),
+                'client_count' => $clientDocuments->count(),
+                'generated_documents' => $generatedDocuments->pluck('document_name', 'file_path')->toArray(),
+                'client_documents' => $clientDocuments->pluck('document_name', 'file_path')->toArray()
+            ]);
+            
+            if ($generatedDocuments->isEmpty() && $clientDocuments->isEmpty()) {
                 Notification::make()
                     ->title('Sin Documentos')
-                    ->body('No hay documentos generados para descargar')
+                    ->body('No hay documentos disponibles para descargar')
                     ->warning()
                     ->send();
                 return;
             }
 
-            // Crear un ZIP con todos los documentos
-            $zipFileName = 'convenio_' . $this->agreement->id . '_documentos_' . now()->format('Y-m-d') . '.zip';
+            // Crear un ZIP con todos los documentos (nombre ultra-simple)
+            $timestamp = time();
+            $zipFileName = 'convenio_' . $this->agreement->id . '_' . $timestamp . '.zip';
             $zipPath = storage_path('app/temp/' . $zipFileName);
+            
+            \Log::info('Creating ZIP file', [
+                'zip_name' => $zipFileName,
+                'full_path' => $zipPath,
+                'agreement_id' => $this->agreement->id
+            ]);
             
             // Crear directorio temporal si no existe
             if (!file_exists(dirname($zipPath))) {
@@ -1190,25 +1610,157 @@ class ManageDocuments extends Page implements HasForms, HasActions
             }
 
             $zip = new ZipArchive();
-            if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
-                foreach ($documents as $document) {
-                    $filePath = Storage::disk('private')->path($document->file_path);
-                    if (file_exists($filePath)) {
-                        $zip->addFile($filePath, $document->document_name . '.pdf');
+            
+            \Log::info('Attempting to create ZIP', [
+                'zip_path' => $zipPath,
+                'zip_filename' => $zipFileName
+            ]);
+            
+            $zipResult = $zip->open($zipPath, ZipArchive::CREATE);
+            if ($zipResult === TRUE) {
+                
+                $addedFiles = 0;
+                
+                // Agregar documentos generados (PDFs del sistema)
+                if (!$generatedDocuments->isEmpty()) {
+                    foreach ($generatedDocuments as $document) {
+                        $filePath = Storage::disk('private')->path($document->file_path);
+                        \Log::info('Processing generated document', [
+                            'document_name' => $document->document_name,
+                            'file_path' => $document->file_path,
+                            'full_path' => $filePath,
+                            'exists' => file_exists($filePath)
+                        ]);
+                        
+                        if (file_exists($filePath)) {
+                            // Limpiar nombre del documento para evitar caracteres problemáticos
+                            $documentName = $document->document_name ?? 'documento_generado_' . $document->id;
+                            $cleanDocumentName = $this->cleanFileName($documentName);
+                            $zipFileName = 'generados/' . $cleanDocumentName . '.pdf';
+                            
+                            \Log::info('Adding generated file to ZIP', [
+                                'original_name' => $documentName,
+                                'clean_name' => $cleanDocumentName,
+                                'zip_filename' => $zipFileName,
+                                'source_path' => $filePath
+                            ]);
+                            
+                            try {
+                                $result = $zip->addFile($filePath, $zipFileName);
+                            } catch (\Exception $e) {
+                                \Log::error('Error adding generated file to ZIP', [
+                                    'error' => $e->getMessage(),
+                                    'zip_filename' => $zipFileName,
+                                    'source_path' => $filePath
+                                ]);
+                                throw $e;
+                            }
+                            if ($result) {
+                                $addedFiles++;
+                                \Log::info('Added generated document to ZIP', ['file' => $zipFileName]);
+                            } else {
+                                \Log::error('Failed to add generated document to ZIP', ['file' => $zipFileName]);
+                            }
+                        } else {
+                            \Log::warning('Generated document file not found', ['path' => $filePath]);
+                        }
                     }
                 }
+                
+                // Agregar documentos del cliente (subidos en paso 2)
+                if (!$clientDocuments->isEmpty()) {
+                    foreach ($clientDocuments as $document) {
+                        $filePath = Storage::disk('private')->path($document->file_path);
+                        \Log::info('Processing client document', [
+                            'document_name' => $document->document_name,
+                            'file_path' => $document->file_path,
+                            'full_path' => $filePath,
+                            'exists' => file_exists($filePath)
+                        ]);
+                        
+                        if (file_exists($filePath)) {
+                            // Obtener extensión del archivo original
+                            $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
+                            // Limpiar nombre del documento para evitar caracteres problemáticos
+                            $documentName = $document->document_name ?? 'documento_cliente_' . $document->id;
+                            $cleanDocumentName = $this->cleanFileName($documentName);
+                            $fileName = $cleanDocumentName . '.' . $extension;
+                            $zipFileName = 'cliente/' . $fileName;
+                            
+                            \Log::info('Adding client file to ZIP', [
+                                'original_name' => $documentName,
+                                'clean_name' => $cleanDocumentName,
+                                'extension' => $extension,
+                                'zip_filename' => $zipFileName,
+                                'source_path' => $filePath
+                            ]);
+                            
+                            try {
+                                $result = $zip->addFile($filePath, $zipFileName);
+                            } catch (\Exception $e) {
+                                \Log::error('Error adding client file to ZIP', [
+                                    'error' => $e->getMessage(),
+                                    'zip_filename' => $zipFileName,
+                                    'source_path' => $filePath
+                                ]);
+                                throw $e;
+                            }
+                            if ($result) {
+                                $addedFiles++;
+                                \Log::info('Added client document to ZIP', ['file' => $zipFileName]);
+                            } else {
+                                \Log::error('Failed to add client document to ZIP', ['file' => $zipFileName]);
+                            }
+                        } else {
+                            \Log::warning('Client document file not found', ['path' => $filePath]);
+                        }
+                    }
+                }
+                
                 $zip->close();
 
+                $totalDocuments = $generatedDocuments->count() + $clientDocuments->count();
+                
+                \Log::info('ZIP creation completed', [
+                    'total_documents_found' => $totalDocuments,
+                    'files_added_to_zip' => $addedFiles,
+                    'zip_path' => $zipPath,
+                    'zip_exists' => file_exists($zipPath),
+                    'zip_size' => file_exists($zipPath) ? filesize($zipPath) : 0
+                ]);
+                
                 Notification::make()
                     ->title('📦 Descarga Iniciada')
-                    ->body('Se han preparado ' . $documents->count() . ' documentos para descarga')
+                    ->body("Se han preparado {$addedFiles} de {$totalDocuments} documentos para descarga ({$generatedDocuments->count()} generados + {$clientDocuments->count()} del cliente)")
                     ->success()
+                    ->duration(5000)
                     ->send();
 
-                // Descargar el archivo
-                return response()->download($zipPath, $zipFileName)->deleteFileAfterSend();
+                // Limpiar el nombre del archivo para la descarga
+                $downloadFileName = $this->cleanFileName(pathinfo($zipFileName, PATHINFO_FILENAME)) . '.zip';
+                
+                \Log::info('Starting download', [
+                    'zip_path' => $zipPath,
+                    'original_filename' => $zipFileName,
+                    'download_filename' => $downloadFileName
+                ]);
+                
+                // Descargar el archivo con nombre limpio y headers seguros
+                return response()->download($zipPath, $downloadFileName, [
+                    'Content-Type' => 'application/zip',
+                    'Content-Disposition' => 'attachment; filename="' . $downloadFileName . '"',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0'
+                ])->deleteFileAfterSend();
             } else {
-                throw new \Exception('No se pudo crear el archivo ZIP');
+                $errorMessage = 'No se pudo crear el archivo ZIP. Código de error: ' . $zipResult;
+                \Log::error('ZIP creation failed', [
+                    'zip_result' => $zipResult,
+                    'zip_path' => $zipPath,
+                    'zip_filename' => $zipFileName
+                ]);
+                throw new \Exception($errorMessage);
             }
 
         } catch (\Exception $e) {
@@ -1626,11 +2178,12 @@ class ManageDocuments extends Page implements HasForms, HasActions
             try {
                 $updated = $this->agreement->update([
                     'current_wizard' => 2,
+                    'wizard2_current_step' => $step,
                     'wizard_data' => array_merge($this->agreement->wizard_data ?? [], $this->data),
                     'updated_at' => now(),
                 ]);
-                
-                
+
+
             } catch (\Exception $e) {
                 
                 Notification::make()
@@ -1718,5 +2271,169 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->danger()
                 ->send();
         }
+    }
+
+    /**
+     * Guarda el valor de propuesta en el convenio sin afectar el wizard
+     */
+    public function saveProposalValue(): void
+    {
+        try {
+            \Log::info('saveProposalValue method called');
+            
+            // Obtener el valor de la propiedad pública o del formulario
+            $proposalValue = $this->proposal_value;
+            
+            // Si no está en la propiedad, intentar obtenerlo del formulario
+            if (is_null($proposalValue)) {
+                $formData = $this->form->getRawState();
+                $proposalValue = $formData['proposal_value'] ?? null;
+            }
+            
+            \Log::info('Proposal value from property: ' . $this->proposal_value);
+            \Log::info('Final proposal value: ' . $proposalValue);
+
+            if (is_null($proposalValue) || $proposalValue === '' || $proposalValue <= 0) {
+                Notification::make()
+                    ->title('❌ Error de Validación')
+                    ->body('Debe ingresar un valor válido antes de guardar.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Actualizar los valores en la base de datos
+            $this->agreement->update([
+                'proposal_value' => $proposalValue,
+                'proposal_saved_at' => now(),
+                'wizard2_current_step' => 3,
+            ]);
+
+            // Enviar notificación de éxito
+            Notification::make()
+                ->title('✅ Valor Guardado Exitosamente')
+                ->body('El Valor de Propuesta Final ha sido registrado en el convenio.')
+                ->success()
+                ->duration(4000)
+                ->send();
+
+            // Refrescar el estado del formulario desde la base de datos para mostrar el valor actualizado
+            $this->agreement->refresh();
+            
+            // Recargar documentos del cliente y agregar el proposal_value actualizado
+            $existingDocuments = $this->loadClientDocuments();
+            $existingDocuments['proposal_value'] = $this->agreement->proposal_value;
+            $this->form->fill($existingDocuments);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al guardar proposal_value: ' . $e->getMessage());
+            
+            Notification::make()
+                ->title('❌ Error al Guardar')
+                ->body('Ocurrió un error al intentar registrar el valor: ' . $e->getMessage())
+                ->danger()
+                ->duration(7000)
+                ->send();
+        }
+    }
+
+    /**
+     * Obtiene el valor CompraVenta original del wizard
+     */
+    private function getOriginalValorCompraventa(): string
+    {
+        $wizardData = $this->agreement->wizard_data ?? [];
+        $valorCompraventa = $wizardData['valor_compraventa'] ?? $wizardData['valor_convenio'] ?? null;
+        
+        if ($valorCompraventa) {
+            $valorCompraventa = (float) str_replace(['$', ','], '', $valorCompraventa);
+            return '<span style="color: #059669; font-weight: 600; font-size: 16px;">$' . number_format($valorCompraventa, 2) . '</span>';
+        }
+        
+        return '<span style="color: #6B7280;">No disponible</span>';
+    }
+
+    /**
+     * Obtiene la comisión total original del wizard
+     */
+    private function getOriginalComisionTotal(): string
+    {
+        $wizardData = $this->agreement->wizard_data ?? [];
+        $comisionTotal = $wizardData['comision_total_pagar'] ?? null;
+        
+        if ($comisionTotal) {
+            $comisionTotal = (float) str_replace(['$', ','], '', $comisionTotal);
+            return '<span style="color: #DC2626; font-weight: 600; font-size: 16px;">$' . number_format($comisionTotal, 2) . '</span>';
+        }
+        
+        return '<span style="color: #6B7280;">No disponible</span>';
+    }
+
+    /**
+     * Obtiene la ganancia final original del wizard
+     */
+    private function getOriginalGananciaFinal(): string
+    {
+        $wizardData = $this->agreement->wizard_data ?? [];
+        $gananciaFinal = $wizardData['ganancia_final'] ?? null;
+        
+        if ($gananciaFinal) {
+            $gananciaFinal = (float) str_replace(['$', ','], '', $gananciaFinal);
+            return '<span style="color: #7C3AED; font-weight: 600; font-size: 16px;">$' . number_format($gananciaFinal, 2) . '</span>';
+        }
+        
+        return '<span style="color: #6B7280;">No disponible</span>';
+    }
+
+    /**
+     * Genera la comparación entre valores originales y finales
+     */
+    private function getValueComparison(): string
+    {
+        if (!$this->agreement->proposal_value) {
+            return '';
+        }
+
+        $wizardData = $this->agreement->wizard_data ?? [];
+        $valorOriginal = $wizardData['valor_compraventa'] ?? $wizardData['valor_convenio'] ?? 0;
+        $valorFinal = $this->agreement->proposal_value;
+        
+        // Convertir a números y validar
+        $valorOriginal = is_numeric($valorOriginal) ? (float) $valorOriginal : 0;
+        $valorFinal = is_numeric($valorFinal) ? (float) $valorFinal : 0;
+        
+        if ($valorOriginal <= 0 || $valorFinal <= 0) {
+            return '<div style="padding: 12px; background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; color: #92400E;">
+                        <strong>⚠️ Advertencia:</strong> No se encontraron valores válidos para comparar
+                    </div>';
+        }
+
+        $diferencia = $valorFinal - $valorOriginal;
+        $porcentajeDiferencia = (($diferencia / $valorOriginal) * 100);
+        
+        $colorDiferencia = $diferencia >= 0 ? '#059669' : '#DC2626'; // Verde si es positivo, rojo si es negativo
+        $iconoDiferencia = $diferencia >= 0 ? '📈' : '📉';
+        $textoDiferencia = $diferencia >= 0 ? 'Mayor' : 'Menor';
+        
+        return '<div style="padding: 16px; background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">VALOR ORIGINAL</div>
+                            <div style="font-size: 18px; font-weight: 600; color: #374151;">$' . number_format($valorOriginal, 2) . '</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">VALOR FINAL</div>
+                            <div style="font-size: 18px; font-weight: 600; color: #374151;">$' . number_format($valorFinal, 2) . '</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">DIFERENCIA</div>
+                            <div style="font-size: 18px; font-weight: 600; color: ' . $colorDiferencia . ';">' . $iconoDiferencia . ' $' . number_format(abs($diferencia), 2) . '</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; padding: 8px; background: white; border-radius: 8px; border: 1px solid #E5E7EB;">
+                        <span style="color: ' . $colorDiferencia . '; font-weight: 600;">' . $textoDiferencia . ' en ' . number_format(abs($porcentajeDiferencia), 2) . '%</span>
+                        ' . ($diferencia >= 0 ? '(Contraoferta exitosa)' : '(Descuento aplicado)') . '
+                    </div>
+                </div>';
     }
 }
