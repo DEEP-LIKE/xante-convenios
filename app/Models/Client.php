@@ -14,6 +14,8 @@ class Client extends Model
         // Campos básicos
         'name',
         'xante_id',
+        'hubspot_id',
+        'hubspot_synced_at',
         'email',
         'phone',
         
@@ -66,6 +68,7 @@ class Client extends Model
         return [
             'birthdate' => 'date',
             'spouse_birthdate' => 'date',
+            'hubspot_synced_at' => 'datetime',
         ];
     }
 
