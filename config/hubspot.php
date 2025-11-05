@@ -39,7 +39,7 @@ return [
             'firstname' => 'name',
             'email' => 'email',
             'phone' => 'phone',
-            'createdate' => 'created_at',
+            'createdate' => 'fecha_registro',  // Fecha de creación en HubSpot
             'lastmodifieddate' => 'updated_at',
         ],
         

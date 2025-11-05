@@ -28,7 +28,7 @@ class HubspotSyncService
     /**
      * Sincronizar clientes desde HubSpot
      */
-    public function syncClients(): array
+    public function syncClients(int $maxPages = null, int $timeLimit = 45): array
     {
         Log::info('Iniciando sincronización de clientes desde HubSpot');
         
@@ -39,13 +39,37 @@ class HubspotSyncService
             'skipped' => 0,
             'errors' => 0,
             'processed_pages' => 0,
+            'time_limited' => false,
+            'max_pages_reached' => false,
         ];
+
+        $startTime = time();
 
         try {
             $hasMore = true;
             $after = null;
             
             while ($hasMore) {
+                // Verificar límite de tiempo
+                if ((time() - $startTime) >= $timeLimit) {
+                    $stats['time_limited'] = true;
+                    Log::info('Sincronización detenida por límite de tiempo', [
+                        'time_elapsed' => time() - $startTime,
+                        'time_limit' => $timeLimit
+                    ]);
+                    break;
+                }
+
+                // Verificar límite de páginas
+                if ($maxPages && $stats['processed_pages'] >= $maxPages) {
+                    $stats['max_pages_reached'] = true;
+                    Log::info('Sincronización detenida por límite de páginas', [
+                        'pages_processed' => $stats['processed_pages'],
+                        'max_pages' => $maxPages
+                    ]);
+                    break;
+                }
+
                 $response = $this->fetchContacts($after);
                 
                 if (!$response['success']) {
@@ -82,6 +106,22 @@ class HubspotSyncService
 
         Log::info('Sincronización completada', $stats);
         return $stats;
+    }
+
+    /**
+     * Sincronización rápida (solo primeras páginas)
+     */
+    public function syncClientsQuick(): array
+    {
+        return $this->syncClients(maxPages: 10, timeLimit: 30);
+    }
+
+    /**
+     * Sincronización por lotes (fragmentos pequeños)
+     */
+    public function syncClientsBatch(int $batchSize = 5): array
+    {
+        return $this->syncClients(maxPages: $batchSize, timeLimit: 40);
     }
 
     /**
@@ -140,26 +180,30 @@ class HubspotSyncService
                 return 'skipped';
             }
 
-            // Buscar xante_id en propiedades personalizadas
+            // VALIDACIÓN CRÍTICA: Buscar xante_id en propiedades personalizadas
             $xanteId = $this->extractXanteId($properties);
             
-            if (!$xanteId) {
-                Log::info("Contacto {$hubspotId} sin xante_id - omitido", [
+            // REGLA DE ORO: Sin xante_id válido = NO IMPORTAR
+            if (!$xanteId || empty(trim($xanteId))) {
+                Log::info("Contacto {$hubspotId} sin xante_id válido - OMITIDO", [
                     'hubspot_id' => $hubspotId,
-                    'email' => $properties['email'] ?? null
+                    'email' => $properties['email'] ?? null,
+                    'firstname' => $properties['firstname'] ?? null
                 ]);
                 return 'skipped';
             }
 
-            // Verificar si ya existe el cliente
-            $existingClient = Client::where('hubspot_id', $hubspotId)->first();
+            // Verificar si ya existe el cliente (prioridad: hubspot_id, luego xante_id)
+            $existingClient = Client::where('hubspot_id', $hubspotId)
+                ->orWhere('xante_id', $xanteId)
+                ->first();
             
             if ($existingClient) {
                 // Actualizar cliente existente
                 $this->updateExistingClient($existingClient, $properties, $xanteId);
                 return 'updated_clients';
             } else {
-                // Crear nuevo cliente
+                // Crear nuevo cliente (solo si tiene xante_id válido)
                 $this->createNewClient($hubspotId, $properties, $xanteId);
                 return 'new_clients';
             }
@@ -174,15 +218,26 @@ class HubspotSyncService
     }
 
     /**
-     * Extraer xante_id de las propiedades
+     * Extraer xante_id de las propiedades (VALIDACIÓN CRÍTICA)
      */
     private function extractXanteId(array $properties): ?string
     {
         $possibleFields = $this->config['mapping']['custom_properties'];
         
         foreach ($possibleFields as $field) {
-            if (!empty($properties[$field])) {
-                return $properties[$field];
+            if (isset($properties[$field]) && !empty(trim($properties[$field]))) {
+                $xanteId = trim($properties[$field]);
+                
+                // Validación adicional: debe ser numérico y mayor a 0
+                if (is_numeric($xanteId) && (int)$xanteId > 0) {
+                    return $xanteId;
+                }
+                
+                Log::warning("xante_id inválido encontrado", [
+                    'field' => $field,
+                    'value' => $xanteId,
+                    'hubspot_properties' => array_keys($properties)
+                ]);
             }
         }
         
@@ -215,15 +270,31 @@ class HubspotSyncService
     private function updateExistingClient(Client $client, array $properties, string $xanteId): void
     {
         $clientData = $this->mapHubspotToClient($properties);
+        
+        // ASEGURAR IDs CRÍTICOS: xante_id y hubspot_id siempre correctos
         $clientData['xante_id'] = $xanteId;
         $clientData['hubspot_synced_at'] = now();
+        
+        // Si el cliente no tenía hubspot_id, asignarlo ahora
+        if (empty($client->hubspot_id)) {
+            $hubspotId = $properties['hs_object_id'] ?? null;
+            if ($hubspotId) {
+                $clientData['hubspot_id'] = $hubspotId;
+                Log::info('Asignando hubspot_id faltante', [
+                    'client_id' => $client->id,
+                    'xante_id' => $xanteId,
+                    'hubspot_id' => $hubspotId
+                ]);
+            }
+        }
 
         $client->update($clientData);
         
         Log::info('Cliente actualizado desde HubSpot', [
             'client_id' => $client->id,
             'xante_id' => $xanteId,
-            'hubspot_id' => $client->hubspot_id
+            'hubspot_id' => $client->hubspot_id,
+            'updated_fields' => array_keys($clientData)
         ]);
     }
 
@@ -239,8 +310,8 @@ class HubspotSyncService
             if (isset($properties[$hubspotField]) && !empty($properties[$hubspotField])) {
                 $value = $properties[$hubspotField];
                 
-                // Procesar fechas
-                if (in_array($clientField, ['created_at', 'updated_at']) && is_numeric($value)) {
+                // Procesar fechas de HubSpot (vienen en milisegundos)
+                if (in_array($clientField, ['fecha_registro', 'updated_at']) && is_numeric($value)) {
                     $value = Carbon::createFromTimestampMs($value);
                 }
                 

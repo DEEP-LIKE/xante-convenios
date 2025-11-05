@@ -41,6 +41,8 @@ class ClientResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with('latestAgreement'))
             ->columns([
+                // ID PRINCIPAL: xante_id es el identificador visible y principal
+                // NOTA: hubspot_id se almacena en BD pero NO se muestra (uso interno)
                 TextColumn::make('xante_id')
                     ->label('ID Xante')
                     ->searchable()
@@ -50,10 +52,18 @@ class ClientResource extends Resource
                     ->label('Nombre')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('created_at')
-                    ->label('Fecha Registro')
+                TextColumn::make('fecha_registro')
+                    ->label('Fecha de Registro')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->placeholder('No disponible')
+                    ->tooltip('Fecha de creación del contacto en HubSpot'),
+                TextColumn::make('hubspot_synced_at')
+                    ->label('Fecha de Sincronización')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->placeholder('No sincronizado')
+                    ->tooltip('Última fecha de sincronización con HubSpot'),
                 TextColumn::make('agreement_status')
                     ->label('Convenio')
                     ->badge()

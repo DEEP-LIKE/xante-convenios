@@ -16,6 +16,7 @@ class Client extends Model
         'xante_id',
         'hubspot_id',
         'hubspot_synced_at',
+        'fecha_registro',
         'email',
         'phone',
         
@@ -69,6 +70,7 @@ class Client extends Model
             'birthdate' => 'date',
             'spouse_birthdate' => 'date',
             'hubspot_synced_at' => 'datetime',
+            'fecha_registro' => 'datetime',
         ];
     }
 

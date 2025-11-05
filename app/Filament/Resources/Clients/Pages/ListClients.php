@@ -18,14 +18,14 @@ class ListClients extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            // Botón de Sincronización con HubSpot
-            Action::make('sync_hubspot')
+            // BOTÓN ÚNICO DE SINCRONIZACIÓN CONSOLIDADO
+            Action::make('sync_hubspot_unified')
                 ->label('Sincronizar HubSpot')
                 ->icon('heroicon-o-arrow-path')
                 ->color('primary')
                 ->requiresConfirmation()
-                ->modalHeading('Sincronizar Clientes desde HubSpot')
-                ->modalDescription('Esta acción importará nuevos clientes desde HubSpot que tengan un xante_id válido. Los clientes existentes serán actualizados.')
+                ->modalHeading('Sincronización Inteligente de HubSpot')
+                ->modalDescription('Sincronización optimizada que procesa contactos de HubSpot con xante_id válido. Solo importa/actualiza clientes que cumplan con los criterios de validación.')
                 ->modalSubmitActionLabel('Iniciar Sincronización')
                 ->disabled(fn() => Cache::get('hubspot_sync_in_progress', false))
                 ->action(function () {
@@ -56,15 +56,45 @@ class ListClients extends ListRecords
                             return;
                         }
 
-                        // Disparar job de sincronización
-                        SyncHubspotClientsJob::dispatch(Auth::id());
+                        // Ejecutar sincronización inteligente (balanceada: 8 páginas, 35s)
+                        $stats = $syncService->syncClients(maxPages: 8, timeLimit: 35);
+
+                        $title = 'Sincronización Completada';
+                        $icon = 'heroicon-o-check-circle';
+                        $color = 'success';
+
+                        // Ajustar mensaje si se alcanzaron límites
+                        if ($stats['time_limited'] || $stats['max_pages_reached']) {
+                            $title = 'Sincronización Parcial Completada';
+                            $icon = 'heroicon-o-clock';
+                            $color = 'warning';
+                        }
+
+                        $body = sprintf(
+                            'Páginas procesadas: %d | Nuevos: %d | Actualizados: %d | Omitidos: %d | Errores: %d',
+                            $stats['processed_pages'],
+                            $stats['new_clients'],
+                            $stats['updated_clients'],
+                            $stats['skipped'],
+                            $stats['errors']
+                        );
+
+                        // Información adicional sobre validación
+                        $body .= "\n🔍 Solo contactos con xante_id válido fueron procesados";
+
+                        if ($stats['time_limited']) {
+                            $body .= "\n⏱️ Detenido por límite de tiempo (35s)";
+                        }
+                        if ($stats['max_pages_reached']) {
+                            $body .= "\n📄 Detenido por límite de páginas (8 páginas)";
+                        }
 
                         Notification::make()
-                            ->title('Sincronización Iniciada')
-                            ->body('La sincronización con HubSpot ha comenzado en segundo plano. Recibirás una notificación cuando termine.')
-                            ->success()
-                            ->icon('heroicon-o-arrow-path')
-                            ->duration(8000)
+                            ->title($title)
+                            ->body($body)
+                            ->color($color)
+                            ->icon($icon)
+                            ->duration(12000)
                             ->send();
 
                     } catch (\Exception $e) {
