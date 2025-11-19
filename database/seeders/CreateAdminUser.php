@@ -10,8 +10,6 @@ class CreateAdminUser extends Seeder
 {
     public function run(): void
     {
-        // No eliminar usuarios existentes, solo crear/actualizar los necesarios
-        
         // Crear o actualizar usuario administrador
         $admin = User::updateOrCreate(
             ['email' => 'admin@xante.com'],
@@ -31,19 +29,19 @@ class CreateAdminUser extends Seeder
                 'name' => 'Asesor de Ventas',
                 'email' => 'asesor@xante.com',
                 'password' => Hash::make('asesor123'),
-                'role' => 'sales',
+                'role' => 'asesor',
                 'email_verified_at' => now(),
             ]
         );
 
-        // Crear o actualizar usuario manager
-        $manager = User::updateOrCreate(
-            ['email' => 'manager@xante.com'],
+        // Crear o actualizar usuario viewer
+        $viewer = User::updateOrCreate(
+            ['email' => 'viewer@xante.com'],
             [
-                'name' => 'Manager Xante',
-                'email' => 'manager@xante.com',
-                'password' => Hash::make('manager123'),
-                'role' => 'manager',
+                'name' => 'Viewer Xante',
+                'email' => 'viewer@xante.com',
+                'password' => Hash::make('viewer123'),
+                'role' => 'viewer',
                 'email_verified_at' => now(),
             ]
         );
@@ -51,8 +49,7 @@ class CreateAdminUser extends Seeder
         echo "✅ Usuarios creados/actualizados exitosamente:\n";
         echo "   👤 admin@xante.com / admin123 (ID: {$admin->id})\n";
         echo "   👤 asesor@xante.com / asesor123 (ID: {$asesor->id})\n";
-        echo "   👤 manager@xante.com / manager123 (ID: {$manager->id})\n";
+        echo "   👤 viewer@xante.com / viewer123 (ID: {$viewer->id})\n";
         echo "\n🔐 Puedes usar cualquiera de estas credenciales para acceder.\n";
-        echo "\n💡 Si ya existían usuarios con estos emails, se actualizaron las contraseñas.\n";
     }
 }

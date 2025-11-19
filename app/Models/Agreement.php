@@ -13,8 +13,10 @@ class Agreement extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_xante_id',
+        'client_id',
         'property_id',
+        'proposal_id',
+        'spouse_id',
         'status',
         // Campos del wizard
         'current_step',
@@ -128,7 +130,17 @@ class Agreement extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class, 'client_xante_id', 'xante_id');
+        return $this->belongsTo(Client::class);
+    }
+
+    public function spouse(): BelongsTo
+    {
+        return $this->belongsTo(Spouse::class);
+    }
+
+    public function proposal(): BelongsTo
+    {
+        return $this->belongsTo(Proposal::class);
     }
 
     public function property(): BelongsTo

@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         // Usuario Administrador
@@ -33,19 +30,19 @@ class UserSeeder extends Seeder
                 'name' => 'Asesor de Ventas',
                 'email' => 'asesor@xante.com',
                 'password' => Hash::make('asesor123'),
-                'role' => 'sales',
+                'role' => 'asesor',
                 'email_verified_at' => now(),
             ]
         );
 
-        // Usuario Manager
+        // Usuario Viewer
         User::updateOrCreate(
-            ['email' => 'manager@xante.com'],
+            ['email' => 'viewer@xante.com'],
             [
-                'name' => 'Manager Xante',
-                'email' => 'manager@xante.com',
-                'password' => Hash::make('manager123'),
-                'role' => 'manager',
+                'name' => 'Viewer Xante',
+                'email' => 'viewer@xante.com',
+                'password' => Hash::make('viewer123'),
+                'role' => 'viewer',
                 'email_verified_at' => now(),
             ]
         );
@@ -53,6 +50,6 @@ class UserSeeder extends Seeder
         $this->command->info('✅ Usuarios creados exitosamente:');
         $this->command->info('   👤 admin@xante.com / admin123 (Administrador)');
         $this->command->info('   👤 asesor@xante.com / asesor123 (Asesor de Ventas)');
-        $this->command->info('   👤 manager@xante.com / manager123 (Manager)');
+        $this->command->info('   👤 viewer@xante.com / viewer123 (Viewer)');
     }
 }

@@ -57,7 +57,7 @@ class ListClients extends ListRecords
                         }
 
                         // Despachar Job asíncrono para evitar timeout
-                        SyncHubspotClientsJob::dispatch();
+                        SyncHubspotClientsJob::dispatch(Auth::id());
 
                         Notification::make()
                             ->title('Sincronización Iniciada')
@@ -76,49 +76,6 @@ class ListClients extends ListRecords
                             ->duration(10000)
                             ->send();
                     }
-                }),
-
-            // Botón para ver estadísticas de sincronización
-            Action::make('sync_stats')
-                ->label('Estadísticas HubSpot')
-                ->icon('heroicon-o-chart-bar')
-                ->color('gray')
-                ->action(function () {
-                    $stats = Cache::get('hubspot_last_sync_stats');
-                    $lastSync = Cache::get('hubspot_last_sync_completed_at');
-                    
-                    if (!$stats) {
-                        Notification::make()
-                            ->title('Sin Estadísticas')
-                            ->body('No hay estadísticas de sincronización disponibles. Ejecuta una sincronización primero.')
-                            ->info()
-                            ->send();
-                        return;
-                    }
-
-                    $syncService = new HubspotSyncService();
-                    $currentStats = $syncService->getSyncStats();
-
-                    Notification::make()
-                        ->title('Estadísticas de Sincronización HubSpot')
-                        ->body(sprintf(
-                            "Última sincronización: %s\n" .
-                            "Total clientes: %d\n" .
-                            "Con HubSpot ID: %d\n" .
-                            "Sin HubSpot ID: %d\n" .
-                            "Última ejecución - Nuevos: %d | Actualizados: %d | Omitidos: %d",
-                            $lastSync ? $lastSync->format('d/m/Y H:i') : 'Nunca',
-                            $currentStats['total_clients'],
-                            $currentStats['clients_with_hubspot_id'],
-                            $currentStats['clients_without_hubspot_id'],
-                            $stats['new_clients'] ?? 0,
-                            $stats['updated_clients'] ?? 0,
-                            $stats['skipped'] ?? 0
-                        ))
-                        ->info()
-                        ->icon('heroicon-o-information-circle')
-                        ->duration(15000)
-                        ->send();
                 }),
         ];
     }

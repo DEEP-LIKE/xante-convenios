@@ -151,6 +151,7 @@ class ClientResource extends Resource
                         return $query;
                     }),
             ])
+            ->defaultSort('fecha_registro', 'desc') // Ordenar por más recientes primero
             ->recordActions([])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -180,7 +181,7 @@ class ClientResource extends Resource
     {
         try {
             // Obtener convenios sin relación de cliente
-            $agreementsWithoutClient = \App\Models\Agreement::whereNull('client_xante_id')
+            $agreementsWithoutClient = \App\Models\Agreement::whereNull('client_id')
                 ->whereNotNull('wizard_data')
                 ->get();
 
@@ -202,13 +203,13 @@ class ClientResource extends Resource
                 }
 
                 if ($client) {
-                    // Actualizar la relación
-                    $agreement->update(['client_xante_id' => $client->xante_id]);
+                    // Actualizar la relación usando client_id
+                    $agreement->update(['client_id' => $client->id]);
                 }
             }
 
             // Verificar convenios con clientes inexistentes
-            $orphanedAgreements = \App\Models\Agreement::whereNotNull('client_xante_id')
+            $orphanedAgreements = \App\Models\Agreement::whereNotNull('client_id')
                 ->whereDoesntHave('client')
                 ->get();
 
@@ -217,6 +218,9 @@ class ClientResource extends Resource
                 
                 if ($wizardData) {
                     $client = static::createClientFromWizardData($wizardData, $agreement);
+                    if ($client) {
+                        $agreement->update(['client_id' => $client->id]);
+                    }
                 }
             }
 

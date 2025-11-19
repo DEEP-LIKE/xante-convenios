@@ -45,25 +45,13 @@ class ConfigurationCalculatorResource extends Resource
                     ->schema([
                         TextInput::make('key')
                             ->label('Clave')
-                            ->required(),
-                        
-                        TextInput::make('name')
-                            ->label('Nombre')
-                            ->required(),
+                            ->required()
+                            ->disabled(), // Clave no debería ser editable
                         
                         Textarea::make('description')
                             ->label('Descripción')
-                            ->rows(2),
-                        
-                        Select::make('group')
-                            ->label('Grupo')
-                            ->options([
-                                'comisiones' => 'Comisiones',
-                                'gastos' => 'Gastos',
-                                'creditos' => 'Créditos',
-                                'general' => 'General',
-                            ])
-                            ->required(),
+                            ->rows(2)
+                            ->columnSpanFull(),
                         
                         Select::make('type')
                             ->label('Tipo')
@@ -87,10 +75,10 @@ class ConfigurationCalculatorResource extends Resource
         return $table
             ->columns([
                 // TextColumn::make('group')->label('Grupo')->badge(), // <-- Mostrar el grupo como "badge"
-                TextColumn::make('name')
-                    ->label('Nombre')
+                TextColumn::make('description')
+                    ->label('Descripción')
                     ->sortable()
-                    ->searchable(), // <-- Ahora el nombre es searchable
+                    ->searchable(), // <-- Ahora la descripción es searchable
                 TextColumn::make('value')
                     ->sortable()
                     ->label('Valor'),

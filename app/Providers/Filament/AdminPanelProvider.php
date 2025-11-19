@@ -57,6 +57,10 @@ class AdminPanelProvider extends PanelProvider
             // ->font('Franie')
             // ->viteTheme('resources/css/filament/admin/theme.css') // Comentado para evitar conflictos
             
+            // Habilitar notificaciones de base de datos (Necesario para recibir avisos de Jobs en background)
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('15s') // Revisar cada 15 segundos
+            
             ->navigationGroups([
                 NavigationGroup::make('Configuraciones')->collapsed(true),
             ])

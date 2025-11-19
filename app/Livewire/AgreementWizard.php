@@ -366,23 +366,23 @@ class AgreementWizard extends Component
             'state' => $client->state,
             
             // Datos del cónyuge (si existen)
-            'spouse_name' => $client->spouse_name,
-            'spouse_birthdate' => $client->spouse_birthdate?->format('Y-m-d'),
-            'spouse_curp' => $client->spouse_curp,
-            'spouse_rfc' => $client->spouse_rfc,
-            'spouse_email' => $client->spouse_email,
-            'spouse_phone' => $client->spouse_phone,
-            'spouse_delivery_file' => $client->spouse_delivery_file,
-            'spouse_civil_status' => $client->spouse_civil_status,
-            'spouse_regime_type' => $client->spouse_regime_type,
-            'spouse_occupation' => $client->spouse_occupation,
-            'spouse_office_phone' => $client->spouse_office_phone,
-            'spouse_additional_contact_phone' => $client->spouse_additional_contact_phone,
-            'spouse_current_address' => $client->spouse_current_address,
-            'spouse_neighborhood' => $client->spouse_neighborhood,
-            'spouse_postal_code' => $client->spouse_postal_code,
-            'spouse_municipality' => $client->spouse_municipality,
-            'spouse_state' => $client->spouse_state,
+            'spouse_name' => $client->spouse?->name,
+            'spouse_birthdate' => $client->spouse?->birthdate?->format('Y-m-d'),
+            'spouse_curp' => $client->spouse?->curp,
+            'spouse_rfc' => $client->spouse?->rfc,
+            'spouse_email' => $client->spouse?->email,
+            'spouse_phone' => $client->spouse?->phone,
+            'spouse_delivery_file' => $client->spouse?->delivery_file,
+            'spouse_civil_status' => $client->spouse?->civil_status,
+            'spouse_regime_type' => $client->spouse?->regime_type,
+            'spouse_occupation' => $client->spouse?->occupation,
+            'spouse_office_phone' => $client->spouse?->office_phone,
+            'spouse_additional_contact_phone' => $client->spouse?->additional_contact_phone,
+            'spouse_current_address' => $client->spouse?->current_address,
+            'spouse_neighborhood' => $client->spouse?->neighborhood,
+            'spouse_postal_code' => $client->spouse?->postal_code,
+            'spouse_municipality' => $client->spouse?->municipality,
+            'spouse_state' => $client->spouse?->state,
             
             // Contacto AC y Presidente
             'ac_name' => $client->ac_name,
@@ -402,7 +402,7 @@ class AgreementWizard extends Component
         \Log::info('Datos del cliente precargados en wizard', [
             'client_xante_id' => $client->xante_id,
             'fields_populated' => count($this->stepData),
-            'has_spouse_data' => !empty($client->spouse_name),
+            'has_spouse_data' => $client->spouse()->exists(),
         ]);
     }
 

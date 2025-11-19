@@ -11,11 +11,9 @@ class ConfigurationCalculator extends Model
     
     protected $fillable = [
         'key',
-        'name',
         'description',
         'value',
         'type',
-        'group',
     ];
 
     // Método para obtener el valor parseado según el tipo

@@ -36,25 +36,7 @@ class Client extends Model
         'municipality',
         'state',
         
-        // Datos personales coacreditado/cónyuge
-        'spouse_name',
-        'spouse_birthdate',
-        'spouse_curp',
-        'spouse_rfc',
-        'spouse_email',
-        'spouse_phone',
-        'spouse_delivery_file',
-        'spouse_civil_status',
-        'spouse_regime_type',
-        'spouse_occupation',
-        'spouse_office_phone',
-        'spouse_additional_contact_phone',
-        'spouse_current_address',
-        'spouse_neighborhood',
-        'spouse_postal_code',
-        'spouse_municipality',
-        'spouse_state',
-        
+
         // Contacto AC y/o Presidente de Privada
         'ac_name',
         'ac_phone',
@@ -68,20 +50,24 @@ class Client extends Model
     {
         return [
             'birthdate' => 'date',
-            'spouse_birthdate' => 'date',
             'hubspot_synced_at' => 'datetime',
             'fecha_registro' => 'datetime',
         ];
     }
 
+    public function spouse(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Spouse::class);
+    }
+
     public function agreements(): HasMany
     {
-        return $this->hasMany(Agreement::class, 'client_xante_id', 'xante_id');
+        return $this->hasMany(Agreement::class);
     }
     
     public function latestAgreement()
     {
-        return $this->hasOne(Agreement::class, 'client_xante_id', 'xante_id')
+        return $this->hasOne(Agreement::class)
             ->latest('created_at');
     }
 

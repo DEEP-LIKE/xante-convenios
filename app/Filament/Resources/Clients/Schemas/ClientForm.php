@@ -94,33 +94,34 @@ class ClientForm
                     ])->columns(2),
                 
                 Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE')
+                    ->relationship('spouse')
                     ->schema([
-                        TextInput::make('spouse_name')
+                        TextInput::make('name')
                             ->label('Nombre Cliente')
                             ->maxLength(255),
-                        DatePicker::make('spouse_birthdate')
+                        DatePicker::make('birthdate')
                             ->label('Fecha de Nacimiento')
                             ->native(false),
-                        TextInput::make('spouse_curp')
+                        TextInput::make('curp')
                             ->label('CURP')
                             ->maxLength(18)
                             ->rules(['regex:/^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$/']),
-                        TextInput::make('spouse_rfc')
+                        TextInput::make('rfc')
                             ->label('RFC')
                             ->maxLength(13)
                             ->rules(['regex:/^[A-Z&Ñ]{3,4}[0-9]{6}[A-V1-9][A-Z1-9][0-9A]$/']),
-                        TextInput::make('spouse_email')
+                        TextInput::make('email')
                             ->label('Correo electrónico')
                             ->email()
                             ->maxLength(255),
-                        TextInput::make('spouse_phone')
+                        TextInput::make('phone')
                             ->label('Núm. Celular')
                             ->tel()
                             ->maxLength(255),
-                        TextInput::make('spouse_delivery_file')
+                        TextInput::make('delivery_file')
                             ->label('Entrega expediente')
                             ->maxLength(255),
-                        Select::make('spouse_civil_status')
+                        Select::make('civil_status')
                             ->label('Estado civil')
                             ->options([
                                 'soltero' => 'Soltero(a)',
@@ -129,33 +130,33 @@ class ClientForm
                                 'viudo' => 'Viudo(a)',
                                 'union_libre' => 'Unión Libre',
                             ]),
-                        TextInput::make('spouse_regime_type')
+                        TextInput::make('regime_type')
                             ->label('Régimen Fiscal')
                             ->maxLength(255),
-                        TextInput::make('spouse_occupation')
+                        TextInput::make('occupation')
                             ->label('Ocupación')
                             ->maxLength(255),
-                        TextInput::make('spouse_office_phone')
+                        TextInput::make('office_phone')
                             ->label('Tel. oficina')
                             ->tel()
                             ->maxLength(255),
-                        TextInput::make('spouse_additional_contact_phone')
+                        TextInput::make('additional_contact_phone')
                             ->label('Tel. Contacto Adic.')
                             ->tel()
                             ->maxLength(255),
-                        Textarea::make('spouse_current_address')
+                        Textarea::make('current_address')
                             ->label('Domicilio Actual')
                             ->rows(3),
-                        TextInput::make('spouse_neighborhood')
+                        TextInput::make('neighborhood')
                             ->label('Colonia')
                             ->maxLength(255),
-                        TextInput::make('spouse_postal_code')
+                        TextInput::make('postal_code')
                             ->label('C.P.')
                             ->maxLength(10),
-                        TextInput::make('spouse_municipality')
+                        TextInput::make('municipality')
                             ->label('Municipio - Alcaldía')
                             ->maxLength(255),
-                        TextInput::make('spouse_state')
+                        TextInput::make('state')
                             ->label('Estado')
                             ->maxLength(255),
                     ])->columns(2),
