@@ -1298,6 +1298,7 @@ class CreateAgreementWizard extends Page implements HasForms
         if ($client) {
             // Datos generales
             $set('xante_id', $client->xante_id);
+            $set('fecha_registro', $client->fecha_registro?->format('Y-m-d'));
 
             // Datos personales titular
             $set('holder_name', $client->name);
@@ -1625,6 +1626,7 @@ class CreateAgreementWizard extends Page implements HasForms
     {
         // Datos generales
         $this->data['xante_id'] = $client->xante_id;
+        $this->data['fecha_registro'] = $client->fecha_registro?->format('Y-m-d');
 
         // Datos personales titular
         $this->data['holder_name'] = $client->name;

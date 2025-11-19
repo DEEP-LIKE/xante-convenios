@@ -12,6 +12,19 @@
         <h3 class="text-md font-medium text-gray-900 mb-4">Información Básica</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {{-- Fecha de Registro (HubSpot Deal) --}}
+            <div class="md:col-span-2">
+                <label for="fecha_registro" class="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha
+                </label>
+                <input type="date" 
+                       wire:model="stepData.fecha_registro"
+                       id="fecha_registro"
+                       class="block w-full rounded-md border-gray-300 bg-gray-100 text-gray-500 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                       readonly
+                       disabled>
+            </div>
+
             {{-- Nombre completo --}}
             <div class="md:col-span-2">
                 <label for="holder_name" class="block text-sm font-medium text-gray-700 mb-2">

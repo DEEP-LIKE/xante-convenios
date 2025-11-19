@@ -91,6 +91,15 @@ return [
             'phone' => 'phone',
             'createdate' => 'fecha_registro',  // Fecha de creación en HubSpot
             'lastmodifieddate' => 'updated_at',
+            
+            // Nuevos campos expandidos
+            'address' => 'current_address',
+            'city' => 'municipality',
+            'state' => 'state',
+            'zip' => 'postal_code',
+            'colonia' => 'neighborhood',
+            'date_of_birth' => 'birthdate',
+            'jobtitle' => 'occupation',
         ],
         
         // Propiedades personalizadas que se buscarán

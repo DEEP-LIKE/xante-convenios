@@ -285,6 +285,9 @@ class HubspotSyncService
                 return 'skipped';
             }
 
+            // Obtener fecha de creación del Deal
+            $dealCreatedAt = $properties['createdate'] ?? null;
+
             // Obtener Contact asociado
             $contact = $this->getContactFromDeal($dealId);
             if (!$contact) {
@@ -311,14 +314,14 @@ class HubspotSyncService
                 ->first();
             
             if ($existingClient) {
-                $this->updateExistingClient($existingClient, $contactProps, $xanteId);
+                $this->updateExistingClient($existingClient, $contactProps, $xanteId, $dealCreatedAt);
                 Log::info("Cliente actualizado desde Deal {$dealId}", [
                     'xante_id' => $xanteId,
                     'client_id' => $existingClient->id
                 ]);
                 return 'updated_clients';
             } else {
-                $this->createNewClient($contactId, $contactProps, $xanteId);
+                $this->createNewClient($contactId, $contactProps, $xanteId, $dealCreatedAt);
                 Log::info("Cliente creado desde Deal {$dealId}", [
                     'xante_id' => $xanteId,
                     'dealname' => $properties['dealname'] ?? 'N/A'
@@ -425,12 +428,25 @@ class HubspotSyncService
     /**
      * Crear nuevo cliente
      */
-    private function createNewClient(string $hubspotId, array $properties, string $xanteId): void
+    private function createNewClient(string $hubspotId, array $properties, string $xanteId, ?string $dealCreatedAt = null): void
     {
         $clientData = $this->mapHubspotToClient($properties);
         $clientData['hubspot_id'] = $hubspotId;
         $clientData['xante_id'] = $xanteId;
         $clientData['hubspot_synced_at'] = now();
+
+        // Asignar fecha de registro desde el Deal si existe
+        if ($dealCreatedAt) {
+            try {
+                if (is_numeric($dealCreatedAt)) {
+                    $clientData['fecha_registro'] = Carbon::createFromTimestampMs($dealCreatedAt);
+                } else {
+                    $clientData['fecha_registro'] = Carbon::parse($dealCreatedAt);
+                }
+            } catch (\Exception $e) {
+                Log::warning("Error parseando fecha de creación del Deal: {$dealCreatedAt}");
+            }
+        }
 
         $client = Client::create($clientData);
         
@@ -445,13 +461,26 @@ class HubspotSyncService
     /**
      * Actualizar cliente existente
      */
-    private function updateExistingClient(Client $client, array $properties, string $xanteId): void
+    private function updateExistingClient(Client $client, array $properties, string $xanteId, ?string $dealCreatedAt = null): void
     {
         $clientData = $this->mapHubspotToClient($properties);
         
         // ASEGURAR IDs CRÍTICOS: xante_id y hubspot_id siempre correctos
         $clientData['xante_id'] = $xanteId;
         $clientData['hubspot_synced_at'] = now();
+        
+        // Actualizar fecha de registro si viene del Deal
+        if ($dealCreatedAt) {
+            try {
+                if (is_numeric($dealCreatedAt)) {
+                    $clientData['fecha_registro'] = Carbon::createFromTimestampMs($dealCreatedAt);
+                } else {
+                    $clientData['fecha_registro'] = Carbon::parse($dealCreatedAt);
+                }
+            } catch (\Exception $e) {
+                Log::warning("Error parseando fecha de creación del Deal: {$dealCreatedAt}");
+            }
+        }
         
         // Si el cliente no tenía hubspot_id, asignarlo ahora
         if (empty($client->hubspot_id)) {
@@ -491,6 +520,20 @@ class HubspotSyncService
                 // Procesar fechas de HubSpot (vienen en milisegundos)
                 if (in_array($clientField, ['fecha_registro', 'updated_at']) && is_numeric($value)) {
                     $value = Carbon::createFromTimestampMs($value);
+                }
+                
+                // Procesar fecha de nacimiento
+                if ($clientField === 'birthdate') {
+                    try {
+                        if (is_numeric($value)) {
+                            $value = Carbon::createFromTimestampMs($value)->format('Y-m-d');
+                        } else {
+                            $value = Carbon::parse($value)->format('Y-m-d');
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error parseando fecha de nacimiento: {$value}");
+                        $value = null;
+                    }
                 }
                 
                 $clientData[$clientField] = $value;

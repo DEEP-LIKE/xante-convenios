@@ -115,6 +115,12 @@ class SyncHubspotClientsJob implements ShouldQueue
     private function sendSuccessNotification(array $stats): void
     {
         try {
+            $recipient = $this->getNotificationRecipient();
+            
+            if (!$recipient) {
+                return;
+            }
+
             Notification::make()
                 ->title('Sincronización HubSpot Completada')
                 ->body(sprintf(
@@ -126,9 +132,7 @@ class SyncHubspotClientsJob implements ShouldQueue
                 ))
                 ->success()
                 ->icon('heroicon-o-check-circle')
-                ->duration(10000)
-                ->send();
-                // ->sendToDatabase(\App\Models\User::find($this->userId));
+                ->sendToDatabase($recipient);
 
         } catch (\Exception $e) {
             Log::warning('No se pudo enviar notificación de éxito', [
@@ -144,13 +148,18 @@ class SyncHubspotClientsJob implements ShouldQueue
     private function sendErrorNotification(string $errorMessage): void
     {
         try {
+            $recipient = $this->getNotificationRecipient();
+            
+            if (!$recipient) {
+                return;
+            }
+
             Notification::make()
                 ->title('Error en Sincronización HubSpot')
                 ->body($errorMessage)
                 ->danger()
                 ->icon('heroicon-o-exclamation-triangle')
-                ->duration(15000)
-                ->sendToDatabase(\App\Models\User::find($this->userId));
+                ->sendToDatabase($recipient);
 
         } catch (\Exception $e) {
             Log::warning('No se pudo enviar notificación de error', [
@@ -158,6 +167,22 @@ class SyncHubspotClientsJob implements ShouldQueue
                 'user_id' => $this->userId
             ]);
         }
+    }
+
+    /**
+     * Obtener destinatario(s) de la notificación
+     * Si es ejecución manual, retorna el usuario que la inició.
+     * Si es automática, retorna todos los usuarios (o admins).
+     */
+    private function getNotificationRecipient()
+    {
+        if ($this->userId) {
+            return \App\Models\User::find($this->userId);
+        }
+
+        // Si es ejecución automática, notificar a todos los usuarios (o filtrar por rol si fuera necesario)
+        // Por ahora notificamos a todos para asegurar visibilidad
+        return \App\Models\User::all();
     }
 
     /**

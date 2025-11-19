@@ -339,10 +339,11 @@ class AgreementWizard extends Component
     {
         // Poblar datos del titular con TODOS los campos disponibles
         $this->stepData = array_merge($this->stepData, [
-            // Datos básicos
+            // Datos básicos (4 campos)
             'holder_name' => $client->name,
             'holder_email' => $client->email,
             'holder_phone' => $client->phone,
+            'fecha_registro' => $client->fecha_registro?->format('Y-m-d'), // Nueva fecha del Deal
             
             // Datos personales
             'holder_birthdate' => $client->birthdate?->format('Y-m-d'),
