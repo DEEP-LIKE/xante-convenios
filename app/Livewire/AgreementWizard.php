@@ -337,17 +337,71 @@ class AgreementWizard extends Component
 
     private function populateClientData(Client $client)
     {
-        // Poblar datos del titular
+        // Poblar datos del titular con TODOS los campos disponibles
         $this->stepData = array_merge($this->stepData, [
+            // Datos básicos
             'holder_name' => $client->name,
             'holder_email' => $client->email,
             'holder_phone' => $client->phone,
-            'holder_birthdate' => $client->birthdate,
+            
+            // Datos personales
+            'holder_birthdate' => $client->birthdate?->format('Y-m-d'),
             'holder_curp' => $client->curp,
             'holder_rfc' => $client->rfc,
             'holder_civil_status' => $client->civil_status,
+            'holder_regime_type' => $client->regime_type,
             'holder_occupation' => $client->occupation,
-            // ... más campos según sea necesario
+            'holder_delivery_file' => $client->delivery_file,
+            
+            // Teléfonos adicionales
+            'holder_office_phone' => $client->office_phone,
+            'holder_additional_contact_phone' => $client->additional_contact_phone,
+            
+            // Dirección completa
+            'current_address' => $client->current_address,
+            'neighborhood' => $client->neighborhood,
+            'postal_code' => $client->postal_code,
+            'municipality' => $client->municipality,
+            'state' => $client->state,
+            
+            // Datos del cónyuge (si existen)
+            'spouse_name' => $client->spouse_name,
+            'spouse_birthdate' => $client->spouse_birthdate?->format('Y-m-d'),
+            'spouse_curp' => $client->spouse_curp,
+            'spouse_rfc' => $client->spouse_rfc,
+            'spouse_email' => $client->spouse_email,
+            'spouse_phone' => $client->spouse_phone,
+            'spouse_delivery_file' => $client->spouse_delivery_file,
+            'spouse_civil_status' => $client->spouse_civil_status,
+            'spouse_regime_type' => $client->spouse_regime_type,
+            'spouse_occupation' => $client->spouse_occupation,
+            'spouse_office_phone' => $client->spouse_office_phone,
+            'spouse_additional_contact_phone' => $client->spouse_additional_contact_phone,
+            'spouse_current_address' => $client->spouse_current_address,
+            'spouse_neighborhood' => $client->spouse_neighborhood,
+            'spouse_postal_code' => $client->spouse_postal_code,
+            'spouse_municipality' => $client->spouse_municipality,
+            'spouse_state' => $client->spouse_state,
+            
+            // Contacto AC y Presidente
+            'ac_name' => $client->ac_name,
+            'ac_phone' => $client->ac_phone,
+            'ac_quota' => $client->ac_quota,
+            'private_president_name' => $client->private_president_name,
+            'private_president_phone' => $client->private_president_phone,
+            'private_president_quota' => $client->private_president_quota,
+        ]);
+        
+        // Filtrar valores nulos para no sobrescribir datos existentes
+        $this->stepData = array_filter($this->stepData, function($value) {
+            return $value !== null && $value !== '';
+        });
+        
+        // Log para debugging
+        \Log::info('Datos del cliente precargados en wizard', [
+            'client_xante_id' => $client->xante_id,
+            'fields_populated' => count($this->stepData),
+            'has_spouse_data' => !empty($client->spouse_name),
         ]);
     }
 

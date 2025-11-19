@@ -22,6 +22,7 @@ return [
     'endpoints' => [
         'contacts' => '/crm/v3/objects/contacts',
         'deals' => '/crm/v3/objects/deals',
+        'deals_search' => '/crm/v3/objects/deals/search',
         'properties' => '/crm/v3/properties',
     ],
     
@@ -30,6 +31,55 @@ return [
         'timeout' => 30,
         'retry_attempts' => 3,
         'retry_delay' => 2, // seconds
+    ],
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Deal Synchronization Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuración para sincronización basada en Deals
+    |
+    */
+    'deal_sync' => [
+        'status_field' => 'estatus_de_convenio',
+        'accepted_value' => 'Aceptado',
+        'properties' => [
+            'dealname',
+            'amount',
+            'dealstage',
+            'closedate',
+            'createdate',
+            'estatus_de_convenio',
+            'num_associated_contacts',
+            'nombre_del_titular',
+            'hs_object_id',
+            'hs_lastmodifieddate',
+        ],
+    ],
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Search Filters
+    |--------------------------------------------------------------------------
+    |
+    | Filtros predefinidos para búsquedas en HubSpot
+    |
+    */
+    'filters' => [
+        'deal_accepted' => [
+            'filterGroups' => [
+                [
+                    'filters' => [
+                        [
+                            'propertyName' => 'estatus_de_convenio',
+                            'operator' => 'EQ',
+                            'value' => 'Aceptado'
+                        ]
+                    ]
+                ]
+            ]
+        ],
     ],
     
     'mapping' => [

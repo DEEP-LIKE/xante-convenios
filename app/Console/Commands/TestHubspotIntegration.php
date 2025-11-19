@@ -62,48 +62,45 @@ class TestHubspotIntegration extends Command
                 ['Última sincronización', $stats['last_sync'] ? $stats['last_sync']->format('d/m/Y H:i') : 'Nunca'],
             ]);
             
-            // Test 4: Sincronización completa (opcional)
+            // Test 4: Opción de sincronización
             if ($this->option('sync')) {
-                $this->info("\n4️⃣ Ejecutando sincronización completa...");
-                $this->warn('⚠️  Esta operación puede tomar varios minutos');
+                $this->info("\n4️⃣ Ejecutando sincronización desde Deals...");
+                $this->info('⏳ Sincronizando clientes desde Deals con estatus "Aceptado"...');
                 
-                if ($this->confirm('¿Continuar con la sincronización?')) {
-                    $syncStats = $syncService->syncClients();
-                    
-                    $this->info('✅ Sincronización completada');
-                    $this->table(['Métrica', 'Cantidad'], [
-                        ['Total en HubSpot', $syncStats['total_hubspot']],
-                        ['Nuevos clientes', $syncStats['new_clients']],
-                        ['Clientes actualizados', $syncStats['updated_clients']],
-                        ['Omitidos (sin xante_id)', $syncStats['skipped']],
-                        ['Errores', $syncStats['errors']],
-                        ['Páginas procesadas', $syncStats['processed_pages']],
-                    ]);
+                $syncStats = $syncService->syncClients(maxPages: 5, timeLimit: 30);
+                
+                $this->info("\n📊 Resultados de la sincronización:");
+                $this->table(['Métrica', 'Valor'], [
+                    ['Total Deals procesados', $syncStats['total_deals']],
+                    ['Clientes nuevos', $syncStats['new_clients']],
+                    ['Clientes actualizados', $syncStats['updated_clients']],
+                    ['Omitidos', $syncStats['skipped']],
+                    ['Errores', $syncStats['errors']],
+                    ['Páginas procesadas', $syncStats['processed_pages']],
+                ]);
+                
+                if ($syncStats['time_limited']) {
+                    $this->warn('⚠️  Sincronización detenida por límite de tiempo');
+                }
+                if ($syncStats['max_pages_reached']) {
+                    $this->warn('⚠️  Sincronización detenida por límite de páginas');
                 }
             }
             
-            // Test 5: Job de sincronización (opcional)
+            // Test 5: Opción de job
             if ($this->option('job')) {
-                $this->info("\n5️⃣ Probando Job de sincronización...");
-                
-                if (Cache::get('hubspot_sync_in_progress', false)) {
-                    $this->warn('⚠️  Ya hay una sincronización en progreso');
-                } else {
-                    SyncHubspotClientsJob::dispatch();
-                    $this->info('✅ Job de sincronización despachado');
-                    $this->info('💡 Ejecuta: php artisan queue:work para procesar el job');
-                }
+                $this->info("\n5️⃣ Despachando job de sincronización...");
+                SyncHubspotClientsJob::dispatch();
+                $this->info('✅ Job despachado. Revisa los logs para ver el progreso.');
             }
             
-            $this->info("\n🎉 Todas las pruebas completadas exitosamente");
+            if (!$this->option('sync') && !$this->option('job')) {
+                $this->info("\n💡 Opciones disponibles:");
+                $this->line("  --sync : Ejecutar sincronización de prueba desde Deals");
+                $this->line("  --job  : Despachar job de sincronización");
+            }
             
-            // Mostrar comandos útiles
-            $this->info("\n📋 Comandos útiles:");
-            $this->line("  • Explorar API: php artisan hubspot:explore");
-            $this->line("  • Sincronización completa: php artisan hubspot:test --sync");
-            $this->line("  • Probar job: php artisan hubspot:test --job");
-            $this->line("  • Procesar jobs: php artisan queue:work");
-            
+            $this->info("\n✅ Pruebas completadas exitosamente");
             return 0;
             
         } catch (\Exception $e) {

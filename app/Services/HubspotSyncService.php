@@ -26,14 +26,14 @@ class HubspotSyncService
     }
 
     /**
-     * Sincronizar clientes desde HubSpot
+     * Sincronizar clientes desde HubSpot Deals
      */
     public function syncClients(int $maxPages = null, int $timeLimit = 45): array
     {
-        Log::info('Iniciando sincronización de clientes desde HubSpot');
+        Log::info('Iniciando sincronización de clientes desde Deals HubSpot');
         
         $stats = [
-            'total_hubspot' => 0,
+            'total_deals' => 0,
             'new_clients' => 0,
             'updated_clients' => 0,
             'skipped' => 0,
@@ -70,21 +70,21 @@ class HubspotSyncService
                     break;
                 }
 
-                $response = $this->fetchContacts($after);
+                $response = $this->fetchDeals($after);
                 
                 if (!$response['success']) {
-                    Log::error('Error fetching contacts from HubSpot', $response);
+                    Log::error('Error fetching deals from HubSpot', $response);
                     $stats['errors']++;
                     break;
                 }
                 
                 $data = $response['data'];
-                $contacts = $data['results'] ?? [];
-                $stats['total_hubspot'] += count($contacts);
+                $deals = $data['results'] ?? [];
+                $stats['total_deals'] += count($deals);
                 $stats['processed_pages']++;
                 
-                foreach ($contacts as $contact) {
-                    $result = $this->processContact($contact);
+                foreach ($deals as $deal) {
+                    $result = $this->processDeal($deal);
                     $stats[$result]++;
                 }
                 
@@ -125,7 +125,50 @@ class HubspotSyncService
     }
 
     /**
-     * Obtener contactos desde HubSpot
+     * Obtener Deals con estatus "Aceptado" desde HubSpot
+     */
+    private function fetchDeals(?string $after = null): array
+    {
+        try {
+            $payload = [
+                'filterGroups' => $this->config['filters']['deal_accepted']['filterGroups'],
+                'properties' => $this->config['deal_sync']['properties'],
+                'limit' => $this->config['sync']['batch_size'],
+            ];
+            
+            if ($after) {
+                $payload['after'] = $after;
+            }
+
+            $response = Http::timeout($this->config['sync']['timeout'])
+                ->withHeaders([
+                    'Authorization' => "Bearer {$this->token}",
+                    'Content-Type' => 'application/json',
+                ])
+                ->post($this->baseUrl . $this->config['endpoints']['deals_search'], $payload);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->json()
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => "HTTP {$response->status()}: {$response->body()}"
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Obtener contactos desde HubSpot (método legacy para compatibilidad)
      */
     private function fetchContacts(?string $after = null): array
     {
@@ -214,6 +257,141 @@ class HubspotSyncService
                 'error' => $e->getMessage()
             ]);
             return 'errors';
+        }
+    }
+
+    /**
+     * Procesar un Deal individual
+     */
+    private function processDeal(array $deal): string
+    {
+        try {
+            $dealId = $deal['id'];
+            $properties = $deal['properties'] ?? [];
+            
+            // Validar estatus
+            $estatus = $properties['estatus_de_convenio'] ?? null;
+            if ($estatus !== 'Aceptado') {
+                return 'skipped';
+            }
+
+            // Verificar si tiene contactos asociados
+            $numContacts = (int)($properties['num_associated_contacts'] ?? 0);
+            if ($numContacts === 0) {
+                Log::info("Deal {$dealId} sin contactos asociados - OMITIDO", [
+                    'dealname' => $properties['dealname'] ?? 'N/A',
+                    'estatus' => $estatus
+                ]);
+                return 'skipped';
+            }
+
+            // Obtener Contact asociado
+            $contact = $this->getContactFromDeal($dealId);
+            if (!$contact) {
+                return 'skipped';
+            }
+
+            $contactProps = $contact['properties'] ?? [];
+            $contactId = $contact['id'] ?? null;
+            
+            // Extraer xante_id del Contact
+            $xanteId = $this->extractXanteId($contactProps);
+            if (!$xanteId) {
+                Log::info("Contact del Deal {$dealId} sin xante_id válido - OMITIDO", [
+                    'contact_id' => $contactId,
+                    'email' => $contactProps['email'] ?? 'N/A',
+                    'dealname' => $properties['dealname'] ?? 'N/A'
+                ]);
+                return 'skipped';
+            }
+
+            // Verificar si cliente existe
+            $existingClient = Client::where('xante_id', $xanteId)
+                ->orWhere('hubspot_id', $contactId)
+                ->first();
+            
+            if ($existingClient) {
+                $this->updateExistingClient($existingClient, $contactProps, $xanteId);
+                Log::info("Cliente actualizado desde Deal {$dealId}", [
+                    'xante_id' => $xanteId,
+                    'client_id' => $existingClient->id
+                ]);
+                return 'updated_clients';
+            } else {
+                $this->createNewClient($contactId, $contactProps, $xanteId);
+                Log::info("Cliente creado desde Deal {$dealId}", [
+                    'xante_id' => $xanteId,
+                    'dealname' => $properties['dealname'] ?? 'N/A'
+                ]);
+                return 'new_clients';
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error procesando Deal', [
+                'deal' => $deal,
+                'error' => $e->getMessage()
+            ]);
+            return 'errors';
+        }
+    }
+
+    /**
+     * Obtener Contact asociado al Deal
+     */
+    private function getContactFromDeal(string $dealId): ?array
+    {
+        try {
+            // 1. Obtener asociaciones
+            $response = Http::timeout($this->config['sync']['timeout'])
+                ->withHeaders([
+                    'Authorization' => "Bearer {$this->token}",
+                ])
+                ->get($this->baseUrl . "/crm/v3/objects/deals/{$dealId}/associations/contacts");
+
+            if (!$response->successful()) {
+                Log::warning("No se pudieron obtener asociaciones del Deal {$dealId}");
+                return null;
+            }
+
+            $associations = $response->json()['results'] ?? [];
+            
+            if (empty($associations)) {
+                Log::info("Deal {$dealId} sin Contact asociado en API");
+                return null;
+            }
+
+            // 2. Obtener ID del primer Contact asociado
+            $contactId = $associations[0]['id'] ?? $associations[0]['toObjectId'] ?? null;
+            
+            if (!$contactId) {
+                Log::warning("Deal {$dealId} tiene asociación pero sin Contact ID válido");
+                return null;
+            }
+
+            // 3. Obtener datos del Contact
+            $contactResponse = Http::timeout($this->config['sync']['timeout'])
+                ->withHeaders([
+                    'Authorization' => "Bearer {$this->token}",
+                ])
+                ->get($this->baseUrl . "/crm/v3/objects/contacts/{$contactId}", [
+                    'properties' => implode(',', array_merge(
+                        ['firstname', 'lastname', 'email', 'phone'],
+                        $this->config['mapping']['custom_properties']
+                    ))
+                ]);
+
+            if ($contactResponse->successful()) {
+                return $contactResponse->json();
+            }
+
+            Log::error("Error obteniendo Contact {$contactId} del Deal {$dealId}");
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error("Excepción obteniendo Contact del Deal {$dealId}", [
+                'error' => $e->getMessage()
+            ]);
+            return null;
         }
     }
 
