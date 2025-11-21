@@ -28,7 +28,7 @@ class HubspotSyncService
     /**
      * Sincronizar clientes desde HubSpot Deals
      */
-    public function syncClients(int $maxPages = null, int $timeLimit = 45): array
+    public function syncClients(int $maxPages = null, ?int $timeLimit = null): array
     {
         Log::info('Iniciando sincronización de clientes desde Deals HubSpot');
         
@@ -50,8 +50,8 @@ class HubspotSyncService
             $after = null;
             
             while ($hasMore) {
-                // Verificar límite de tiempo
-                if ((time() - $startTime) >= $timeLimit) {
+                // Verificar límite de tiempo (si está configurado)
+                if ($timeLimit && (time() - $startTime) >= $timeLimit) {
                     $stats['time_limited'] = true;
                     Log::info('Sincronización detenida por límite de tiempo', [
                         'time_elapsed' => time() - $startTime,
@@ -134,6 +134,12 @@ class HubspotSyncService
                 'filterGroups' => $this->config['filters']['deal_accepted']['filterGroups'],
                 'properties' => $this->config['deal_sync']['properties'],
                 'limit' => $this->config['sync']['batch_size'],
+                'sorts' => [
+                    [
+                        'propertyName' => 'createdate',
+                        'direction' => 'DESCENDING'
+                    ]
+                ],
             ];
             
             if ($after) {

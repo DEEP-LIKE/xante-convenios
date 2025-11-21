@@ -57,6 +57,7 @@ class ClientSearchService
     {
         return Client::query()
             ->selectRaw("id, CONCAT(name, ' — ', xante_id) as display_name")
+            ->orderBy('created_at', 'desc')
             ->pluck('display_name', 'id')
             ->toArray();
     }

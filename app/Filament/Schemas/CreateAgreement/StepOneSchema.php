@@ -44,13 +44,33 @@ class StepOneSchema
                 Select::make('client_id')
                     ->label('Cliente Seleccionado')
                     ->placeholder('Busque por nombre o ID Xante...')
+                    ->searchable()
                     ->options(function () {
+                        // Mostrar los 100 clientes más recientes al abrir el dropdown
                         return Client::query()
-                            ->selectRaw("id, CONCAT(name, ' — ', xante_id) as display_name")
-                            ->pluck('display_name', 'id')
+                            ->orderBy('hubspot_synced_at', 'asc')
+                            ->limit(100)
+                            ->get()
+                            ->mapWithKeys(fn ($client) => [$client->id => $client->name . ' — ' . $client->xante_id])
                             ->toArray();
                     })
-                    ->searchable()
+                    ->getSearchResultsUsing(function (string $search) {
+                        // Búsqueda dinámica cuando el usuario escribe
+                        return Client::query()
+                            ->where(function ($query) use ($search) {
+                                $query->where('name', 'like', "%{$search}%")
+                                    ->orWhere('xante_id', 'like', "%{$search}%");
+                            })
+                            ->orderBy('hubspot_synced_at', 'asc')
+                            ->limit(100)
+                            ->get()
+                            ->mapWithKeys(fn ($client) => [$client->id => $client->name . ' — ' . $client->xante_id])
+                            ->toArray();
+                    })
+                    ->getOptionLabelUsing(function ($value) {
+                        $client = Client::find($value);
+                        return $client ? $client->name . ' — ' . $client->xante_id : '';
+                    })
                     ->required()
                     ->live()
                     ->afterStateUpdated(function ($state, callable $set) use ($page) {
