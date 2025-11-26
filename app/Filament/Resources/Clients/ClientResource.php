@@ -196,12 +196,18 @@ class ClientResource extends Resource
             ])
             ->defaultSort('fecha_registro', 'desc') // Ordenar por más recientes primero
             ->actions([])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ])
-                ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin puede eliminar
-            ]);
+            ->bulkActions(
+                auth()->user()?->role === 'admin' 
+                    ? [
+                        BulkActionGroup::make([
+                            DeleteBulkAction::make(),
+                        ]),
+                    ] 
+                    : []
+            )
+            ->checkIfRecordIsSelectableUsing(
+                fn ($record): bool => auth()->user()?->role === 'admin',
+            );
     }
 
     public static function getRelations(): array

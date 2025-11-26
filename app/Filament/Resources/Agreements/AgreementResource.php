@@ -709,12 +709,18 @@ class AgreementResource extends Resource
                     ->url(fn (Agreement $record): string => static::getUrl('edit', ['record' => $record]))
                     ->icon('heroicon-o-pencil'),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ])
-                ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin puede eliminar
-            ]);
+            ->bulkActions(
+                auth()->user()?->role === 'admin' 
+                    ? [
+                        BulkActionGroup::make([
+                            DeleteBulkAction::make(),
+                        ]),
+                    ] 
+                    : []
+            )
+            ->checkIfRecordIsSelectableUsing(
+                fn ($record): bool => auth()->user()?->role === 'admin',
+            );
     }
 
     public static function getRelations(): array

@@ -246,12 +246,19 @@ class WizardResource extends Resource
                         return "/admin/convenios/crear?agreement={$record->id}";
                     }),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->requiresConfirmation(),
-                ]),
-            ])
+            ->bulkActions(
+                auth()->user()?->role === 'admin' 
+                    ? [
+                        BulkActionGroup::make([
+                            DeleteBulkAction::make()
+                                ->requiresConfirmation(),
+                        ]),
+                    ] 
+                    : []
+            )
+            ->checkIfRecordIsSelectableUsing(
+                fn ($record): bool => auth()->user()?->role === 'admin',
+            )
             ->emptyStateActions([
                 Action::make('create_first_agreement')
                     ->label('Nuevo Convenio')
