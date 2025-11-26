@@ -35,7 +35,6 @@
         .header {
             display: table;
             width: 100%;
-            margin-bottom: 15px;
         }
         
         .logo-container {
@@ -241,7 +240,7 @@
         {{-- HEADER CON LOGO --}}
         <div class="header">
             <div class="logo-container">
-                <img src="{{ public_path('images/Logo-Xante.png') }}" alt="Xante Logo" class="logo">
+                <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
             </div>
             <div class="header-info">
                 <div class="header-box">
@@ -257,7 +256,7 @@
 
         {{-- TÍTULO PRINCIPAL --}}
         <div class="main-title">
-            DATOS GENERALES<br>"FASE I"
+            DATOS GENERALES - "FASE I"
         </div>
 
         {{-- SECCIÓN: DATOS PERSONALES TITULAR --}}

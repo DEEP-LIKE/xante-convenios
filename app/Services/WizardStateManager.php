@@ -68,13 +68,89 @@ class WizardStateManager
     {
         $data = [];
 
-        // Si hay un clientId en la URL, mostrar notificación
+        // Si hay un clientId en la URL, precargar los datos del cliente
         if ($clientId) {
-            Notification::make()
-                ->title('Funcionalidad en desarrollo')
-                ->body('La preselección de clientes desde la URL se activará después de guardar el primer paso.')
-                ->warning()
-                ->send();
+            $client = \App\Models\Client::where('xante_id', $clientId)->first();
+            
+            if ($client) {
+                // Preseleccionar el cliente en el formulario (usar ID interno de BD)
+                $data['client_id'] = $client->id; // ID interno para el selector
+                $data['xante_id'] = $client->xante_id; // ID de Xante para referencia
+                
+                // Precargar fecha de registro (fecha del Deal en HubSpot)
+                if ($client->fecha_registro) {
+                    $data['fecha_registro'] = $client->fecha_registro->format('Y-m-d');
+                }
+                
+                // Precargar datos del titular
+                $data['holder_name'] = $client->name;
+                $data['holder_email'] = $client->email;
+                $data['holder_phone'] = $client->phone;
+                $data['holder_office_phone'] = $client->office_phone;
+                $data['holder_curp'] = $client->curp;
+                $data['holder_rfc'] = $client->rfc;
+                $data['holder_civil_status'] = $client->civil_status;
+                $data['holder_occupation'] = $client->occupation;
+                
+                // Precargar domicilio del titular
+                $data['current_address'] = $client->current_address;
+                $data['neighborhood'] = $client->neighborhood;
+                $data['postal_code'] = $client->postal_code;
+                $data['municipality'] = $client->municipality;
+                $data['state'] = $client->state;
+                
+                // Precargar datos del cónyuge si existe
+                if ($client->spouse) {
+                    $data['spouse_name'] = $client->spouse->name;
+                    $data['spouse_email'] = $client->spouse->email;
+                    $data['spouse_phone'] = $client->spouse->phone;
+                    $data['spouse_curp'] = $client->spouse->curp;
+                    $data['spouse_current_address'] = $client->spouse->current_address;
+                    $data['spouse_neighborhood'] = $client->spouse->neighborhood;
+                    $data['spouse_postal_code'] = $client->spouse->postal_code;
+                    $data['spouse_municipality'] = $client->spouse->municipality;
+                    $data['spouse_state'] = $client->spouse->state;
+                }
+                
+                // --- NUEVO: Precargar datos de Propiedad y Financieros desde el último convenio ---
+                $latestAgreement = \App\Models\Agreement::where('client_id', $client->id)
+                    ->latest()
+                    ->first();
+                
+                if ($latestAgreement && !empty($latestAgreement->wizard_data)) {
+                    // Mezclar datos del convenio (Propiedad, Financieros) con los datos actuales
+                    // Usamos array_merge para que los datos del convenio NO sobrescriban los del cliente
+                    // (aunque en teoría son complementarios)
+                    $agreementData = $latestAgreement->wizard_data;
+                    
+                    // Filtrar solo campos relevantes para evitar sobrescribir IDs o datos sensibles
+                    $allowedFields = [
+                        // Propiedad
+                        'property_address', 'community', 'housing_type', 'prototype', 
+                        'lot', 'block', 'stage', 'property_municipality', 'property_state',
+                        // Financieros
+                        'agreement_value', 'promotion_price', 'total_commission', 'final_profit'
+                    ];
+                    
+                    foreach ($allowedFields as $field) {
+                        if (isset($agreementData[$field]) && !empty($agreementData[$field])) {
+                            $data[$field] = $agreementData[$field];
+                        }
+                    }
+                }
+                
+                Notification::make()
+                    ->title('Cliente Preseleccionado')
+                    ->body("Los datos de {$client->name} han sido precargados. Puedes continuar con el siguiente paso.")
+                    ->success()
+                    ->send();
+            } else {
+                Notification::make()
+                    ->title('Cliente no encontrado')
+                    ->body('No se pudo encontrar el cliente seleccionado.')
+                    ->warning()
+                    ->send();
+            }
         }
 
         return new WizardStateDTO(

@@ -5,7 +5,9 @@ export default {
     presets: [preset],
     content: [
         './app/Filament/**/*.php',
-        './resources/views/filament/**/*.blade.php',
+        './app/Services/**/*.php',  // Servicios que renderizan HTML (WizardSummaryRenderer, etc.)
+        './app/Actions/**/*.php',   // Acciones que puedan tener HTML
+        './resources/views/**/*.blade.php',  // Todas las vistas Blade (no solo filament)
         './vendor/filament/**/*.blade.php',
     ],
     theme: {

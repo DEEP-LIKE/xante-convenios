@@ -9,6 +9,11 @@ class ProposalClosuresWidget extends ChartWidget
 {
     protected static ?int $sort = 2;
     
+    public static function canView(): bool
+    {
+        return false;
+    }
+    
     public function getHeading(): string
     {
         return 'Cierres con Propuesta Final Ofrecida';

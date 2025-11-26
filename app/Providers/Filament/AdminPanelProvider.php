@@ -16,8 +16,6 @@ use Illuminate\Support\Facades\Blade;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\AgreementsChart;
 use App\Filament\Widgets\ProposalStatsWidget;
-use App\Filament\Widgets\ProposalClosuresWidget;
-use App\Filament\Widgets\ProposalClosuresStatsWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -73,9 +71,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                ProposalClosuresStatsWidget::class,
                 ProposalStatsWidget::class,
-                ProposalClosuresWidget::class,
                 StatsOverview::class,
                 AgreementsChart::class,
             ])

@@ -45,6 +45,7 @@ return [
         'status_field' => 'estatus_de_convenio',
         'accepted_value' => 'Aceptado',
         'properties' => [
+            // Propiedades básicas del deal
             'dealname',
             'amount',
             'dealstage',
@@ -52,9 +53,58 @@ return [
             'createdate',
             'estatus_de_convenio',
             'num_associated_contacts',
-            'nombre_del_titular',
             'hs_object_id',
             'hs_lastmodifieddate',
+            
+            // Datos del titular
+            'nombre_completo',
+            'email',
+            'phone',
+            'mobilephone',
+            'telefono_oficina',
+            'curp',
+            'rfc',
+            'estado_civil',
+            'ocupacion',
+            
+            // Domicilio del titular
+            'domicilio_actual',
+            'numero_casa',
+            'colonia',
+            'codigo_postal',
+            'municipio',
+            'estado',
+            
+            // Datos del cónyuge
+            'nombre_completo_conyuge',
+            'email_conyuge',
+            'telefono_movil_conyuge',
+            'curp_conyuge',
+            
+            // Domicilio del cónyuge
+            'domicilio_actual_conyuge',
+            'numero_casa_conyuge',
+            'colonia_conyuge',
+            'codigo_postal_conyuge',
+            'municipio_conyuge',
+            'estado_conyuge',
+            
+            // Datos de la propiedad
+            'domicilio_convenio',
+            'comunidad',
+            'tipo_vivienda',
+            'prototipo',
+            'lote',
+            'manzana',
+            'etapa',
+            'municipio_propiedad',
+            'estado_propiedad',
+            
+            // Datos financieros
+            'valor_convenio',
+            'precio_promocion',
+            'comision_total_pagar',
+            'ganancia_final',
         ],
     ],
     

@@ -10,6 +10,11 @@ class ProposalClosuresStatsWidget extends BaseWidget
 {
     protected static ?int $sort = 1;
     
+    public static function canView(): bool
+    {
+        return false;
+    }
+    
     protected function getStats(): array
     {
         // Contar convenios completados que tienen proposal_value

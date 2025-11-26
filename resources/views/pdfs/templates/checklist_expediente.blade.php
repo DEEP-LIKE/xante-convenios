@@ -276,7 +276,7 @@
                 <span class="value">{{ strtoupper($holder_name ?? '____________________') }}</span>
            
                 <span class="value">{{ strtoupper($comunidad ?? 'REAL ________') }}</span>, 
-                <span class="value">{{ strtoupper($property_community ?? 'PRIVADA ________') }}</span>.
+                <span class="value">{{ strtoupper($domicilio_convenio ?? '') }}</span>.
             </div>
         </div>
 

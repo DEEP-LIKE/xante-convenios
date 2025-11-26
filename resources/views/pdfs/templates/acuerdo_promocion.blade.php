@@ -156,7 +156,7 @@
         
         /* FIRMAS */
         .signatures-section {
-            margin-top: 60px;
+            margin-top: 30px;
             page-break-inside: avoid;
         }
         

@@ -24,6 +24,8 @@ class UpdateClientFromWizardAction
         $spouseUpdateData = [];
 
         // Mapear campos del wizard a campos del cliente
+        // NOTA: Solo campos que existen en la tabla 'clients'
+        // Los datos de AC/Privada y régimen se guardan en wizard_data del convenio
         $clientFieldMapping = [
             'delivery_file' => 'holder_delivery_file',
             'curp' => 'holder_curp',
@@ -38,14 +40,11 @@ class UpdateClientFromWizardAction
             'municipality' => 'municipality',
             'state' => 'state',
             'civil_status' => 'holder_civil_status',
-            'regime_type' => 'holder_regime_type',
             'occupation' => 'holder_occupation',
-            'ac_name' => 'ac_name',
-            'ac_phone' => 'ac_phone',
-            'ac_quota' => 'ac_quota',
-            'private_president_name' => 'private_president_name',
-            'private_president_phone' => 'private_president_phone',
-            'private_president_quota' => 'private_president_quota',
+            // Campos removidos (no existen en tabla clients):
+            // - regime_type (se guarda en wizard_data)
+            // - ac_name, ac_phone, ac_quota (datos de propiedad, en wizard_data)
+            // - private_president_* (datos de propiedad, en wizard_data)
         ];
 
         // Mapear campos del wizard a campos del cónyuge
@@ -58,7 +57,7 @@ class UpdateClientFromWizardAction
             'phone' => 'spouse_phone',
             'delivery_file' => 'spouse_delivery_file',
             'civil_status' => 'spouse_civil_status',
-            'regime_type' => 'spouse_regime_type',
+            // 'regime_type' => 'spouse_regime_type', // Removido - no existe en tabla spouses
             'occupation' => 'spouse_occupation',
             'office_phone' => 'spouse_office_phone',
             'additional_contact_phone' => 'spouse_additional_contact_phone',

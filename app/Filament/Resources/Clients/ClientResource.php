@@ -152,7 +152,57 @@ class ClientResource extends Resource
                     }),
             ])
             ->defaultSort('fecha_registro', 'desc') // Ordenar por más recientes primero
-            ->recordActions([])
+            ->actions([
+                \Filament\Tables\Actions\Action::make('check_hubspot')
+                    ->label('Ver HubSpot')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->modalHeading('Estatus en HubSpot (Tiempo Real)')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar')
+                    ->modalDescription(function (Client $record) {
+                        if (!$record->hubspot_deal_id) return 'Este cliente no tiene un Deal de HubSpot asociado.';
+                        
+                        try {
+                            $service = new \App\Services\HubspotSyncService();
+                            $deal = $service->getDealDetails($record->hubspot_deal_id);
+                            
+                            if (!$deal) return 'No se pudo obtener información de HubSpot. Verifique la conexión.';
+                            
+                            $amount = number_format((float)($deal['amount'] ?? 0), 2);
+                            $status = $deal['estatus_de_convenio'] ?? 'N/A';
+                            $stage = $deal['dealstage'] ?? 'N/A';
+                            $lastMod = isset($deal['hs_lastmodifieddate']) 
+                                ? \Carbon\Carbon::parse($deal['hs_lastmodifieddate'])->setTimezone('America/Mexico_City')->format('d/m/Y H:i') 
+                                : 'N/A';
+                            
+                            return new \Illuminate\Support\HtmlString("
+                                <div class='p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3'>
+                                    <div class='flex justify-between items-center border-b pb-2'>
+                                        <span class='text-gray-600'>Estatus Convenio:</span>
+                                        <span class='font-bold text-lg text-primary-600'>{$status}</span>
+                                    </div>
+                                    <div class='flex justify-between items-center border-b pb-2'>
+                                        <span class='text-gray-600'>Monto:</span>
+                                        <span class='font-mono'>$ {$amount}</span>
+                                    </div>
+                                    <div class='flex justify-between items-center border-b pb-2'>
+                                        <span class='text-gray-600'>Etapa (Stage ID):</span>
+                                        <span class='text-sm'>{$stage}</span>
+                                    </div>
+                                    <div class='flex justify-between items-center'>
+                                        <span class='text-gray-600'>Última Modificación:</span>
+                                        <span class='text-sm'>{$lastMod}</span>
+                                    </div>
+                                </div>
+                                <p class='text-xs text-gray-400 mt-2 text-center'>Estos datos vienen directamente de HubSpot y no se guardan localmente.</p>
+                            ");
+                        } catch (\Exception $e) {
+                            return "Error: " . $e->getMessage();
+                        }
+                    })
+                    ->visible(fn (Client $record) => !empty($record->hubspot_deal_id)),
+            ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

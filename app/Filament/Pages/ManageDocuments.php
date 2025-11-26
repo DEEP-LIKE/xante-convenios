@@ -23,6 +23,7 @@ use App\Actions\Agreements\SendDocumentsAction;
 use App\Actions\Agreements\GenerateDocumentsZipAction;
 use App\Actions\Agreements\MarkAgreementCompletedAction;
 use App\Actions\Agreements\SaveDocumentStepAction;
+use App\Actions\Agreements\SyncClientToHubspotAction;
 use BackedEnum;
 
 class ManageDocuments extends Page implements HasForms, HasActions
@@ -215,6 +216,15 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                     ->success()
                                     ->duration(5000)
                                     ->send();
+
+                                // Sincronizar estatus 'completed' (Aceptado) con HubSpot
+                                try {
+                                    $syncAction = app(SyncClientToHubspotAction::class);
+                                    $syncAction->execute($this->agreement, $this->agreement->wizard_data ?? []);
+                                    \Log::info('HubSpot actualizado tras completar documentos', ['agreement_id' => $this->agreement->id]);
+                                } catch (\Exception $e) {
+                                    \Log::error('Error sincronizando HubSpot al completar documentos', ['error' => $e->getMessage()]);
+                                }
                             }
                             $this->saveStepData(3);
                         }),
@@ -532,26 +542,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
     // ACTION METHODS
     // ========================================
 
-    public function downloadAllDocuments(GenerateDocumentsZipAction $action)
-    {
-        try {
-            if (!$this->agreement) {
-                throw new \Exception('No se encontró el convenio');
-            }
 
-            $zipPath = $action->execute($this->agreement);
-            $zipFileName = basename($zipPath);
-
-            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
-
-        } catch (\Exception $e) {
-            Notification::make()
-                ->title('Error al Descargar')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
-    }
 
     public function returnToHome()
     {
@@ -635,6 +626,15 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->duration(4000)
                 ->send();
 
+            // Sincronizar monto de propuesta con HubSpot
+            try {
+                $syncAction = app(SyncClientToHubspotAction::class);
+                $syncAction->execute($this->agreement, $this->agreement->wizard_data ?? []);
+                \Log::info('HubSpot actualizado con valor de propuesta', ['agreement_id' => $this->agreement->id]);
+            } catch (\Exception $e) {
+                \Log::error('Error sincronizando HubSpot al guardar valor propuesta', ['error' => $e->getMessage()]);
+            }
+
             $this->agreement->refresh();
             $existingDocuments = $this->uploadService->loadDocuments($this->agreement);
             $existingDocuments['proposal_value'] = $this->agreement->proposal_value;
@@ -652,8 +652,145 @@ class ManageDocuments extends Page implements HasForms, HasActions
 
     public function getDocumentFields(): array
     {
-        // Este método se mantiene para compatibilidad con StepOneSchema
-        // La lógica de renderizado está en el schema
-        return [];
+        $documentComponents = [];
+        
+        foreach ($this->agreement->generatedDocuments as $document) {
+            $documentComponents[] = \Filament\Forms\Components\Placeholder::make("document_{$document->id}")
+                ->label($document->document_name ?? $document->document_type)
+                ->content(function () use ($document) {
+                    $downloadUrl = route('documents.download', ['document' => $document->id]);
+                    $fileName = $document->file_name ?? basename($document->file_path);
+                    $fileSize = $document->formatted_size ?? 'N/A';
+                    
+                    return new \Illuminate\Support\HtmlString("
+                        <div style='display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; transition: background-color 0.2s;' onmouseover='this.style.background=\"#f3f4f6\"' onmouseout='this.style.background=\"#f9fafb\"'>
+                            <div style='flex: 1; min-width: 0; padding-right: 16px;'>
+                                <div style='font-weight: 600; color: #111827; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'>{$fileName}</div>
+                                <div style='font-size: 12px; color: #6b7280;'>Tamaño: {$fileSize}</div>
+                            </div>
+                            <a href='{$downloadUrl}' 
+                               target='_blank'
+                               style='display: inline-flex; align-items: center; padding: 10px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-weight: 500; border-radius: 8px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); white-space: nowrap;'
+                               onmouseover=\"this.style.background='linear-gradient(135deg, #059669 0%, #047857 100%)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.5)'; this.style.transform='translateY(-2px)';\"
+                               onmouseout=\"this.style.background='linear-gradient(135deg, #10b981 0%, #059669 100%)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)'; this.style.transform='translateY(0)';\">
+                                <svg style='width: 16px; height: 16px; margin-right: 8px;' fill='none' stroke='currentColor' viewBox='0 0 24 24' stroke-width='2'>
+                                    <path stroke-linecap='round' stroke-linejoin='round' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/>
+                                </svg>
+                                Descargar PDF
+                            </a>
+                        </div>
+                    ");
+                });
+        }
+        
+        // Envolver en un Grid de 2 columnas
+        return [
+            \Filament\Schemas\Components\Grid::make(2)
+                ->schema($documentComponents)
+        ];
+    }
+
+    /**
+     * Descarga el checklist de expediente actualizado con los documentos subidos marcados
+     */
+    public function downloadUpdatedChecklistAction()
+    {
+        try {
+            // Obtener los documentos subidos del cliente
+            $uploadedDocuments = $this->agreement->clientDocuments()
+                ->pluck('document_type')
+                ->toArray();
+
+            // Generar el PDF del checklist con los documentos marcados
+            $pdfService = new PdfGenerationService();
+            
+            // Preparar los datos para el template
+            $wizardData = $this->agreement->wizard_data ?? [];
+            $templateData = $pdfService->prepareTemplateData($this->agreement);
+            
+            // Agregar información de documentos subidos
+            $templateData['uploadedDocuments'] = $uploadedDocuments;
+            $templateData['isUpdated'] = true; // Indica que es la versión actualizada
+            
+            // Generar el PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+                'pdfs.templates.checklist_expediente',
+                $templateData
+            );
+            
+            $pdf->setPaper('letter', 'portrait');
+            
+            // Nombre del archivo
+            $fileName = 'checklist_expediente_actualizado_' . $this->agreement->id . '_' . now()->format('Ymd') . '.pdf';
+            
+            // Descargar el PDF
+            return response()->streamDownload(function () use ($pdf) {
+                echo $pdf->output();
+            }, $fileName, [
+                'Content-Type' => 'application/pdf',
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error generating updated checklist', [
+                'agreement_id' => $this->agreement->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            Notification::make()
+                ->title('Error al generar checklist')
+                ->body('No se pudo generar el checklist actualizado: ' . $e->getMessage())
+                ->danger()
+                ->send();
+                
+            return null;
+        }
+    }
+
+    /**
+     * Descarga todos los documentos (generados + cliente) en un archivo ZIP
+     */
+    public function downloadAllDocuments()
+    {
+        try {
+            // Notificar al usuario que se está generando el ZIP
+            Notification::make()
+                ->title('📦 Generando ZIP')
+                ->body('Preparando todos los documentos para descarga...')
+                ->info()
+                ->send();
+            
+            $zipAction = new GenerateDocumentsZipAction();
+            $zipPath = $zipAction->execute($this->agreement);
+            
+            // Nombre del archivo para descarga
+            $downloadName = 'convenio_' . $this->agreement->id . '_documentos_completos.zip';
+            
+            // Notificar éxito
+            Notification::make()
+                ->title('✅ ZIP Generado')
+                ->body('Descargando archivo con todos los documentos...')
+                ->success()
+                ->duration(3000)
+                ->send();
+            
+            // Descargar y luego eliminar el archivo temporal
+            return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error downloading all documents', [
+                'agreement_id' => $this->agreement->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            Notification::make()
+                ->title('❌ Error al descargar documentos')
+                ->body('No se pudieron descargar los documentos: ' . $e->getMessage())
+                ->danger()
+                ->send();
+                
+            return null;
+        }
     }
 }

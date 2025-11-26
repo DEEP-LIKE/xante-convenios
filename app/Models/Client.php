@@ -15,6 +15,7 @@ class Client extends Model
         'name',
         'xante_id',
         'hubspot_id',
+        'hubspot_deal_id',
         'hubspot_synced_at',
         'fecha_registro',
         'email',

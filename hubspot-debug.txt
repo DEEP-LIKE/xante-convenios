@@ -1,0 +1,74 @@
+
+===============================================================
+  COMPARACION: BD LOCAL vs HUBSPOT
+===============================================================
+Usuario: miguel.alfaro@carbono.mx
+Fecha: 2025-11-25 16:48:20
+===============================================================
+
+[PASO 1/3] Consultando BD Local...
+[PASO 2/3] Consultando HubSpot...
+[DEBUG] Request URL: https://api.hubapi.com/crm/v3/objects/deals/search
+[DEBUG] Buscando deals con:
+        - estatus_de_convenio = 'Aceptado'
+        - email = 'miguel.alfaro@carbono.mx'
+[DEBUG] Propiedades solicitadas: 47 campos
+
+[DEBUG] Response Status: 400
+[DEBUG] Total Deals Encontrados: 0
+[DEBUG] Error Response: {"status":"error","message":"There was a problem with the request.","correlationId":"dd565275-ab36-4cbe-a24a-7b128031bbed"}
+[DEBUG] No se encontraron deals que cumplan los criterios
+
+[PASO 3/3] Comparando datos...
+
+===============================================================
+  RESULTADOS DE LA COMPARACION
+===============================================================
+
+=============================================================================================================================
+CAMPO                          | BD LOCAL                       | HUBSPOT                        | SYNC
+=============================================================================================================================
+
+[IDs Y METADATA]
+-----------------------------------------------------------------------------------------------------------------------------
+HubSpot Deal ID                | [VACIO]                        | [VACIO]                        | SI
+Ultima Modificacion            | 2025-11-25 16:35:22            | [VACIO]                        | NO
+
+[DATOS DEL TITULAR]
+-----------------------------------------------------------------------------------------------------------------------------
+Nombre Completo                | MIGUEL ALFARO                  | [VACIO]                        | NO
+Email                          | miguel.alfaro@carbono.mx       | [VACIO]                        | NO
+Telefono Movil                 | 5535050647                     | [VACIO]                        | NO
+Telefono Oficina               | [VACIO]                        | [VACIO]                        | SI
+CURP                           | [VACIO]                        | [VACIO]                        | SI
+RFC                            | [VACIO]                        | [VACIO]                        | SI
+Estado Civil                   | [VACIO]                        | [VACIO]                        | SI
+Ocupacion                      | [VACIO]                        | [VACIO]                        | SI
+
+[DOMICILIO DEL TITULAR]
+-----------------------------------------------------------------------------------------------------------------------------
+Direccion                      | [VACIO]                        | [VACIO]                        | SI
+Colonia                        | [VACIO]                        | [VACIO]                        | SI
+Codigo Postal                  | [VACIO]                        | [VACIO]                        | SI
+Municipio                      | [VACIO]                        | [VACIO]                        | SI
+Estado                         | [VACIO]                        | [VACIO]                        | SI
+
+[DATOS DEL CONYUGE]
+-----------------------------------------------------------------------------------------------------------------------------
+N/A - No hay conyuge en ninguno de los dos sistemas
+
+[AGREEMENTS EN BD LOCAL]
+-----------------------------------------------------------------------------------------------------------------------------
+   ID: 8 | Estado: expediente_incompleto | Creado: 2025-11-25 16:38:00
+
+=============================================================================================================================
+  ESTADO DE SINCRONIZACION
+=============================================================================================================================
+
+[X] DEAL NO ENCONTRADO EN HUBSPOT
+    Verifica que el deal tenga estado 'Aceptado'
+
+===============================================================
+  FIN DE LA COMPARACION
+===============================================================
+

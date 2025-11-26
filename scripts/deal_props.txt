@@ -1,0 +1,33 @@
+
+===============================================================
+  LISTADO DE PROPIEDADES DE DEALS
+===============================================================
+
+Total propiedades encontradas: 465
+
+Propiedades que coinciden con palabras clave:
+------------------------------------------------
+NOMBRE INTERNO (API)                     | ETIQUETA (LABEL)                         | TIPO
+------------------------------------------------
+calle_o_privada_                         | Calle / Privada y Número # *            | string
+colonia                                  | colonia                                  | string
+dealname                                 | Deal Name                                | string
+documento_caratula_estado_de_cuenta__mes | Carátula Estado de Cuenta (mes corrient | enumeration
+documento_comprobante_de_domicilio__mes_ | Comprobante de domicilio (mes corriente) | enumeration
+documento_curp__mes_corriente_           | CURP (mes corriente)                     | enumeration
+estado                                   | Estado                                   | string
+estado_de_cuenta_hipotecario             | Estado de cuenta hipotecario             | enumeration
+hs_latest_marketing_email_click_date     | Latest marketing email click date        | datetime
+hs_latest_marketing_email_open_date      | Latest marketing email open date         | datetime
+hs_latest_marketing_email_reply_date     | Latest marketing email reply date        | datetime
+hs_latest_sales_email_click_date         | Latest sales email click date            | datetime
+hs_latest_sales_email_open_date          | Latest sales email open date             | datetime
+hs_latest_sales_email_reply_date         | Latest sales email reply date            | datetime
+hs_next_meeting_name                     | Next Meeting Name                        | string
+hs_sales_email_last_replied              | Recent Sales Email Replied Date          | datetime
+hs_synced_deal_owner_name_and_email      | HubSpot Sales Lead                       | string
+nombre_del_desarrollo                    | Nombre del desarrollo                    | enumeration
+nombre_del_titular                       | Nombre del titular                       | string
+nombre_inmueble                          | Nombre inmueble (supervisor)             | string
+state                                    | Estado/región*                          | string
+

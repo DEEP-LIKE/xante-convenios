@@ -32,13 +32,12 @@ class StepOneSchema
                     ]);
 
                     $page->agreementId = $agreement->id;
-
                     // Guardar en sesión para persistencia en recargas
                     session(['wizard_agreement_id' => $page->agreementId]);
                 }
 
                 // Guardar los datos del paso actual
-                $page->saveStepData(1);
+                $page->saveStepData(2);
             })
             ->schema([
                 Select::make('client_id')

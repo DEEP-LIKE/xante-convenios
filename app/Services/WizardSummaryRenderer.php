@@ -2,14 +2,10 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Blade;
+
 /**
  * Servicio para renderizar resúmenes HTML del wizard
- * 
- * Responsabilidades:
- * - Generar HTML para el resumen del titular
- * - Generar HTML para el resumen del cónyuge
- * - Generar HTML para el resumen de la propiedad
- * - Generar HTML para el resumen financiero
  */
 class WizardSummaryRenderer
 {
@@ -18,54 +14,42 @@ class WizardSummaryRenderer
      */
     public function renderHolderSummary(array $data): string
     {
-        $html = '<div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">';
-
-        if (!empty($data['holder_name'])) {
-            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
-            $html .= '<div><strong class="text-blue-700">Nombre:</strong> ' . ($data['holder_name'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">Email:</strong> ' . ($data['holder_email'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">Teléfono:</strong> ' . ($data['holder_phone'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">Tel. Oficina:</strong> ' . ($data['holder_office_phone'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">CURP:</strong> ' . ($data['holder_curp'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">RFC:</strong> ' . ($data['holder_rfc'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">Estado Civil:</strong> ' . ($data['holder_civil_status'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-blue-700">Ocupación:</strong> ' . ($data['holder_occupation'] ?? 'N/A') . '</div>';
-
-            // Domicilio del titular
-            if (!empty($data['current_address'])) {
-                $html .= '<div class="col-span-2 mt-3 pt-3 border-t border-blue-200">';
-                $html .= '<h5 class="font-semibold text-blue-700 mb-2 flex items-center"><span class="mr-1">📍</span> Domicilio</h5>';
-
-                $address = $data['current_address'];
-                if (!empty($data['holder_house_number'])) {
-                    $address .= ' #' . $data['holder_house_number'];
-                }
-                $html .= '<div class="mb-2"><strong class="text-blue-700">Dirección:</strong> ' . $address . '</div>';
-
-                $html .= '<div class="grid grid-cols-2 gap-2">';
-                if (!empty($data['neighborhood'])) {
-                    $html .= '<div><strong class="text-blue-700">Colonia:</strong> ' . $data['neighborhood'] . '</div>';
-                }
-                if (!empty($data['postal_code'])) {
-                    $html .= '<div><strong class="text-blue-700">C.P.:</strong> ' . $data['postal_code'] . '</div>';
-                }
-                if (!empty($data['municipality'])) {
-                    $html .= '<div><strong class="text-blue-700">Municipio:</strong> ' . $data['municipality'] . '</div>';
-                }
-                if (!empty($data['state'])) {
-                    $html .= '<div><strong class="text-blue-700">Estado:</strong> ' . $data['state'] . '</div>';
-                }
-                $html .= '</div>';
-                $html .= '</div>';
-            }
-
-            $html .= '</div>';
-        } else {
-            $html .= '<div class="text-center text-gray-500 py-4">📝 No se capturó información del titular</div>';
+        if (empty($data['holder_name'])) {
+            return $this->renderEmptyState('No se capturó información del titular');
         }
 
-        $html .= '</div>';
-        return $html;
+        return Blade::render('
+            <x-wizard.summary-card title="Datos del Titular" icon="heroicon-o-user" color="primary">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <x-wizard.infolist-entry label="Nombre Completo" :value="$data[\'holder_name\'] ?? null" />
+                    <x-wizard.infolist-entry label="Email" :value="$data[\'holder_email\'] ?? null" />
+                    <x-wizard.infolist-entry label="Teléfono Móvil" :value="$data[\'holder_phone\'] ?? null" />
+                    <x-wizard.infolist-entry label="Tel. Oficina" :value="$data[\'holder_office_phone\'] ?? null" />
+                    <x-wizard.infolist-entry label="CURP" :value="$data[\'holder_curp\'] ?? null" />
+                    <x-wizard.infolist-entry label="RFC" :value="$data[\'holder_rfc\'] ?? null" />
+                    <x-wizard.infolist-entry label="Estado Civil" :value="$data[\'holder_civil_status\'] ?? null" />
+                    <x-wizard.infolist-entry label="Ocupación" :value="$data[\'holder_occupation\'] ?? null" />
+                </div>
+
+                @if(!empty($data[\'current_address\']))
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">Domicilio Actual</h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <x-wizard.infolist-entry 
+                                label="Calle y Número" 
+                                :value="($data[\'current_address\'] ?? \'\') . \' \' . (!empty($data[\'holder_house_number\']) ? \'#\' . $data[\'holder_house_number\'] : \'\')" 
+                            />
+                            <x-wizard.infolist-entry label="Colonia" :value="$data[\'neighborhood\'] ?? null" />
+                            <x-wizard.infolist-entry label="Código Postal" :value="$data[\'postal_code\'] ?? null" />
+                            <x-wizard.infolist-entry 
+                                label="Municipio / Estado" 
+                                :value="collect([$data[\'municipality\'] ?? null, $data[\'state\'] ?? null])->filter()->join(\', \')" 
+                            />
+                        </div>
+                    </div>
+                @endif
+            </x-wizard.summary-card>
+        ', ['data' => $data]);
     }
 
     /**
@@ -73,56 +57,38 @@ class WizardSummaryRenderer
      */
     public function renderSpouseSummary(array $data): string
     {
-        $html = '<div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">';
-
-        if (!empty($data['spouse_name'])) {
-            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
-            $html .= '<div><strong class="text-green-700">Nombre:</strong> ' . ($data['spouse_name'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">Email:</strong> ' . ($data['spouse_email'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">Teléfono:</strong> ' . ($data['spouse_phone'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">Tel. Oficina:</strong> ' . ($data['spouse_office_phone'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">CURP:</strong> ' . ($data['spouse_curp'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">RFC:</strong> ' . ($data['spouse_rfc'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">Estado Civil:</strong> ' . ($data['spouse_civil_status'] ?? 'N/A') . '</div>';
-            $html .= '<div><strong class="text-green-700">Ocupación:</strong> ' . ($data['spouse_occupation'] ?? 'N/A') . '</div>';
-
-            // Domicilio del cónyuge
-            if (!empty($data['spouse_current_address'])) {
-                $html .= '<div class="col-span-2 mt-3 pt-3 border-t border-green-200">';
-                $html .= '<h5 class="font-semibold text-green-700 mb-2 flex items-center"><span class="mr-1">📍</span> Domicilio</h5>';
-
-                $address = $data['spouse_current_address'];
-                if (!empty($data['spouse_house_number'])) {
-                    $address .= ' #' . $data['spouse_house_number'];
-                }
-                $html .= '<div class="mb-2"><strong class="text-green-700">Dirección:</strong> ' . $address . '</div>';
-
-                $html .= '<div class="grid grid-cols-2 gap-2">';
-                if (!empty($data['spouse_neighborhood'])) {
-                    $html .= '<div><strong class="text-green-700">Colonia:</strong> ' . $data['spouse_neighborhood'] . '</div>';
-                }
-                if (!empty($data['spouse_postal_code'])) {
-                    $html .= '<div><strong class="text-green-700">C.P.:</strong> ' . $data['spouse_postal_code'] . '</div>';
-                }
-                if (!empty($data['spouse_municipality'])) {
-                    $html .= '<div><strong class="text-green-700">Municipio:</strong> ' . $data['spouse_municipality'] . '</div>';
-                }
-                if (!empty($data['spouse_state'])) {
-                    $html .= '<div><strong class="text-green-700">Estado:</strong> ' . $data['spouse_state'] . '</div>';
-                }
-                $html .= '</div>';
-                $html .= '</div>';
-            }
-
-            $html .= '</div>';
-        } else {
-            $html .= '<div class="text-center text-gray-500 py-4 italic">';
-            $html .= '📝 No se capturó información del cónyuge / coacreditado';
-            $html .= '</div>';
+        if (empty($data['spouse_name'])) {
+            return $this->renderEmptyState('No se capturó información del cónyuge / coacreditado');
         }
 
-        $html .= '</div>';
-        return $html;
+        return Blade::render('
+            <x-wizard.summary-card title="Cónyuge / Coacreditado" icon="heroicon-o-users" color="success">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <x-wizard.infolist-entry label="Nombre Completo" :value="$data[\'spouse_name\'] ?? null" />
+                    <x-wizard.infolist-entry label="Email" :value="$data[\'spouse_email\'] ?? null" />
+                    <x-wizard.infolist-entry label="Teléfono Móvil" :value="$data[\'spouse_phone\'] ?? null" />
+                    <x-wizard.infolist-entry label="CURP" :value="$data[\'spouse_curp\'] ?? null" />
+                </div>
+
+                @if(!empty($data[\'spouse_current_address\']))
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">Domicilio</h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <x-wizard.infolist-entry 
+                                label="Calle y Número" 
+                                :value="($data[\'spouse_current_address\'] ?? \'\') . \' \' . (!empty($data[\'spouse_house_number\']) ? \'#\' . $data[\'spouse_house_number\'] : \'\')" 
+                            />
+                            <x-wizard.infolist-entry label="Colonia" :value="$data[\'spouse_neighborhood\'] ?? null" />
+                            <x-wizard.infolist-entry label="Código Postal" :value="$data[\'spouse_postal_code\'] ?? null" />
+                            <x-wizard.infolist-entry 
+                                label="Municipio / Estado" 
+                                :value="collect([$data[\'spouse_municipality\'] ?? null, $data[\'spouse_state\'] ?? null])->filter()->join(\', \')" 
+                            />
+                        </div>
+                    </div>
+                @endif
+            </x-wizard.summary-card>
+        ', ['data' => $data]);
     }
 
     /**
@@ -130,23 +96,21 @@ class WizardSummaryRenderer
      */
     public function renderPropertySummary(array $data): string
     {
-        $html = '<div class="space-y-3">';
-
-        $html .= '<div><strong>Domicilio:</strong> ' . ($data['domicilio_convenio'] ?? 'N/A') . '</div>';
-        $html .= '<div><strong>Comunidad:</strong> ' . ($data['comunidad'] ?? 'N/A') . '</div>';
-        $html .= '<div><strong>Tipo de Vivienda:</strong> ' . ($data['tipo_vivienda'] ?? 'N/A') . '</div>';
-        $html .= '<div><strong>Prototipo:</strong> ' . ($data['prototipo'] ?? 'N/A') . '</div>';
-
-        if (!empty($data['lote']) || !empty($data['manzana']) || !empty($data['etapa'])) {
-            $html .= '<div><strong>Ubicación:</strong> ';
-            if (!empty($data['lote'])) $html .= 'Lote ' . $data['lote'] . ' ';
-            if (!empty($data['manzana'])) $html .= 'Manzana ' . $data['manzana'] . ' ';
-            if (!empty($data['etapa'])) $html .= 'Etapa ' . $data['etapa'];
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
-        return $html;
+        return Blade::render('
+            <x-wizard.summary-card title="Propiedad del Convenio" icon="heroicon-o-home-modern" color="info">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <x-wizard.infolist-entry label="Domicilio Vivienda" :value="$data[\'domicilio_convenio\'] ?? null" />
+                    <x-wizard.infolist-entry label="Comunidad" :value="$data[\'comunidad\'] ?? null" />
+                    <x-wizard.infolist-entry label="Tipo Vivienda" :value="$data[\'tipo_vivienda\'] ?? null" />
+                    <x-wizard.infolist-entry label="Prototipo" :value="$data[\'prototipo\'] ?? null" />
+                    <x-wizard.infolist-entry label="Lote" :value="$data[\'lote\'] ?? null" />
+                    <x-wizard.infolist-entry label="Manzana" :value="$data[\'manzana\'] ?? null" />
+                    <x-wizard.infolist-entry label="Etapa" :value="$data[\'etapa\'] ?? null" />
+                    <x-wizard.infolist-entry label="Municipio" :value="$data[\'municipio_propiedad\'] ?? null" />
+                    <x-wizard.infolist-entry label="Estado" :value="$data[\'estado_propiedad\'] ?? null" />
+                </div>
+            </x-wizard.summary-card>
+        ', ['data' => $data]);
     }
 
     /**
@@ -159,14 +123,38 @@ class WizardSummaryRenderer
         $comisionTotal = floatval(str_replace(',', '', $data['comision_total_pagar'] ?? 0));
         $gananciaFinal = floatval(str_replace(',', '', $data['ganancia_final'] ?? 0));
 
-        $html = '<div class="bg-gray-50 p-4 rounded-lg space-y-2">';
-        $html .= '<div class="flex justify-between"><span><strong>Valor del Convenio:</strong></span><span class="font-bold text-blue-600">$' . number_format($valorConvenio, 2) . '</span></div>';
-        $html .= '<div class="flex justify-between"><span><strong>Precio de Promoción:</strong></span><span class="font-bold text-green-600">$' . number_format($precioPromocion, 2) . '</span></div>';
-        $html .= '<div class="flex justify-between"><span><strong>Comisión Total:</strong></span><span class="font-bold text-orange-600">$' . number_format($comisionTotal, 2) . '</span></div>';
-        $html .= '<hr class="my-2">';
-        $html .= '<div class="flex justify-between text-lg"><span><strong>Ganancia Final:</strong></span><span class="font-bold text-green-700">$' . number_format($gananciaFinal, 2) . '</span></div>';
-        $html .= '</div>';
+        $viewData = [
+            'valorConvenio' => $valorConvenio,
+            'precioPromocion' => $precioPromocion,
+            'comisionTotal' => $comisionTotal,
+            'gananciaFinal' => $gananciaFinal,
+        ];
 
-        return $html;
+        return Blade::render('
+            <x-wizard.summary-card title="Resumen Financiero" icon="heroicon-o-currency-dollar" color="warning">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <x-wizard.infolist-entry 
+                        label="Valor Convenio" 
+                        :value="\' $\' . number_format($valorConvenio, 2)" 
+                    />
+                    <x-wizard.infolist-entry 
+                        label="Precio Promoción" 
+                        :value="\'$\' . number_format($precioPromocion, 2)" 
+                    </div>
+                </div>
+            </x-wizard.summary-card>
+        ', $viewData);
+    }
+
+    private function renderEmptyState(string $message): string
+    {
+        return Blade::render('
+            <div class="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center">
+                <div class="text-gray-400 mb-2">
+                    <x-filament::icon icon="heroicon-o-document" class="h-8 w-8 mx-auto" />
+                </div>
+                <span class="text-gray-500 font-medium">{{ $message }}</span>
+            </div>
+        ', ['message' => $message]);
     }
 }

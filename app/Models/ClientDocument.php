@@ -14,10 +14,13 @@ class ClientDocument extends Model
     protected $fillable = [
         'agreement_id',
         'document_type',
+        'document_name',
         'document_category',
+        'category',
         'file_name',
         'file_path',
         'file_size',
+        'uploaded_at',
         'is_validated',
         'validated_by',
         'validated_at',
@@ -28,6 +31,7 @@ class ClientDocument extends Model
     {
         return [
             'is_validated' => 'boolean',
+            'uploaded_at' => 'datetime',
             'validated_at' => 'datetime',
         ];
     }

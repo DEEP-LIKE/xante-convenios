@@ -20,100 +20,46 @@ class StepFiveSchema
                 $page->saveStepData(5);
             })
             ->schema([
-                // Grid de 3 columnas para las secciones principales
-                Grid::make(3)
-                    ->schema([
-                        // SECCIÓN 1: DATOS DEL TITULAR
-                        Section::make('👤 DATOS DEL TITULAR')
-                            ->description('Información del titular capturada en Paso 2')
-                            ->schema([
-                                Placeholder::make('holder_summary')
-                                    ->content(function () use ($page) {
-                                        return $page->renderHolderSummary($page->data);
-                                    })
-                                    ->html(),
-                            ])
-                            ->collapsible()
-                            ->collapsed(false),
-
-                        // SECCIÓN 2: DATOS DEL CÓNYUGE/COACREDITADO
-                        Section::make('💑 DATOS DEL CÓNYUGE')
-                            ->description('Información del cónyuge/coacreditado capturada en Paso 2')
-                            ->schema([
-                                Placeholder::make('spouse_summary')
-                                    ->content(function () use ($page) {
-                                        return $page->renderSpouseSummary($page->data);
-                                    })
-                                    ->html(),
-                            ])
-                            ->collapsible()
-                            ->collapsed(false),
-
-                        // SECCIÓN 3: DATOS DE LA PROPIEDAD
-                        Section::make('🏠 DATOS DE LA PROPIEDAD')
-                            ->description('Información capturada en Paso 3')
-                            ->schema([
-                                Placeholder::make('property_summary')
-                                    ->content(function () use ($page) {
-                                        return $page->renderPropertySummary($page->data);
-                                    })
-                                    ->html(),
-                            ])
-                            ->collapsible()
-                            ->collapsed(false),
-                    ]),
-
-                // SECCIÓN 4: CALCULADORA FINANCIERA (ancho completo)
-                Section::make('💰 RESUMEN FINANCIERO')
-                    ->description('Cálculos realizados en Paso 4')
-                    ->schema([
-                        Placeholder::make('financial_summary')
-                            ->content(function () use ($page) {
-                                return $page->renderFinancialSummary($page->data);
-                            })
-                            ->html(),
-                    ])
-                    ->collapsible()
-                    ->collapsed(false)
+                // Renderizar el Infolist definido en el Page
+                \Filament\Forms\Components\ViewField::make('agreement_summary')
+                    ->hiddenLabel()
+                    ->view('filament.pages.components.agreement-summary-infolist')
                     ->columnSpanFull(),
 
                 // SECCIÓN DE CONFIRMACIÓN
-                Section::make('CONFIRMACIÓN FINAL')
+                Section::make('Confirmación Final')
                     ->schema([
                         Placeholder::make('warning_message')
                             ->content(new HtmlString('
-                                <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px;">
-                                    <div style="display: flex;">
-                                        <div style="flex-shrink: 0; margin-right: 12px;">
-                                            <svg style="height: 20px; width: 20px; color: #f59e0b;" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h3 style="font-size: 14px; font-weight: 500; color: #92400e; margin: 0;">
-                                                Una vez que genere los documentos, NO PODRÁ modificar esta información
-                                            </h3>
-                                            <div style="margin-top: 8px; font-size: 14px; color: #b45309;">
-                                                <p style="margin: 0;">Los documentos PDF se generarán con la información que aparece arriba. Revise cuidadosamente antes de continuar.</p>
-                                            </div>
-                                        </div>
+                                <div style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; background-color: #fff7ed; border-left: 4px solid #FFD729; border-radius: 0 0.5rem 0.5rem 0; margin-bottom: 1rem;">
+                                    <div style="flex-shrink: 0;">
+                                        <svg style="height: 1.5rem; width: 1.5rem; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 style="font-size: 0.875rem; font-weight: 700; color: #92400e; margin-bottom: 0.25rem;">
+                                            Acción Irreversible
+                                        </h3>
+                                        <p style="font-size: 0.875rem; color: #78350f;">
+                                            Al generar los documentos, la información quedará bloqueada. Verifique cuidadosamente todos los datos antes de continuar.
+                                        </p>
                                     </div>
                                 </div>
                             '))
                             ->hiddenLabel(),
 
                         Checkbox::make('confirm_data_correct')
-                            ->label('✓ Confirmo que he revisado toda la información y es correcta')
+                            ->label('He revisado toda la información y confirmo que es correcta')
                             ->required()
                             ->accepted()
                             ->validationMessages([
                                 'accepted' => 'Debe confirmar que la información es correcta para continuar.',
                             ])
-                            ->helperText('Esta confirmación es obligatoria para poder generar los documentos')
-                            ->inline(false)
+                            ->inline(true)  // Estilo inline como Filament
                             ->dehydrated(),
                     ])
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
             ]);
     }
 }

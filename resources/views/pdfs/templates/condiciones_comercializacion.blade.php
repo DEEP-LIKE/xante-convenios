@@ -292,7 +292,7 @@
                 </div>
                 <div class="property-data">
                     <span class="property-label">Privada:</span>
-                    <span class="property-value">{{ $property_community ?? '' }}</span>
+                    <span class="property-value">{{ $domicilio_convenio ?? '' }}</span>
                 </div>
                 <div class="property-data">
                     <span class="property-label">Tipo:</span>

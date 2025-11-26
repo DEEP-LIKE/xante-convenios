@@ -18,7 +18,7 @@ class StepThreeSchema
             ->description('Datos de la vivienda y ubicación')
             ->icon('heroicon-o-home-modern')
             ->afterValidation(function () use ($page) {
-                $page->saveStepData(3);
+                $page->saveStepData(4);
             })
             ->schema([
                 Section::make('INFORMACIÓN DE LA PROPIEDAD')

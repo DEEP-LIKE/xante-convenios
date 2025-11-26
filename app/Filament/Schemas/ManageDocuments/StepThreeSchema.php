@@ -17,14 +17,31 @@ class StepThreeSchema
         $documents = $agreement->generatedDocuments ?? collect();
 
         return [
+            // MENSAJE DE ÉXITO
             Section::make('¡Convenio Finalizado con Éxito!')
                 ->icon('heroicon-o-check-badge')
                 ->iconColor('success')
                 ->description('El proceso de gestión documental ha finalizado correctamente')
                 ->schema([
-                    // Mensaje de celebración
-                    Placeholder::make('celebration')
-                        ->content('✅ El convenio se ha completado exitosamente. Todos los documentos han sido procesados.')
+                    Placeholder::make('success_message')
+                        ->content(new HtmlString('
+                            <div style="display: flex; align-items: flex-start; gap: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 4px solid #10b981; border-radius: 0 0.75rem 0.75rem 0; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);">
+                                <div style="flex-shrink: 0;">
+                                    <svg style="height: 2rem; width: 2rem; color: #10b981;" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 1.125rem; font-weight: 700; color: #047857; margin-bottom: 0.5rem;">
+                                        ✅ Proceso Completado
+                                    </h3>
+                                    <p style="font-size: 0.875rem; color: #065f46; line-height: 1.5;">
+                                        El convenio se ha completado exitosamente. Todos los documentos han sido procesados y están listos para su descarga.
+                                    </p>
+                                </div>
+                            </div>
+                        '))
+                        ->hiddenLabel()
                         ->columnSpanFull(),
                         
                     // Información del convenio
@@ -40,16 +57,38 @@ class StepThreeSchema
                                 
                             Placeholder::make('final_status')
                                 ->label('✅ Estado Final')
-                                ->content('Completado')
+                                ->content(new HtmlString('<span style="color: #10b981; font-weight: 600;">Completado</span>'))
                         ]),
                 ]),
                 
-                
+            // VALOR DE CIERRE
             Section::make('💰 Valor de Cierre')
                 ->icon('heroicon-o-currency-dollar')
-                ->iconColor('success')
+                ->iconColor('warning')
                 ->description('Registrar el valor final con el que se cerró el convenio')
                 ->schema([
+                    // Advertencia sobre valor de cierre
+                    Placeholder::make('value_warning')
+                        ->content(new HtmlString('
+                            <div style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; background-color: #fff7ed; border-left: 4px solid #FFD729; border-radius: 0 0.5rem 0.5rem 0; margin-bottom: 1rem;">
+                                <div style="flex-shrink: 0;">
+                                    <svg style="height: 1.5rem; width: 1.5rem; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 style="font-size: 0.875rem; font-weight: 700; color: #92400e; margin-bottom: 0.25rem;">
+                                        Valor Único
+                                    </h3>
+                                    <p style="font-size: 0.875rem; color: #78350f;">
+                                        Una vez guardado, el valor de propuesta no podrá ser modificado.
+                                    </p>
+                                </div>
+                            </div>
+                        '))
+                        ->hiddenLabel()
+                        ->columnSpanFull(),
+                        
                     // Valores de Referencia Original
                     Grid::make(3)
                         ->schema([
@@ -98,16 +137,6 @@ class StepThreeSchema
                                 ),
                         ]),
                         
-                    // Comparación de valores
-                    // Grid::make(1)
-                    //     ->schema([
-                    //         Placeholder::make('value_comparison')
-                    //             ->label('📊 Comparación de Valores')
-                    //             ->content(fn() => new HtmlString($page->getValueComparison()))
-                    //             ->visible(fn() => $page->agreement->proposal_value !== null),
-                    //     ])
-                    //     ->columnSpanFull(),
-                        
                     Placeholder::make('save_proposal_button')
                         ->label('💾 Guardar Valor de Propuesta')
                         ->content(fn() => view('components.action-button', [
@@ -117,53 +146,42 @@ class StepThreeSchema
                             'color' => 'success',
                             'action' => 'saveProposalValue',
                             'confirm' => '¿Desea guardar el valor de propuesta registrado?',
-                            'prevent' => false // Evitar el prevent. que causa conflictos con wire:confirm
+                            'prevent' => false
                         ]))
                         ->visible(fn() => $page->agreement->proposal_value === null),
                 ]),
                 
-            Section::make('Acciones Disponibles')
-            ->icon('heroicon-o-wrench-screwdriver')
-            ->iconColor('warning')
-            ->description('Opciones para gestionar el convenio completado')
-            ->schema([
-                Grid::make(3)
-                    ->schema([
-                        // Card: Descargar Todos los Documentos
-                        Placeholder::make('action_download')
-                            ->label('📥 Descargar Documentos')
-                            ->content(fn() => view('components.action-button', [
-                                'icon' => 'heroicon-o-arrow-down-tray',
-                                'label' => 'Descargar Todos',
-                                'sublabel' => 'los Documentos PDF',
-                                'action' => 'downloadAllDocuments',
-                                'color' => 'success'
-                            ])),
-                            
-                        // // Card: Enviar Correos
-                        // Placeholder::make('action_email')
-                        //     ->label('📧 Enviar por Email')
-                        //     ->content(fn() => view('components.action-button', [
-                        //         'icon' => 'heroicon-o-envelope',
-                        //         'label' => 'Enviar Correos',
-                        //         'sublabel' => 'Reenviar Documentos',
-                        //         'action' => 'sendDocumentsToClient',
-                        //         'color' => 'info',
-                        //         'confirm' => '¿Está seguro de reenviar los documentos al cliente?'
-                        //     ])),
-                            
-                        // Card: Regresar a Inicio
-                        Placeholder::make('action_home')
-                            ->label('🏠 Regresar al Dashboard')
-                            ->content(fn() => view('components.action-button', [
-                                'icon' => 'heroicon-o-home',
-                                'label' => 'Volver al Inicio',
-                                'sublabel' => 'Dashboard Principal',
-                                'action' => 'returnToHome',
-                                'color' => 'primary'
-                            ])),
-                    ]),
-            ]),
+            // ACCIONES DISPONIBLES
+            Section::make('🎯 Acciones Disponibles')
+                ->icon('heroicon-o-wrench-screwdriver')
+                ->iconColor('primary')
+                ->description('Opciones para gestionar el convenio completado')
+                ->schema([
+                    Grid::make(2)
+                        ->schema([
+                            // Card: Descargar Todos los Documentos
+                            Placeholder::make('action_download')
+                                ->label('📥 Descargar Documentos')
+                                ->content(fn() => view('components.action-link-button', [
+                                    'icon' => 'heroicon-o-arrow-down-tray',
+                                    'label' => 'Descargar Todos',
+                                    'sublabel' => 'los Documentos PDF',
+                                    'url' => route('documents.download-all', ['agreement' => $agreement->id]),
+                                    'color' => 'success'
+                                ])),
+                                
+                            // Card: Regresar a Inicio
+                            Placeholder::make('action_home')
+                                ->label('🏠 Regresar al Dashboard')
+                                ->content(fn() => view('components.action-link-button', [
+                                    'icon' => 'heroicon-o-home',
+                                    'label' => 'Volver al Inicio',
+                                    'sublabel' => 'Dashboard Principal',
+                                    'url' => '/admin',
+                                    'color' => 'primary'
+                                ])),
+                        ]),
+                ]),
         ];
     }
 }

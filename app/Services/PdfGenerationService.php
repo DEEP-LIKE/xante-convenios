@@ -159,6 +159,7 @@ class PdfGenerationService
             'agreement_id' => $agreement->id,
             'document_type' => $type,
             'document_name' => $name,
+            'file_name' => $fileName,
             'file_path' => $filePath,
             'template_used' => "original_pdf/{$originalFileName}",
             'file_size' => strlen($fileContent),
@@ -238,6 +239,7 @@ class PdfGenerationService
             'agreement_id' => $agreement->id,
             'document_type' => $type,
             'document_name' => $name,
+            'file_name' => $fileName,
             'file_path' => $filePath,
             'template_used' => "pdfs.templates.{$type}",
             'file_size' => strlen($pdfOutput),
@@ -248,7 +250,7 @@ class PdfGenerationService
     /**
      * Prepara los datos para las plantillas
      */
-    private function prepareTemplateData(Agreement $agreement): array
+    public function prepareTemplateData(Agreement $agreement): array
     {
         $wizardData = $agreement->wizard_data ?? [];
         
@@ -278,9 +280,15 @@ class PdfGenerationService
             'holder_birthdate' => $wizardData['holder_birthdate'] ?? '',
             'holder_civil_status' => $wizardData['holder_civil_status'] ?? '',
             'holder_occupation' => $wizardData['holder_occupation'] ?? '',
-            'holder_current_address' => $wizardData['holder_current_address'] ?? '',
-            'holder_municipality' => $wizardData['holder_municipality'] ?? '',
-            'holder_state' => $wizardData['holder_state'] ?? '',
+            'holder_current_address' => $wizardData['holder_current_address'] ?? $wizardData['current_address'] ?? '',
+            'holder_municipality' => $wizardData['holder_municipality'] ?? $wizardData['municipality'] ?? '',
+            'holder_state' => $wizardData['holder_state'] ?? $wizardData['state'] ?? '',
+            'holder_delivery_file' => $wizardData['holder_delivery_file'] ?? '',
+            'holder_regime_type' => $wizardData['holder_regime_type'] ?? '',
+            'holder_office_phone' => $wizardData['holder_office_phone'] ?? '',
+            'holder_additional_contact_phone' => $wizardData['holder_additional_contact_phone'] ?? '',
+            'holder_neighborhood' => $wizardData['holder_neighborhood'] ?? $wizardData['neighborhood'] ?? '',
+            'holder_postal_code' => $wizardData['holder_postal_code'] ?? $wizardData['postal_code'] ?? '',
             
             // Datos del cónyuge/coacreditado
             'spouse_name' => $wizardData['spouse_name'] ?? '',
@@ -310,16 +318,22 @@ class PdfGenerationService
             'private_president_quota' => $wizardData['private_president_quota'] ?? '',
             
             // Datos de la propiedad
-            'domicilio_convenio' => $wizardData['domicilio_convenio'] ?? '',
-            'comunidad' => $wizardData['comunidad'] ?? '',
-            'tipo_vivienda' => $wizardData['tipo_vivienda'] ?? '',
-            'prototipo' => $wizardData['prototipo'] ?? '',
-            'lote' => $wizardData['lote'] ?? '',
-            'manzana' => $wizardData['manzana'] ?? '',
-            'etapa' => $wizardData['etapa'] ?? '',
-            'municipio_propiedad' => $wizardData['municipio_propiedad'] ?? '',
-            'estado_propiedad' => $wizardData['estado_propiedad'] ?? '',
-            'numero_interior' => $wizardData['numero_interior'] ?? '',
+            'domicilio_convenio' => $wizardData['domicilio_convenio'] ?? $wizardData['property_address'] ?? '',
+            'comunidad' => $wizardData['comunidad'] ?? $wizardData['community'] ?? '',
+            'property_community' => $wizardData['comunidad'] ?? $wizardData['community'] ?? '',
+            'property_full_community' => $wizardData['comunidad'] ?? $wizardData['community'] ?? '',
+            'tipo_vivienda' => $wizardData['tipo_vivienda'] ?? $wizardData['housing_type'] ?? '',
+            'prototipo' => $wizardData['prototipo'] ?? $wizardData['prototype'] ?? '',
+            'lote' => $wizardData['lote'] ?? $wizardData['lot'] ?? '',
+            'manzana' => $wizardData['manzana'] ?? $wizardData['block'] ?? '',
+            'etapa' => $wizardData['etapa'] ?? $wizardData['stage'] ?? '',
+            'municipio_propiedad' => $wizardData['municipio_propiedad'] ?? $wizardData['property_municipality'] ?? '',
+            'estado_propiedad' => $wizardData['estado_propiedad'] ?? $wizardData['property_state'] ?? '',
+            'numero_interior' => $wizardData['numero_interior'] ?? $wizardData['interior_number'] ?? '',
+            'property_interior_number' => $wizardData['numero_interior'] ?? $wizardData['interior_number'] ?? '',
+            'property_lot' => $wizardData['lote'] ?? $wizardData['lot'] ?? '',
+            'property_block' => $wizardData['manzana'] ?? $wizardData['block'] ?? '',
+            'property_stage' => $wizardData['etapa'] ?? $wizardData['stage'] ?? '',
             
             // Estados y ubicaciones
             'property_state' => $wizardData['estado_propiedad'] ?? $wizardData['estado'] ?? '',
@@ -349,7 +363,7 @@ class PdfGenerationService
             'month' => $monthNames[now()->format('n')] ?? 'enero',
             'year' => now()->format('Y'),
             'monthNames' => $monthNames,
-            'xante_id' => $agreement->client_xante_id ?? '',
+            'xante_id' => $agreement->client_xante_id ?? $wizardData['xante_id'] ?? '',
             
             // Datos bancarios (valores por defecto de XANTE)
             'bank_name' => $wizardData['bank_name'] ?? 'BBVA',

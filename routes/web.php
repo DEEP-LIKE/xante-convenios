@@ -73,6 +73,28 @@ Route::middleware(['auth'])->group(function () {
             ]
         );
     })->name('download.updated.checklist');
+    
+    // Ruta para descargar todos los documentos en ZIP
+    Route::get('/documents/download-all/{agreement}', function ($agreementId) {
+        $agreement = \App\Models\Agreement::findOrFail($agreementId);
+        
+        try {
+            $zipAction = new \App\Actions\Agreements\GenerateDocumentsZipAction();
+            $zipPath = $zipAction->execute($agreement);
+            
+            $downloadName = 'convenio_' . $agreement->id . '_documentos_completos.zip';
+            
+            return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error downloading all documents via route', [
+                'agreement_id' => $agreement->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            abort(500, 'Error al generar el archivo ZIP: ' . $e->getMessage());
+        }
+    })->name('documents.download-all');
 });
 
 require __DIR__.'/auth.php';

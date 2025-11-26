@@ -21,7 +21,7 @@ class StepTwoSchema
             ->description('Información personal del cliente')
             ->icon('heroicon-o-user')
             ->afterValidation(function () use ($page) {
-                $page->saveStepData(2);
+                $page->saveStepData(3);
             })
             ->schema([
                 // DATOS GENERALES - FASE I
@@ -91,6 +91,7 @@ class StepTwoSchema
                                     ->maxLength(100),
                                 TextInput::make('holder_email')
                                     ->label('Correo electrónico')
+                                    ->disabled()
                                     ->email()
                                     ->required(),
                                 TextInput::make('holder_office_phone')

@@ -15,6 +15,7 @@ class GeneratedDocument extends Model
         'agreement_id',
         'document_type',
         'document_name',
+        'file_name',
         'file_path',
         'file_size',
         'template_used',

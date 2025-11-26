@@ -19,7 +19,7 @@ class StepFourSchema
             ->description('Cálculos financieros del convenio')
             ->icon('heroicon-o-calculator')
             ->afterValidation(function () use ($page) {
-                $page->saveStepData(4);
+                $page->saveStepData(5);
             })
             ->schema([
                 // ⭐ Indicador de Pre-cálculo Previo

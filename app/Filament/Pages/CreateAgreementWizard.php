@@ -21,10 +21,19 @@ use App\Actions\Agreements\UpdateClientFromWizardAction;
 use App\Actions\Agreements\PreloadClientDataAction;
 use App\Actions\Agreements\GenerateAgreementDocumentsAction;
 use BackedEnum;
+use Filament\Infolists\Concerns\InteractsWithInfolists;
+use Filament\Infolists\Contracts\HasInfolists;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\IconEntry;
+use Filament\Support\Enums\FontWeight;
 
-class CreateAgreementWizard extends Page implements HasForms
+class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 {
     use InteractsWithForms;
+    use InteractsWithInfolists;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-plus';
     protected static ?string $title = 'Nuevo Convenio';
@@ -42,6 +51,155 @@ class CreateAgreementWizard extends Page implements HasForms
     protected $listeners = [
         'stepChanged' => 'handleStepChange',
     ];
+
+    // ... (rest of the class)
+
+    /**
+     * Define el Infolist para el resumen del convenio
+     */
+    public function agreementInfolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->state($this->data)
+            ->schema([
+                Section::make('Datos del Titular')
+                    ->icon('heroicon-o-user')
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextEntry::make('holder_name')
+                                    ->label('Nombre Completo')
+                                    ->weight(FontWeight::Bold),
+                                TextEntry::make('holder_email')
+                                    ->label('Email')
+                                    ->icon('heroicon-m-envelope'),
+                                TextEntry::make('holder_phone')
+                                    ->label('Teléfono Móvil')
+                                    ->icon('heroicon-m-phone'),
+                                TextEntry::make('holder_office_phone')
+                                    ->label('Tel. Oficina'),
+                                TextEntry::make('holder_curp')
+                                    ->label('CURP'),
+                                TextEntry::make('holder_rfc')
+                                    ->label('RFC'),
+                                TextEntry::make('holder_civil_status')
+                                    ->label('Estado Civil'),
+                                TextEntry::make('holder_occupation')
+                                    ->label('Ocupación'),
+                            ]),
+                        Section::make('Domicilio Actual')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('current_address_full')
+                                            ->label('Calle y Número')
+                                            ->state(fn ($record) => ($this->data['current_address'] ?? '') . ' ' . (!empty($this->data['holder_house_number']) ? '#' . $this->data['holder_house_number'] : '')),
+                                        TextEntry::make('neighborhood')
+                                            ->label('Colonia'),
+                                        TextEntry::make('postal_code')
+                                            ->label('Código Postal'),
+                                        TextEntry::make('location_full')
+                                            ->label('Municipio / Estado')
+                                            ->state(fn ($record) => collect([$this->data['municipality'] ?? null, $this->data['state'] ?? null])->filter()->join(', ')),
+                                    ])
+                            ])
+                            ->visible(fn () => !empty($this->data['current_address']))
+                    ])
+                    ->collapsible(),
+
+                Section::make('Cónyuge / Coacreditado')
+                    ->icon('heroicon-o-users')
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextEntry::make('spouse_name')
+                                    ->label('Nombre Completo')
+                                    ->weight(FontWeight::Bold),
+                                TextEntry::make('spouse_email')
+                                    ->label('Email')
+                                    ->icon('heroicon-m-envelope'),
+                                TextEntry::make('spouse_phone')
+                                    ->label('Teléfono Móvil')
+                                    ->icon('heroicon-m-phone'),
+                                TextEntry::make('spouse_curp')
+                                    ->label('CURP'),
+                            ]),
+                        Section::make('Domicilio')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        TextEntry::make('spouse_address_full')
+                                            ->label('Calle y Número')
+                                            ->state(fn ($record) => ($this->data['spouse_current_address'] ?? '') . ' ' . (!empty($this->data['spouse_house_number']) ? '#' . $this->data['spouse_house_number'] : '')),
+                                        TextEntry::make('spouse_neighborhood')
+                                            ->label('Colonia'),
+                                        TextEntry::make('spouse_postal_code')
+                                            ->label('Código Postal'),
+                                        TextEntry::make('spouse_location_full')
+                                            ->label('Municipio / Estado')
+                                            ->state(fn ($record) => collect([$this->data['spouse_municipality'] ?? null, $this->data['spouse_state'] ?? null])->filter()->join(', ')),
+                                    ])
+                            ])
+                            ->visible(fn () => !empty($this->data['spouse_current_address']))
+                    ])
+                    ->visible(fn () => !empty($this->data['spouse_name']))
+                    ->collapsible(),
+
+                Section::make('Propiedad del Convenio')
+                    ->icon('heroicon-o-home-modern')
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                TextEntry::make('domicilio_convenio')
+                                    ->label('Domicilio Vivienda'),
+                                TextEntry::make('comunidad')
+                                    ->label('Comunidad'),
+                                TextEntry::make('tipo_vivienda')
+                                    ->label('Tipo de Vivienda'),
+                                TextEntry::make('prototipo')
+                                    ->label('Prototipo'),
+                                TextEntry::make('lote')
+                                    ->label('Lote'),
+                                TextEntry::make('manzana')
+                                    ->label('Manzana'),
+                                TextEntry::make('etapa')
+                                    ->label('Etapa'),
+                                TextEntry::make('municipio_propiedad')
+                                    ->label('Municipio'),
+                                TextEntry::make('estado_propiedad')
+                                    ->label('Estado'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                Section::make('Resumen Financiero')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->schema([
+                        Grid::make(4)
+                            ->schema([
+                                TextEntry::make('valor_convenio')
+                                    ->label('Valor Convenio')
+                                    ->money('MXN')
+                                    ->size(TextEntry\TextEntrySize::Large)
+                                    ->weight(FontWeight::Bold),
+                                TextEntry::make('precio_promocion')
+                                    ->label('Precio Promoción')
+                                    ->money('MXN'),
+                                TextEntry::make('comision_total_pagar')
+                                    ->label('Comisión Total')
+                                    ->money('MXN'),
+                                TextEntry::make('ganancia_final')
+                                    ->label('Ganancia Final Est.')
+                                    ->money('MXN')
+                                    ->size(TextEntry\TextEntrySize::Large)
+                                    ->weight(FontWeight::Black)
+                                    ->color('success'),
+                            ]),
+                    ])
+                    ->collapsible(),
+            ]);
+    }
+
 
     // ========================================
     // DEPENDENCY INJECTION
@@ -212,15 +370,21 @@ class CreateAgreementWizard extends Page implements HasForms
         $this->currentStep = $step;
 
         $action = new SaveWizardStepAction();
-        $success = $action->execute(
+        $result = $action->execute(
             $this->agreementId,
             $step,
             $this->data,
             fn($clientId) => $this->updateClientData($clientId)
         );
 
-        if ($success && !request()->has('agreement')) {
-            $this->dispatch('update-query-string', ['agreement' => $this->agreementId]);
+        // Capturar el agreementId si se creó uno nuevo
+        if ($result['success'] && $result['agreementId']) {
+            $this->agreementId = $result['agreementId'];
+            
+            // Actualizar query string si es necesario
+            if (!request()->has('agreement')) {
+                $this->dispatch('update-query-string', ['agreement' => $this->agreementId]);
+            }
         }
     }
 
@@ -350,6 +514,47 @@ class CreateAgreementWizard extends Page implements HasForms
             // Continuar con datos actuales
         }
 
+        // 1. Mostrar Loading
+        $this->dispatch('showLoading', message: 'Sincronizando información con HubSpot...');
+
+        // 2. Sincronizar con HubSpot (Push)
+        $agreement = Agreement::find($this->agreementId);
+        if ($agreement && $agreement->client) {
+            $syncAction = app(\App\Actions\Agreements\SyncClientToHubspotAction::class);
+            $syncErrors = $syncAction->execute($agreement, $this->data);
+            
+            // Si hay errores críticos en la sincronización, DETENER el proceso
+            if (!empty($syncErrors) && isset($syncErrors['error'])) {
+                $this->dispatch('hideLoading');
+                
+                Notification::make()
+                    ->title('Error de Sincronización con HubSpot')
+                    ->body('No se pudo sincronizar la información con HubSpot. Por favor, intenta nuevamente en unos momentos. Tus datos han sido guardados.')
+                    ->danger()
+                    ->persistent()
+                    ->send();
+                
+                \Illuminate\Support\Facades\Log::error('Sincronización HubSpot falló - Proceso detenido', [
+                    'agreement_id' => $this->agreementId,
+                    'errors' => $syncErrors
+                ]);
+                
+                return; // DETENER aquí - No generar PDFs ni avanzar
+            }
+            
+            // Si solo hay warnings (campos no sincronizables), continuar
+            if (!empty($syncErrors)) {
+                \Illuminate\Support\Facades\Log::info('Advertencias en sincronización HubSpot', [
+                    'agreement_id' => $this->agreementId,
+                    'warnings' => $syncErrors
+                ]);
+            }
+        }
+
+        // 3. Actualizar mensaje de loading
+        $this->dispatch('updateLoadingMessage', message: 'Generando documentos PDF...');
+
+        // 4. Generar Documentos
         $action = app(GenerateAgreementDocumentsAction::class);
         $redirectUrl = $action->execute(
             $this->agreementId,
@@ -360,6 +565,9 @@ class CreateAgreementWizard extends Page implements HasForms
         if ($redirectUrl) {
             $this->stateManager->clearSession();
             $this->redirect($redirectUrl);
+        } else {
+            // Si no hay redirección (error), ocultar loading
+            $this->dispatch('hideLoading');
         }
     }
 
