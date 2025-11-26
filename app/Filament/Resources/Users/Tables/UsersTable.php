@@ -22,15 +22,23 @@ class UsersTable
                     ->label('Correo electrónico')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('email_verified_at')
-                    ->label('Verificado')
-                    ->dateTime()
-                    ->sortable(),
+                TextColumn::make('role')
+                    ->label('Rol')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'admin' => 'danger',
+                        'asesor' => 'info',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'admin' => 'Administrador',
+                        'asesor' => 'Asesor',
+                        default => $state,
+                    }),
                 TextColumn::make('created_at')  
                     ->label('Creado')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
                 TextColumn::make('updated_at')
                     ->label('Actualizado')
                     ->dateTime()
