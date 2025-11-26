@@ -7,6 +7,7 @@ use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Models\Client;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\Action;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -63,20 +64,66 @@ class ClientResource extends Resource
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->placeholder('No sincronizado')
-                    ->tooltip('Última fecha de sincronización con HubSpot'),
+                    ->tooltip('Última fecha de sincronización con HubSpot')
+                    ->toggleable(isToggledHiddenByDefault: true), // Oculta por defecto
+                
+                // Monto del Convenio (HubSpot)
+                TextColumn::make('hubspot_amount')
+                    ->label('Monto HubSpot')
+                    ->getStateUsing(function (Client $record) {
+                        if (!$record->hubspot_deal_id) return null;
+                        
+                        try {
+                            $service = new \App\Services\HubspotSyncService();
+                            $deal = $service->getDealDetails($record->hubspot_deal_id);
+                            return $deal['amount'] ?? null;
+                        } catch (\Exception $e) {
+                            return null;
+                        }
+                    })
+                    ->money('MXN')
+                    ->placeholder('N/A')
+                    ->tooltip('Monto del negocio en HubSpot (tiempo real)')
+                    ->sortable(false)
+                    ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin
+                
+                // Estatus del Convenio (HubSpot)
+                TextColumn::make('hubspot_status')
+                    ->label('Estatus HubSpot')
+                    ->getStateUsing(function (Client $record) {
+                        if (!$record->hubspot_deal_id) return null;
+                        
+                        try {
+                            $service = new \App\Services\HubspotSyncService();
+                            $deal = $service->getDealDetails($record->hubspot_deal_id);
+                            return $deal['estatus_de_convenio'] ?? null;
+                        } catch (\Exception $e) {
+                            return null;
+                        }
+                    })
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'Aceptado' => 'success',
+                        'En Proceso' => 'info',
+                        'Rechazado' => 'danger',
+                        default => 'gray',
+                    })
+                    ->placeholder('N/A')
+                    ->tooltip('Estatus del convenio en HubSpot (tiempo real)')
+                    ->sortable(false),
+                
+                // Convenio Local (movido al final)
                 TextColumn::make('agreement_status')
                     ->label('Convenio')
                     ->badge()
                     ->tooltip('Haz clic para gestionar el convenio')
                     ->getStateUsing(fn (Client $record): string => $record->agreement_status)
                     ->color(fn (?string $state): string => match ($state) {
-                        // Estados originales
                         'sin_convenio' => 'gray',
                         'expediente_incompleto' => 'warning',
                         'expediente_completo' => 'success',
                         'convenio_proceso' => 'info',
                         'convenio_firmado' => 'success',
-                        // Nuevos estados del sistema de dos wizards
                         'draft' => 'gray',
                         'pending_validation' => 'warning',
                         'documents_generating' => 'info',
@@ -89,13 +136,11 @@ class ClientResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        // Estados originales
                         'sin_convenio' => '➕ Sin Convenio',
                         'expediente_incompleto' => 'Expediente Incompleto',
                         'expediente_completo' => 'Expediente Completo',
                         'convenio_proceso' => 'Convenio en Proceso',
                         'convenio_firmado' => 'Convenio Firmado',
-                        // Nuevos estados del sistema de dos wizards
                         'draft' => '📝 Borrador',
                         'pending_validation' => '⏳ Pendiente de Validación',
                         'documents_generating' => '⚙️ Generando Documentos',
@@ -110,14 +155,12 @@ class ClientResource extends Resource
                     ->url(function (Client $record): ?string {
                         $latestAgreement = $record->latestAgreement;
                         if ($latestAgreement) {
-                            // Si tiene convenio, ir al wizard apropiado
                             if (in_array($latestAgreement->status, ['documents_generated', 'documents_sent', 'awaiting_client_docs', 'documents_complete', 'completed'])) {
                                 return "/admin/manage-documents/{$latestAgreement->id}";
                             } else {
                                 return "/admin/convenios/crear?agreement={$latestAgreement->id}";
                             }
                         } else {
-                            // Si no tiene convenio, crear uno nuevo
                             return "/admin/convenios/crear?client_id={$record->xante_id}";
                         }
                     })
@@ -152,61 +195,12 @@ class ClientResource extends Resource
                     }),
             ])
             ->defaultSort('fecha_registro', 'desc') // Ordenar por más recientes primero
-            ->actions([
-                \Filament\Tables\Actions\Action::make('check_hubspot')
-                    ->label('Ver HubSpot')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->modalHeading('Estatus en HubSpot (Tiempo Real)')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Cerrar')
-                    ->modalDescription(function (Client $record) {
-                        if (!$record->hubspot_deal_id) return 'Este cliente no tiene un Deal de HubSpot asociado.';
-                        
-                        try {
-                            $service = new \App\Services\HubspotSyncService();
-                            $deal = $service->getDealDetails($record->hubspot_deal_id);
-                            
-                            if (!$deal) return 'No se pudo obtener información de HubSpot. Verifique la conexión.';
-                            
-                            $amount = number_format((float)($deal['amount'] ?? 0), 2);
-                            $status = $deal['estatus_de_convenio'] ?? 'N/A';
-                            $stage = $deal['dealstage'] ?? 'N/A';
-                            $lastMod = isset($deal['hs_lastmodifieddate']) 
-                                ? \Carbon\Carbon::parse($deal['hs_lastmodifieddate'])->setTimezone('America/Mexico_City')->format('d/m/Y H:i') 
-                                : 'N/A';
-                            
-                            return new \Illuminate\Support\HtmlString("
-                                <div class='p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3'>
-                                    <div class='flex justify-between items-center border-b pb-2'>
-                                        <span class='text-gray-600'>Estatus Convenio:</span>
-                                        <span class='font-bold text-lg text-primary-600'>{$status}</span>
-                                    </div>
-                                    <div class='flex justify-between items-center border-b pb-2'>
-                                        <span class='text-gray-600'>Monto:</span>
-                                        <span class='font-mono'>$ {$amount}</span>
-                                    </div>
-                                    <div class='flex justify-between items-center border-b pb-2'>
-                                        <span class='text-gray-600'>Etapa (Stage ID):</span>
-                                        <span class='text-sm'>{$stage}</span>
-                                    </div>
-                                    <div class='flex justify-between items-center'>
-                                        <span class='text-gray-600'>Última Modificación:</span>
-                                        <span class='text-sm'>{$lastMod}</span>
-                                    </div>
-                                </div>
-                                <p class='text-xs text-gray-400 mt-2 text-center'>Estos datos vienen directamente de HubSpot y no se guardan localmente.</p>
-                            ");
-                        } catch (\Exception $e) {
-                            return "Error: " . $e->getMessage();
-                        }
-                    })
-                    ->visible(fn (Client $record) => !empty($record->hubspot_deal_id)),
-            ])
+            ->actions([])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                ]),
+                ])
+                ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin puede eliminar
             ]);
     }
 

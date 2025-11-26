@@ -18,12 +18,33 @@ class UserForm
                 TextInput::make('email')
                     ->label('Correo electrónico')
                     ->email()
+                    ->required()
+                    ->unique(ignoreRecord: true),
+                \Filament\Forms\Components\Select::make('role')
+                    ->label('Rol')
+                    ->options([
+                        'admin' => 'Administrador',
+                        'asesor' => 'Asesor',
+                    ])
+                    ->default('asesor')
                     ->required(),
-                DateTimePicker::make('email_verified_at'),
                 TextInput::make('password')
                     ->label('Contraseña')
                     ->password()
-                    ->required(),
+                    ->required(fn (string $context): bool => $context === 'create')
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->revealable(),
+                TextInput::make('password_confirmation')
+                    ->label('Confirmar Contraseña')
+                    ->password()
+                    ->required(fn (string $context): bool => $context === 'create')
+                    ->same('password')
+                    ->dehydrated(false)
+                    ->revealable(),
+                DateTimePicker::make('email_verified_at')
+                    ->default(now())
+                    ->dehydrated()
+                    ->hidden(),
             ]);
     }
 }

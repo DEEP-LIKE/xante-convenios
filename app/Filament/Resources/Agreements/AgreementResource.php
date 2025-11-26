@@ -712,7 +712,8 @@ class AgreementResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                ]),
+                ])
+                ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin puede eliminar
             ]);
     }
 
