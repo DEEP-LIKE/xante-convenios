@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use BackedEnum;
 use App\Filament\Resources\Clients\Pages\ListClients;
+use Filament\Schemas\Components\TextEntry;
+use Filament\Forms\Components\Placeholder;
+use Filament\Actions\ViewAction;
 
 class ClientResource extends Resource
 {
@@ -37,7 +40,8 @@ class ClientResource extends Resource
     public static function table(Table $table): Table
     {
         // Sincronización automática cada vez que se carga la tabla
-        static::syncClientAgreementRelations();
+        // Sincronización automática eliminada para mejorar rendimiento
+        // static::syncClientAgreementRelations();
         
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with('latestAgreement'))
@@ -52,10 +56,15 @@ class ClientResource extends Resource
                 TextColumn::make('name')
                     ->label('Nombre')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->limit(30)
+                    ->tooltip(function (TextColumn $column): ?string {
+                        $state = $column->getState();
+                        return strlen($state) > 30 ? $state : null;
+                    }),
                 TextColumn::make('fecha_registro')
                     ->label('Fecha de Registro')
-                    ->dateTime('d/m/Y H:i')
+                    ->date('d/m/Y')
                     ->sortable()
                     ->placeholder('No disponible')
                     ->tooltip('Fecha de creación del contacto en HubSpot'),
@@ -70,37 +79,15 @@ class ClientResource extends Resource
                 // Monto del Convenio (HubSpot)
                 TextColumn::make('hubspot_amount')
                     ->label('Monto HubSpot')
-                    ->getStateUsing(function (Client $record) {
-                        if (!$record->hubspot_deal_id) return null;
-                        
-                        try {
-                            $service = new \App\Services\HubspotSyncService();
-                            $deal = $service->getDealDetails($record->hubspot_deal_id);
-                            return $deal['amount'] ?? null;
-                        } catch (\Exception $e) {
-                            return null;
-                        }
-                    })
                     ->money('MXN')
                     ->placeholder('N/A')
-                    ->tooltip('Monto del negocio en HubSpot (tiempo real)')
-                    ->sortable(false)
+                    ->tooltip('Monto del negocio en HubSpot (sincronizado)')
+                    ->sortable()
                     ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin
                 
                 // Estatus del Convenio (HubSpot)
                 TextColumn::make('hubspot_status')
                     ->label('Estatus HubSpot')
-                    ->getStateUsing(function (Client $record) {
-                        if (!$record->hubspot_deal_id) return null;
-                        
-                        try {
-                            $service = new \App\Services\HubspotSyncService();
-                            $deal = $service->getDealDetails($record->hubspot_deal_id);
-                            return $deal['estatus_de_convenio'] ?? null;
-                        } catch (\Exception $e) {
-                            return null;
-                        }
-                    })
                     ->badge()
                     ->color(fn (?string $state): string => match ($state) {
                         'Aceptado' => 'success',
@@ -109,8 +96,8 @@ class ClientResource extends Resource
                         default => 'gray',
                     })
                     ->placeholder('N/A')
-                    ->tooltip('Estatus del convenio en HubSpot (tiempo real)')
-                    ->sortable(false),
+                    ->tooltip('Estatus del convenio en HubSpot (sincronizado)')
+                    ->sortable(),
                 
                 // Convenio Local (movido al final)
                 TextColumn::make('agreement_status')
@@ -195,7 +182,11 @@ class ClientResource extends Resource
                     }),
             ])
             ->defaultSort('fecha_registro', 'desc') // Ordenar por más recientes primero
-            ->actions([])
+            ->actions([
+                ViewAction::make()
+                    ->label('Ver Detalle')
+                    ->tooltip('Ver información completa del cliente'),
+            ])
             ->bulkActions(
                 auth()->user()?->role === 'admin' 
                     ? [
@@ -208,6 +199,105 @@ class ClientResource extends Resource
             ->checkIfRecordIsSelectableUsing(
                 fn ($record): bool => auth()->user()?->role === 'admin',
             );
+    }
+
+    public static function infolist(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
+    {
+        return $schema
+            ->schema([
+                Section::make('Información Principal')
+                    ->columns(3)
+                    ->schema([
+                        Placeholder::make('xante_id')
+                            ->label('ID Xante')
+                            ->content(fn ($record) => $record->xante_id),
+                        Placeholder::make('name')
+                            ->label('Nombre Completo')
+                            ->content(fn ($record) => $record->name),
+                        Placeholder::make('email')
+                            ->label('Correo Electrónico')
+                            ->content(fn ($record) => $record->email ?? 'N/A'),
+                        Placeholder::make('phone')
+                            ->label('Teléfono')
+                            ->content(fn ($record) => $record->phone ?? 'N/A'),
+                        Placeholder::make('fecha_registro')
+                            ->label('Fecha de Registro')
+                            ->content(fn ($record) => $record->fecha_registro?->format('d/m/Y H:i') ?? 'N/A'),
+                        Placeholder::make('hubspot_synced_at')
+                            ->label('Última Sincronización')
+                            ->content(fn ($record) => $record->hubspot_synced_at?->format('d/m/Y H:i') ?? 'Nunca'),
+                    ]),
+
+                Section::make('Datos de HubSpot')
+                    ->columns(3)
+                    ->schema([
+                        Placeholder::make('hubspot_amount')
+                            ->label('Monto del Negocio')
+                            ->content(fn ($record) => $record->hubspot_amount ? '$' . number_format($record->hubspot_amount, 2) . ' MXN' : 'N/A'),
+                        Placeholder::make('hubspot_status')
+                            ->label('Estatus del Convenio')
+                            ->content(fn ($record) => $record->hubspot_status ?? 'N/A'),
+                        Placeholder::make('hubspot_deal_id')
+                            ->label('ID Deal HubSpot')
+                            ->content(fn ($record) => $record->hubspot_deal_id ?? 'N/A'),
+                    ]),
+
+                Section::make('Información Personal')
+                    ->columns(3)
+                    ->schema([
+                        Placeholder::make('birthdate')
+                            ->label('Fecha de Nacimiento')
+                            ->content(fn ($record) => $record->birthdate?->format('d/m/Y') ?? 'N/A'),
+                        Placeholder::make('curp')
+                            ->label('CURP')
+                            ->content(fn ($record) => $record->curp ?? 'N/A'),
+                        Placeholder::make('rfc')
+                            ->label('RFC')
+                            ->content(fn ($record) => $record->rfc ?? 'N/A'),
+                        Placeholder::make('civil_status')
+                            ->label('Estado Civil')
+                            ->content(fn ($record) => $record->civil_status ?? 'N/A'),
+                        Placeholder::make('occupation')
+                            ->label('Ocupación')
+                            ->content(fn ($record) => $record->occupation ?? 'N/A'),
+                    ]),
+
+                Section::make('Domicilio')
+                    ->columns(2)
+                    ->schema([
+                        Placeholder::make('current_address')
+                            ->label('Calle y Número')
+                            ->content(fn ($record) => $record->current_address ?? 'N/A')
+                            ->columnSpanFull(),
+                        Placeholder::make('neighborhood')
+                            ->label('Colonia')
+                            ->content(fn ($record) => $record->neighborhood ?? 'N/A'),
+                        Placeholder::make('postal_code')
+                            ->label('Código Postal')
+                            ->content(fn ($record) => $record->postal_code ?? 'N/A'),
+                        Placeholder::make('municipality')
+                            ->label('Municipio')
+                            ->content(fn ($record) => $record->municipality ?? 'N/A'),
+                        Placeholder::make('state')
+                            ->label('Estado')
+                            ->content(fn ($record) => $record->state ?? 'N/A'),
+                    ]),
+
+                Section::make('Información del Cónyuge')
+                    ->columns(3)
+                    ->schema([
+                        Placeholder::make('spouse_name')
+                            ->label('Nombre')
+                            ->content(fn ($record) => $record->spouse?->name ?? 'N/A'),
+                        Placeholder::make('spouse_email')
+                            ->label('Email')
+                            ->content(fn ($record) => $record->spouse?->email ?? 'N/A'),
+                        Placeholder::make('spouse_phone')
+                            ->label('Teléfono')
+                            ->content(fn ($record) => $record->spouse?->phone ?? 'N/A'),
+                    ])
+                    ->visible(fn ($record) => $record->spouse()->exists()),
+            ]);
     }
 
     public static function getRelations(): array

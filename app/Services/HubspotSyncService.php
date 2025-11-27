@@ -475,7 +475,8 @@ class HubspotSyncService
         ]);
 
         // 6. Sincronizar datos del convenio (Propiedad y Financieros)
-        $this->syncAgreementData($client, $dealProps);
+        // DESHABILITADO POR SOLICITUD DEL USUARIO: Solo sincronizar clientes
+        // $this->syncAgreementData($client, $dealProps);
     }
 
     /**
@@ -512,7 +513,8 @@ class HubspotSyncService
                     }
                     
                     // Intentamos sincronizar el convenio (que tiene su propia lógica de protección)
-                    $this->syncAgreementData($client, $dealProps);
+                    // DESHABILITADO POR SOLICITUD DEL USUARIO
+                    // $this->syncAgreementData($client, $dealProps);
                     
                     return; // SALIR TEMPRANO
                 }
@@ -572,7 +574,8 @@ class HubspotSyncService
         ]);
 
         // 7. Sincronizar datos del convenio (Propiedad y Financieros)
-        $this->syncAgreementData($client, $dealProps);
+        // DESHABILITADO POR SOLICITUD DEL USUARIO: Solo sincronizar clientes
+        // $this->syncAgreementData($client, $dealProps);
     }
 
     /**
@@ -773,6 +776,15 @@ class HubspotSyncService
         
         if (!empty($dealProps['estado'])) {
             $clientData['state'] = $dealProps['estado'];
+        }
+
+        // Nuevos campos para optimización de rendimiento
+        if (!empty($dealProps['amount'])) {
+            $clientData['hubspot_amount'] = $dealProps['amount'];
+        }
+        
+        if (!empty($dealProps['estatus_de_convenio'])) {
+            $clientData['hubspot_status'] = $dealProps['estatus_de_convenio'];
         }
 
         return $clientData;

@@ -17,6 +17,8 @@ class Client extends Model
         'hubspot_id',
         'hubspot_deal_id',
         'hubspot_synced_at',
+        'hubspot_amount',
+        'hubspot_status',
         'fecha_registro',
         'email',
         'phone',
