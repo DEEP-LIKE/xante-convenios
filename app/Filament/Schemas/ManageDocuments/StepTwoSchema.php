@@ -255,23 +255,8 @@ class StepTwoSchema
                                             $page->handleDocumentStateChange('property_cfe_receipt', 'propiedad', $state);
                                         }),
                                 ])
-                                ->collapsible(),
+                                 ->collapsible(),
                         ]),
-                        
-                    Grid::make(1)
-                        ->schema([
-                            Checkbox::make('documents_validated')
-                                ->label('Marcar todos los documentos como válidos para concluir el convenio')
-                                ->helperText('Al marcar esta casilla, confirmará que todos los documentos del cliente han sido recibidos y validados correctamente.')
-                                ->disabled($page->agreement->status === 'completed')
-                                ->default($page->agreement->status === 'completed')
-                                ->live()
-                                ->afterStateUpdated(function ($state) use ($page) {
-                                    if ($state && $page->agreement->status !== 'completed') {
-                                        $page->markDocumentsReceived();
-                                    }
-                                })
-                        ])
                 ]),
                 
             Section::make('Estado de Confirmación')
