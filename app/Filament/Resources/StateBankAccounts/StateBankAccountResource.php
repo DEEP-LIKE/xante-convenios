@@ -40,40 +40,7 @@ class StateBankAccountResource extends Resource
                     ->schema([
                         \Filament\Forms\Components\Select::make('state_name')
                             ->label('Nombre del Estado')
-                            ->options([
-                                'Aguascalientes' => 'Aguascalientes',
-                                'Baja California' => 'Baja California',
-                                'Baja California Sur' => 'Baja California Sur',
-                                'Campeche' => 'Campeche',
-                                'Chiapas' => 'Chiapas',
-                                'Chihuahua' => 'Chihuahua',
-                                'Ciudad de México' => 'Ciudad de México',
-                                'Coahuila' => 'Coahuila',
-                                'Colima' => 'Colima',
-                                'Durango' => 'Durango',
-                                'Guanajuato' => 'Guanajuato',
-                                'Guerrero' => 'Guerrero',
-                                'Hidalgo' => 'Hidalgo',
-                                'Jalisco' => 'Jalisco',
-                                'México' => 'México',
-                                'Michoacán' => 'Michoacán',
-                                'Morelos' => 'Morelos',
-                                'Nayarit' => 'Nayarit',
-                                'Nuevo León' => 'Nuevo León',
-                                'Oaxaca' => 'Oaxaca',
-                                'Puebla' => 'Puebla',
-                                'Querétaro' => 'Querétaro',
-                                'Quintana Roo' => 'Quintana Roo',
-                                'San Luis Potosí' => 'San Luis Potosí',
-                                'Sinaloa' => 'Sinaloa',
-                                'Sonora' => 'Sonora',
-                                'Tabasco' => 'Tabasco',
-                                'Tamaulipas' => 'Tamaulipas',
-                                'Tlaxcala' => 'Tlaxcala',
-                                'Veracruz' => 'Veracruz',
-                                'Yucatán' => 'Yucatán',
-                                'Zacatecas' => 'Zacatecas',
-                            ])
+                            ->options(\App\Models\StateCommissionRate::where('is_active', true)->pluck('state_name', 'state_name'))
                             ->searchable()
                             ->required()
                             ->live()
@@ -98,13 +65,14 @@ class StateBankAccountResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(10)
-                            ->readOnly(),
+                            ->disabled()
+                            ->dehydrated(),
                         \Filament\Forms\Components\TextInput::make('account_holder')
                             ->label('Nombre del Titular')
                             ->required()
                             ->maxLength(255),
                         \Filament\Forms\Components\TextInput::make('bank_name')
-                            ->label('Banco')
+                            ->label('Nombre del Banco')
                             ->required()
                             ->maxLength(255),
                         \Filament\Forms\Components\TextInput::make('account_number')
@@ -119,10 +87,6 @@ class StateBankAccountResource extends Resource
                             ->length(18)
                             ->regex('/^[0-9]+$/')
                             ->inputMode('numeric'),
-                        \Filament\Forms\Components\Toggle::make('is_active')
-                            ->label('Activo')
-                            ->default(true)
-                            ->required(),
                     ])
                     ->columns(2),
             ]);
@@ -131,6 +95,12 @@ class StateBankAccountResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
+                ->join('state_commission_rates', 'state_bank_accounts.state_code', '=', 'state_commission_rates.state_code')
+                ->orderBy('state_commission_rates.is_active', 'desc')
+                ->orderBy('state_commission_rates.commission_percentage', 'desc')
+                ->select('state_bank_accounts.*')
+            )
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('state_name')
                     ->label('Estado')
@@ -146,7 +116,7 @@ class StateBankAccountResource extends Resource
                 \Filament\Tables\Columns\TextColumn::make('clabe')
                     ->label('CLABE')
                     ->searchable(),
-                \Filament\Tables\Columns\IconColumn::make('is_active')
+                \Filament\Tables\Columns\IconColumn::make('commissionRate.is_active')
                     ->label('Activo')
                     ->boolean()
                     ->sortable(),

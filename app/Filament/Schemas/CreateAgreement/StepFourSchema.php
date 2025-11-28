@@ -247,6 +247,19 @@ class StepFourSchema
                                         'fovissste' => 'Fovissste',
                                         'otro' => 'Otro',
                                     ]),
+                                TextInput::make('state_commission_percentage')
+                                    ->label('% Multiplicador por estado')
+                                    ->numeric()
+                                    ->suffix('%')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->extraAttributes(['class' => 'bg-gray-50'])
+                                    ->helperText(function (callable $get) {
+                                        $stateName = $get('estado_propiedad');
+                                        return $stateName 
+                                            ? 'Valor desde configuración de estado: ' . $stateName
+                                            : 'Seleccione un estado en el paso anterior';
+                                    }),
                             ]),
                     ])
                     ->collapsible(),

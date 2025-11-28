@@ -441,8 +441,38 @@
         <div class="signatures-section">
             <div class="signature-block">
                 <div class="signature-label">EL VENDEDOR(ES)</div>
-                <div class="signature-line"></div>
-                <div class="signature-name">{{ strtoupper($holder_name ?? 'NOMBRE Y FIRMA VENDEDOR') }}</div>
+                
+                @php
+                    $showDoubleSignature = false;
+                    if (!empty($wizardData['has_co_borrower']) && $wizardData['has_co_borrower']) {
+                        $relationship = $wizardData['co_borrower_relationship'] ?? '';
+                        // Mostrar doble firma solo si es Coacreditado o Bienes Mancomunados
+                        if (in_array($relationship, ['coacreditado', 'bienes_mancomunados'])) {
+                            $showDoubleSignature = true;
+                        }
+                    }
+                @endphp
+
+                @if($showDoubleSignature)
+                    {{-- FIRMAS MANCOMUNADAS (LADO A LADO) --}}
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 48%; text-align: center; vertical-align: top;">
+                                <div class="signature-line" style="width: 90%; margin: 0 auto 8px auto;"></div>
+                                <div class="signature-name">{{ strtoupper($holder_name ?? 'NOMBRE Y FIRMA VENDEDOR') }}</div>
+                            </td>
+                            <td style="width: 4%;">&nbsp;</td>
+                            <td style="width: 48%; text-align: center; vertical-align: top;">
+                                <div class="signature-line" style="width: 90%; margin: 0 auto 8px auto;"></div>
+                                <div class="signature-name">{{ strtoupper($spouse_name ?? 'NOMBRE Y FIRMA COACREDITADO / CÓNYUGE') }}</div>
+                            </td>
+                        </tr>
+                    </table>
+                @else
+                    {{-- FIRMA INDIVIDUAL (CENTRADA) --}}
+                    <div class="signature-line"></div>
+                    <div class="signature-name">{{ strtoupper($holder_name ?? 'NOMBRE Y FIRMA VENDEDOR') }}</div>
+                @endif
             </div>
 
             <div class="signature-block" style="margin-top: 50px;">

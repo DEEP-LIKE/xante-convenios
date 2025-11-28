@@ -70,10 +70,39 @@ class StepThreeSchema
                                     ->label('Municipio')
                                     ->maxLength(100)
                                     ->required(),
-                                TextInput::make('estado_propiedad')
+                                \Filament\Forms\Components\Select::make('estado_propiedad')
                                     ->label('Estado')
-                                    ->maxLength(100)
-                                    ->required(),
+                                    ->options(\App\Models\StateCommissionRate::where('is_active', true)->pluck('state_name', 'state_name'))
+                                    ->searchable()
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        if ($state) {
+                                            $rate = \App\Models\StateCommissionRate::where('state_name', $state)->first();
+                                            $set('state_commission_percentage', $rate ? $rate->commission_percentage : 0);
+                                        } else {
+                                            $set('state_commission_percentage', 0);
+                                        }
+                                    }),
+                                \Filament\Forms\Components\Hidden::make('state_commission_percentage')
+                                    ->default(function (callable $get) {
+                                        $stateName = $get('estado_propiedad');
+                                        if ($stateName) {
+                                            $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
+                                            return $rate ? $rate->commission_percentage : 0;
+                                        }
+                                        return 0;
+                                    })
+                                    ->afterStateHydrated(function (\Filament\Forms\Components\Hidden $component, $state, callable $get) {
+                                        // Si el campo está vacío (convenio existente sin este dato), calcularlo
+                                        if (!$state || $state == 0) {
+                                            $stateName = $get('estado_propiedad');
+                                            if ($stateName) {
+                                                $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
+                                                $component->state($rate ? $rate->commission_percentage : 0);
+                                            }
+                                        }
+                                    }),
                             ]),
                         Grid::make(1)
                             ->schema([

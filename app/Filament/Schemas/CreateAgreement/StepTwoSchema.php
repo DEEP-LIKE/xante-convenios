@@ -50,7 +50,7 @@ class StepTwoSchema
                         Action::make('toggle_co_borrower')
                             ->label(fn (callable $get) => $get('has_co_borrower') ? '✓ Tiene coacreditado o cónyuge' : '¿Tiene coacreditado o cónyuge?')
                             ->icon(fn (callable $get) => $get('has_co_borrower') ? 'heroicon-o-check-circle' : 'heroicon-o-user-plus')
-                            ->color(fn (callable $get) => $get('has_co_borrower') ? 'success' : 'gray')
+                            ->color(fn (callable $get) => $get('has_co_borrower') ? 'success' : 'primary')
                             ->size('sm')
                             ->action(function (callable $get, callable $set) {
                                 $currentState = $get('has_co_borrower');

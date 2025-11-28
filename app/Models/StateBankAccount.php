@@ -33,4 +33,12 @@ class StateBankAccount extends Model
     {
         return "{$this->bank_name} - {$this->account_number}";
     }
+
+    /**
+     * Get the commission rate associated with the state
+     */
+    public function commissionRate()
+    {
+        return $this->belongsTo(StateCommissionRate::class, 'state_code', 'state_code');
+    }
 }

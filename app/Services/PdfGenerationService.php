@@ -365,10 +365,10 @@ class PdfGenerationService
             'monthNames' => $monthNames,
             'xante_id' => $agreement->client_xante_id ?? $wizardData['xante_id'] ?? '',
             
-            // Datos bancarios (valores por defecto de XANTE)
-            'bank_name' => $wizardData['bank_name'] ?? 'BBVA',
-            'bank_account' => $wizardData['bank_account'] ?? '0123456789',
-            'bank_clabe' => $wizardData['bank_clabe'] ?? '012345678901234567',
+            // Datos bancarios (buscar por estado de la propiedad)
+            'bank_name' => $this->getBankDataForState($wizardData['estado_propiedad'] ?? null, 'bank_name'),
+            'bank_account' => $this->getBankDataForState($wizardData['estado_propiedad'] ?? null, 'account_number'),
+            'bank_clabe' => $this->getBankDataForState($wizardData['estado_propiedad'] ?? null, 'clabe'),
             
             // Imágenes en formato base64 para PDFs
             'logo_path' => $this->getImageBase64('Logo-Xante.png'),
@@ -446,6 +446,39 @@ class PdfGenerationService
             Log::error("Error al convertir imagen a base64: {$filename}", ['error' => $e->getMessage()]);
             return '';
         }
+    }
+    
+    /**
+     * Obtiene datos bancarios específicos del estado
+     */
+    private function getBankDataForState(?string $stateName, string $field): string
+    {
+        if (!$stateName) {
+            return $this->getDefaultBankData($field);
+        }
+        
+        $bankAccount = \App\Models\StateBankAccount::where('state_name', $stateName)->first();
+        
+        if (!$bankAccount) {
+            Log::warning("No se encontró cuenta bancaria para el estado: {$stateName}");
+            return $this->getDefaultBankData($field);
+        }
+        
+        return $bankAccount->{$field} ?? $this->getDefaultBankData($field);
+    }
+    
+    /**
+     * Retorna valores por defecto para datos bancarios
+     */
+    private function getDefaultBankData(string $field): string
+    {
+        $defaults = [
+            'bank_name' => 'BBVA',
+            'account_number' => '0123456789',
+            'clabe' => '012345678901234567',
+        ];
+        
+        return $defaults[$field] ?? '';
     }
     
     /**

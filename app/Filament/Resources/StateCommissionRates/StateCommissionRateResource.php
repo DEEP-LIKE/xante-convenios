@@ -98,7 +98,8 @@ class StateCommissionRateResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(10)
-                            ->readOnly(),
+                            ->disabled()
+                            ->dehydrated(),
                         \Filament\Forms\Components\TextInput::make('commission_percentage')
                             ->label('Porcentaje de Comisión')
                             ->numeric()
@@ -117,6 +118,8 @@ class StateCommissionRateResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('is_active', 'desc')
+            ->modifyQueryUsing(fn ($query) => $query->orderBy('is_active', 'desc')->orderBy('commission_percentage', 'desc'))
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('state_name')
                     ->label('Estado')
