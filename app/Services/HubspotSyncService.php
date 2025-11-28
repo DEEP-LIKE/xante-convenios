@@ -1048,95 +1048,105 @@ class HubspotSyncService
     }
 
     /**
-     * Mapear Cliente Local -> Propiedades HubSpot Deal
-     */
-    private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null): array
-    {
-        $props = [];
+ * Mapear Cliente Local -> Propiedades HubSpot Deal
+ */
+private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null): array
+{
+    $props = [];
 
-        // Datos del Titular (Nombres corregidos según diagnóstico)
-        if ($client->name) $props['nombre_del_titular'] = $client->name; // Antes: nombre_completo
-        
-        // Propiedades que NO existen en este portal de HubSpot (Comentadas para evitar error)
-        // if ($client->curp) $props['curp'] = $client->curp;
-        // if ($client->rfc) $props['rfc'] = $client->rfc;
-        // if ($client->civil_status) $props['estado_civil'] = $client->civil_status;
-        // if ($client->occupation) $props['ocupacion'] = $client->occupation;
-
-        // Domicilio del Titular
-        if ($client->current_address) {
-            $props['calle_o_privada_'] = $client->current_address; // Antes: domicilio_actual
-        }
-        if ($client->neighborhood) $props['colonia'] = $client->neighborhood;
-        // if ($client->postal_code) $props['codigo_postal'] = $client->postal_code; // No encontrado
-        // if ($client->municipality) $props['municipio'] = $client->municipality; // No encontrado
-        if ($client->state) $props['estado'] = $client->state;
-
-        // Datos del Cónyuge (No encontrados en diagnóstico, se comentan por seguridad)
-        /*
-        if ($client->spouse) {
-            $spouse = $client->spouse;
-            if ($spouse->name) $props['nombre_completo_conyuge'] = $spouse->name;
-            // ... resto de propiedades de cónyuge
-        }
-        */
-
-        // Mapeo de Estatus de Convenio desde Agreement
-        if ($agreement) {
-            // Mapear status local a opciones de HubSpot
-            // Opciones típicas: 'En Proceso', 'Aceptado', 'Rechazado', 'Completado'
-            // Ajusta según tus valores reales en HubSpot
-            $statusMap = [
-                'draft' => 'En Proceso',
-                'in_progress' => 'En Proceso',
-                'completed' => 'Aceptado', // O 'Completado'
-                'cancelled' => 'Rechazado'
-            ];
-            
-            if (isset($statusMap[$agreement->status])) {
-                $props['estatus_de_convenio'] = $statusMap[$agreement->status];
-            }
-            
-            // Si hay valor de propuesta, también podríamos enviarlo si existe el campo en HubSpot
-            if ($agreement->proposal_value) {
-                $props['amount'] = $agreement->proposal_value;
-            }
-        }
-
-        return $props;
+    // Datos del Titular - Campos que SÍ EXISTEN en HubSpot Deals
+    if ($client->name) $props['nombre_del_titular'] = $client->name;
+    
+    // Domicilio del Titular - Campos que SÍ EXISTEN en HubSpot Deals
+    if ($client->current_address) {
+        $props['calle_o_privada_'] = $client->current_address;
     }
+    if ($client->neighborhood) $props['colonia'] = $client->neighborhood;
+    if ($client->state) $props['estado'] = $client->state;
+    
+    // Campos que NO EXISTEN en HubSpot Deals (comentados - solicitar al cliente)
+    // if ($client->curp) $props['curp'] = $client->curp; // ← FALTA CREAR
+    // if ($client->rfc) $props['rfc'] = $client->rfc; // ← FALTA CREAR
+    // if ($client->civil_status) $props['estado_civil'] = $client->civil_status; // ← FALTA CREAR
+    // if ($client->occupation) $props['ocupacion'] = $client->occupation; // ← FALTA CREAR
+    // if ($client->postal_code) $props['codigo_postal'] = $client->postal_code; // ← FALTA CREAR
+    // if ($client->municipality) $props['municipio'] = $client->municipality; // ← FALTA CREAR
+    // if ($client->email) $props['email'] = $client->email; // ← FALTA CREAR (o usar Contact)
+    // if ($client->phone) $props['telefono'] = $client->phone; // ← FALTA CREAR (o usar Contact)
+
+    // Datos del Cónyuge (No encontrados en diagnóstico, se comentan por seguridad)
+    /*
+    if ($client->spouse) {
+        $spouse = $client->spouse;
+        if ($spouse->name) $props['nombre_completo_conyuge'] = $spouse->name;
+        // ... resto de propiedades de cónyuge
+    }
+    */
+
+    // Mapeo de Estatus de Convenio desde Agreement
+    if ($agreement) {
+        // Mapear status local a opciones de HubSpot
+        $statusMap = [
+            'draft' => 'En Proceso',
+            'in_progress' => 'En Proceso',
+            'completed' => 'Aceptado',
+            'cancelled' => 'Rechazado'
+        ];
+        
+        if (isset($statusMap[$agreement->status])) {
+            $props['estatus_de_convenio'] = $statusMap[$agreement->status];
+        }
+        
+        // Si hay valor de propuesta, también podríamos enviarlo si existe el campo en HubSpot
+        if ($agreement->proposal_value) {
+            $props['amount'] = $agreement->proposal_value;
+        }
+    }
+
+    return $props;
+}
 
     /**
-     * Mapear Cliente Local -> Propiedades HubSpot Contact
-     */
-    private function mapClientToHubspotContact(Client $client): array
-    {
-        $props = [];
+ * Mapear Cliente Local -> Propiedades HubSpot Contact
+ */
+private function mapClientToHubspotContact(Client $client): array
+{
+    $props = [];
 
-        // Mapeo básico
-        if ($client->email) $props['email'] = $client->email;
-        if ($client->phone) $props['phone'] = $client->phone;
-        
-        // Separar nombre y apellido si es posible
-        if ($client->name) {
-            $parts = explode(' ', $client->name);
-            if (count($parts) > 1) {
-                $props['firstname'] = array_shift($parts);
-                $props['lastname'] = implode(' ', $parts);
-            } else {
-                $props['firstname'] = $client->name;
-            }
-        }
-
-        // Campos adicionales mapeados en config
-        if ($client->current_address) $props['address'] = $client->current_address;
-        if ($client->municipality) $props['city'] = $client->municipality;
-        if ($client->state) $props['state'] = $client->state;
-        if ($client->postal_code) $props['zip'] = $client->postal_code;
-        if ($client->occupation) $props['jobtitle'] = $client->occupation;
-
-        return $props;
+    // Mapeo básico
+    if ($client->email) $props['email'] = $client->email;
+    if ($client->phone) {
+        $props['phone'] = $client->phone;
+        $props['mobilephone'] = $client->phone; // También en mobilephone
     }
+    
+    // Separar nombre y apellido si es posible
+    if ($client->name) {
+        $parts = explode(' ', $client->name);
+        if (count($parts) > 1) {
+            $props['firstname'] = array_shift($parts);
+            $props['lastname'] = implode(' ', $parts);
+        } else {
+            $props['firstname'] = $client->name;
+        }
+    }
+
+    // Campos adicionales que EXISTEN en HubSpot Contacts
+    if ($client->current_address) $props['address'] = $client->current_address;
+    if ($client->municipality) $props['city'] = $client->municipality;
+    if ($client->state) $props['state'] = $client->state;
+    if ($client->postal_code) $props['zip'] = $client->postal_code;
+    if ($client->neighborhood) $props['colonia'] = $client->neighborhood; // ← AGREGADO
+    if ($client->occupation) $props['jobtitle'] = $client->occupation;
+    
+    // Campos que NO EXISTEN en HubSpot (comentados - solicitar al cliente)
+    // if ($client->curp) $props['curp'] = $client->curp; // ← FALTA CREAR
+    // if ($client->rfc) $props['rfc'] = $client->rfc; // ← FALTA CREAR
+    // if ($client->civil_status) $props['estado_civil'] = $client->civil_status; // ← FALTA CREAR
+    // if ($client->birthdate) $props['fecha_nacimiento'] = $client->birthdate->format('Y-m-d'); // ← FALTA CREAR
+
+    return $props;
+}
 
     /**
      * Obtener detalles ligeros del Deal para visualización rápida
