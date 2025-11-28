@@ -24,6 +24,7 @@ class QuoteCalculatorPage extends Page implements HasForms
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
     protected static ?string $navigationLabel = 'Propuesta / Calculadora';
+    // protected static \UnitEnum|string|null $navigationGroup = 'Configuraciones';
     protected static ?string $title = 'Calculadora de Cotizaciones';
     protected static ?string $slug = 'quote-calculator';
     protected static ?int $navigationSort = 3;

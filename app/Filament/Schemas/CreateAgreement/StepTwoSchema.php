@@ -46,6 +46,23 @@ class StepTwoSchema
 
                 // DATOS PERSONALES TITULAR
                 Section::make('DATOS PERSONALES TITULAR:')
+                    ->headerActions([
+                        Action::make('toggle_co_borrower')
+                            ->label(fn (callable $get) => $get('has_co_borrower') ? '✓ Tiene coacreditado o cónyuge' : '¿Tiene coacreditado o cónyuge?')
+                            ->icon(fn (callable $get) => $get('has_co_borrower') ? 'heroicon-o-check-circle' : 'heroicon-o-user-plus')
+                            ->color(fn (callable $get) => $get('has_co_borrower') ? 'success' : 'gray')
+                            ->size('sm')
+                            ->action(function (callable $get, callable $set) {
+                                $currentState = $get('has_co_borrower');
+                                $set('has_co_borrower', !$currentState);
+                                
+                                if ($currentState) {
+                                    // Si se está desactivando, limpiar el tipo de relación
+                                    $set('co_borrower_relationship', null);
+                                }
+                            })
+                            ->tooltip('Habilitar/deshabilitar sección de coacreditado o cónyuge'),
+                    ])
                     ->schema([
                         Grid::make(2)
                             ->schema([
@@ -140,6 +157,7 @@ class StepTwoSchema
                 // DATOS PERSONALES COACREDITADO / CÓNYUGE
                 Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE:')
                     ->description('Información del cónyuge o coacreditado')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('has_co_borrower'))
                     ->headerActions([
                         Action::make('copy_from_holder')
                             ->label('Copiar datos del titular')
@@ -170,82 +188,107 @@ class StepTwoSchema
                             ->tooltip('Copiar domicilios y teléfonos del titular'),
                     ])
                     ->schema([
-                        Grid::make(2)
+                        \Filament\Forms\Components\ToggleButtons::make('co_borrower_relationship')
+                            ->label('Tipo de Relación')
+                            ->options([
+                                'coacreditado' => 'Coacreditado',
+                                'bienes_separados' => 'Casado por bienes separados',
+                                'bienes_mancomunados' => 'Casado con bienes mancomunados',
+                            ])
+                            ->colors([
+                                'coacreditado' => 'info',
+                                'bienes_separados' => 'warning',
+                                'bienes_mancomunados' => 'success',
+                            ])
+                            ->icons([
+                                'coacreditado' => 'heroicon-o-users',
+                                'bienes_separados' => 'heroicon-o-minus-circle',
+                                'bienes_mancomunados' => 'heroicon-o-heart',
+                            ])
+                            ->inline()
+                            ->required()
+                            ->live(),
+
+                        Grid::make(1)
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => in_array($get('co_borrower_relationship'), ['coacreditado', 'bienes_mancomunados']))
                             ->schema([
-                                TextInput::make('spouse_name')
-                                    ->label('Nombre Cliente')
-                                    ->maxLength(255),
-                                TextInput::make('spouse_delivery_file')
-                                    ->label('Entrega expediente')
-                                    ->maxLength(100),
-                                DatePicker::make('spouse_birthdate')
-                                    ->native(false)
-                                    ->label('Fecha de Nacimiento (min 18 años)')
-                                    ->displayFormat('d/m/Y')
-                                    ->maxDate(Carbon::today()->subYears(18))
-                                    ->validationMessages([
-                                        'max' => 'El titular debe ser mayor de 18 años.',
-                                    ])
-                                    ->suffixIcon(Heroicon::Calendar),
-                                Select::make('spouse_civil_status')
-                                    ->label('Estado civil')
-                                    ->options([
-                                        'soltero' => 'Soltero(a)',
-                                        'casado' => 'Casado(a)',
-                                        'divorciado' => 'Divorciado(a)',
-                                        'viudo' => 'Viudo(a)',
-                                        'union_libre' => 'Unión Libre',
+                                Grid::make(2)
+                                    ->schema([
+                                        TextInput::make('spouse_name')
+                                            ->label('Nombre Cliente')
+                                            ->maxLength(255),
+                                        TextInput::make('spouse_delivery_file')
+                                            ->label('Entrega expediente')
+                                            ->maxLength(100),
+                                        DatePicker::make('spouse_birthdate')
+                                            ->native(false)
+                                            ->label('Fecha de Nacimiento (min 18 años)')
+                                            ->displayFormat('d/m/Y')
+                                            ->maxDate(Carbon::today()->subYears(18))
+                                            ->validationMessages([
+                                                'max' => 'El titular debe ser mayor de 18 años.',
+                                            ])
+                                            ->suffixIcon(Heroicon::Calendar),
+                                        Select::make('spouse_civil_status')
+                                            ->label('Estado civil')
+                                            ->options([
+                                                'soltero' => 'Soltero(a)',
+                                                'casado' => 'Casado(a)',
+                                                'divorciado' => 'Divorciado(a)',
+                                                'viudo' => 'Viudo(a)',
+                                                'union_libre' => 'Unión Libre',
+                                            ]),
+                                        TextInput::make('spouse_curp')
+                                            ->label('CURP')
+                                            ->maxLength(18)
+                                            ->minLength(18),
+                                        TextInput::make('spouse_regime_type')
+                                            ->label('Régimen Fiscal')
+                                            ->maxLength(100),
+                                        TextInput::make('spouse_rfc')
+                                            ->label('RFC')
+                                            ->maxLength(13),
+                                        TextInput::make('spouse_occupation')
+                                            ->label('Ocupación')
+                                            ->maxLength(100),
+                                        TextInput::make('spouse_email')
+                                            ->label('Correo electrónico')
+                                            ->email(),
+                                        TextInput::make('spouse_office_phone')
+                                            ->label('Tel. oficina')
+                                            ->tel()
+                                            ->maxLength(20),
+                                        TextInput::make('spouse_phone')
+                                            ->label('Núm. Celular')
+                                            ->tel()
+                                            ->maxLength(20),
+                                        TextInput::make('spouse_additional_contact_phone')
+                                            ->label('Tel. Contacto Adic.')
+                                            ->tel()
+                                            ->maxLength(20),
                                     ]),
-                                TextInput::make('spouse_curp')
-                                    ->label('CURP')
-                                    ->maxLength(18)
-                                    ->minLength(18),
-                                TextInput::make('spouse_regime_type')
-                                    ->label('Régimen Fiscal')
-                                    ->maxLength(100),
-                                TextInput::make('spouse_rfc')
-                                    ->label('RFC')
-                                    ->maxLength(13),
-                                TextInput::make('spouse_occupation')
-                                    ->label('Ocupación')
-                                    ->maxLength(100),
-                                TextInput::make('spouse_email')
-                                    ->label('Correo electrónico')
-                                    ->email(),
-                                TextInput::make('spouse_office_phone')
-                                    ->label('Tel. oficina')
-                                    ->tel()
-                                    ->maxLength(20),
-                                TextInput::make('spouse_phone')
-                                    ->label('Núm. Celular')
-                                    ->tel()
-                                    ->maxLength(20),
-                                TextInput::make('spouse_additional_contact_phone')
-                                    ->label('Tel. Contacto Adic.')
-                                    ->tel()
-                                    ->maxLength(20),
-                            ]),
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('spouse_current_address')
-                                    ->label('Calle y Domicilio')
-                                    ->maxLength(400)
-                                    ->columnSpan(1),
-                            ]),
-                        Grid::make(3)
-                            ->schema([
-                                TextInput::make('spouse_neighborhood')
-                                    ->label('Colonia')
-                                    ->maxLength(100),
-                                TextInput::make('spouse_postal_code')
-                                    ->label('C.P.')
-                                    ->maxLength(10),
-                                TextInput::make('spouse_municipality')
-                                    ->label('Municipio - Alcaldía')
-                                    ->maxLength(100),
-                                TextInput::make('spouse_state')
-                                    ->label('Estado')
-                                    ->maxLength(100),
+                                Grid::make(2)
+                                    ->schema([
+                                        TextInput::make('spouse_current_address')
+                                            ->label('Calle y Domicilio')
+                                            ->maxLength(400)
+                                            ->columnSpan(1),
+                                    ]),
+                                Grid::make(3)
+                                    ->schema([
+                                        TextInput::make('spouse_neighborhood')
+                                            ->label('Colonia')
+                                            ->maxLength(100),
+                                        TextInput::make('spouse_postal_code')
+                                            ->label('C.P.')
+                                            ->maxLength(10),
+                                        TextInput::make('spouse_municipality')
+                                            ->label('Municipio - Alcaldía')
+                                            ->maxLength(100),
+                                        TextInput::make('spouse_state')
+                                            ->label('Estado')
+                                            ->maxLength(100),
+                                    ]),
                             ]),
                     ])
                     ->collapsible(),

@@ -101,6 +101,8 @@ class Agreement extends Model
         'completed_at',
         'proposal_value',
         'proposal_saved_at',
+        'has_co_borrower',
+        'co_borrower_relationship',
     ];
 
     protected function casts(): array
@@ -125,6 +127,7 @@ class Agreement extends Model
             'wizard2_current_step' => 'integer',
             'proposal_value' => 'decimal:2',
             'proposal_saved_at' => 'datetime',
+            'has_co_borrower' => 'boolean',
         ];
     }
 
