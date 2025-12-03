@@ -19,7 +19,7 @@ class AgreementCalculatorService
     {
         $configValues = ConfigurationCalculator::whereIn('key', [
             'comision_sin_iva_default',
-            'comision_iva_incluido_default',
+            'comision_iva_incluido_default', // This now stores the IVA percentage (16%)
             'precio_promocion_multiplicador_default',
             'isr_default',
             'cancelacion_hipoteca_default',
@@ -28,7 +28,7 @@ class AgreementCalculatorService
 
         return [
             'porcentaje_comision_sin_iva' => $configValues['comision_sin_iva_default'] ?? 6.50,
-            'porcentaje_comision_iva_incluido' => $configValues['comision_iva_incluido_default'] ?? 7.54,
+            'iva_percentage' => $configValues['comision_iva_incluido_default'] ?? 16.00, // Using this as IVA %
             'precio_promocion_multiplicador' => $configValues['precio_promocion_multiplicador_default'] ?? 1.09,
             'isr' => $configValues['isr_default'] ?? 0,
             'cancelacion_hipoteca' => $configValues['cancelacion_hipoteca_default'] ?? 20000,
@@ -54,11 +54,14 @@ class AgreementCalculatorService
         $params = array_merge($defaults, $parameters);
 
         $porcentajeComision = (float) ($params['porcentaje_comision_sin_iva'] ?? 6.50);
-        $porcentajeComisionIvaIncluido = (float) ($params['porcentaje_comision_iva_incluido'] ?? 7.54);
+        $ivaPercentage = (float) ($params['iva_percentage'] ?? 16.00);
         $multiplicadorPrecioPromocion = (float) ($params['precio_promocion_multiplicador'] ?? 1.09);
         $isr = (float) ($params['isr'] ?? 0);
         $cancelacion = (float) ($params['cancelacion_hipoteca'] ?? 20000);
         $montoCredito = (float) ($params['monto_credito'] ?? 800000);
+
+        // Calcular porcentaje de comisión con IVA incluido dinámicamente
+        $porcentajeComisionIvaIncluido = round($porcentajeComision * (1 + ($ivaPercentage / 100)), 2);
 
         // Realizar cálculos
         $calculations = [];
@@ -88,6 +91,7 @@ class AgreementCalculatorService
         $calculations['parametros_utilizados'] = [
             'valor_convenio' => $valorConvenio,
             'porcentaje_comision_sin_iva' => $porcentajeComision,
+            'iva_percentage' => $ivaPercentage,
             'porcentaje_comision_iva_incluido' => $porcentajeComisionIvaIncluido,
             'precio_promocion_multiplicador' => $multiplicadorPrecioPromocion,
             'isr' => $isr,

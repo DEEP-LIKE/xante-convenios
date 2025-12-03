@@ -18,15 +18,15 @@ class StateCommissionRateResource extends Resource
 {
     protected static ?string $model = StateCommissionRate::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calculator';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
     
     protected static \UnitEnum|string|null $navigationGroup = 'Configuraciones';
     
-    protected static ?string $navigationLabel = 'Porcentajes por Estado';
+    protected static ?string $navigationLabel = 'Gastos notariales (GE)';
     
-    protected static ?string $modelLabel = 'Porcentaje por Estado';
+    protected static ?string $modelLabel = 'Gasto notarial (GE)';
     
-    protected static ?string $pluralModelLabel = 'Porcentajes por Estado';
+    protected static ?string $pluralModelLabel = 'Gastos notariales (GE)';
     
     protected static ?int $navigationSort = 2;
 
@@ -55,7 +55,7 @@ class StateCommissionRateResource extends Resource
                                 'Guerrero' => 'Guerrero',
                                 'Hidalgo' => 'Hidalgo',
                                 'Jalisco' => 'Jalisco',
-                                'México' => 'México',
+                                'Estado de México' => 'Estado de México',
                                 'Michoacán' => 'Michoacán',
                                 'Morelos' => 'Morelos',
                                 'Nayarit' => 'Nayarit',
@@ -83,7 +83,7 @@ class StateCommissionRateResource extends Resource
                                     'Campeche' => 'CAM', 'Chiapas' => 'CHIS', 'Chihuahua' => 'CHIH',
                                     'Ciudad de México' => 'CDMX', 'Coahuila' => 'COAH', 'Colima' => 'COL',
                                     'Durango' => 'DGO', 'Guanajuato' => 'GTO', 'Guerrero' => 'GRO',
-                                    'Hidalgo' => 'HGO', 'Jalisco' => 'JAL', 'México' => 'MEX',
+                                    'Hidalgo' => 'HGO', 'Jalisco' => 'JAL', 'Estado de México' => 'MEX',
                                     'Michoacán' => 'MICH', 'Morelos' => 'MOR', 'Nayarit' => 'NAY',
                                     'Nuevo León' => 'NL', 'Oaxaca' => 'OAX', 'Puebla' => 'PUE',
                                     'Querétaro' => 'QRO', 'Quintana Roo' => 'QROO', 'San Luis Potosí' => 'SLP',
@@ -101,7 +101,7 @@ class StateCommissionRateResource extends Resource
                             ->disabled()
                             ->dehydrated(),
                         \Filament\Forms\Components\TextInput::make('commission_percentage')
-                            ->label('Porcentaje de Comisión')
+                            ->label('Porcentaje GE')
                             ->numeric()
                             ->suffix('%')
                             ->required()
@@ -130,7 +130,7 @@ class StateCommissionRateResource extends Resource
                     ->searchable()
                     ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('commission_percentage')
-                    ->label('Comisión')
+                    ->label('GE %')
                     ->suffix('%')
                     ->sortable(),
                 \Filament\Tables\Columns\IconColumn::make('is_active')

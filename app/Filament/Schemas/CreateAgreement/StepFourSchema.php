@@ -199,31 +199,49 @@ class StepFourSchema
                                     ->dehydrated(false)
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText('Valor fijo desde configuración'),
-                                TextInput::make('porcentaje_comision_iva_incluido')
-                                    ->label('% Comisión IVA Incluido')
+                                TextInput::make('iva_percentage')
+                                    ->label('Comisión IVA incluido')
                                     ->numeric()
                                     ->suffix('%')
                                     ->step(0.01)
-                                    ->default(function () {
+                                    ->afterStateHydrated(function ($component, callable $get) {
+                                        $sinIva = (float) $get('porcentaje_comision_sin_iva');
                                         $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
-                                        return $config ? $config->value : 7.54;
+                                        $ivaPercentage = $config ? (float) $config->value : 16.00;
+                                        
+                                        if ($sinIva > 0 && $ivaPercentage > 0) {
+                                            $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
+                                            $component->state($conIva);
+                                        }
                                     })
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText('Valor fijo desde configuración'),
-                                TextInput::make('precio_promocion_multiplicador')
-                                    ->label('Multiplicador Precio Promoción')
+                                    ->helperText(function (callable $get) {
+                                        $sinIva = (float) $get('porcentaje_comision_sin_iva');
+                                        $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
+                                        $ivaPercentage = $config ? (float) $config->value : 16.00;
+                                        
+                                        if ($sinIva > 0 && $ivaPercentage > 0) {
+                                            $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
+                                            return 'Comisión sin IVA × (1 + % IVA)' ;
+                                            // //. number_format($sinIva, 2) . '% × (1 + ' . number_format($ivaPercentage, 0) . '%) = ' . number_format($conIva, 2) . '%';
+                                        }
+                                        return 'Comisión sin IVA × (1 + IVA%)';
+                                    }),
+                                TextInput::make('state_commission_percentage')
+                                    ->label('% Multiplicador por estado')
                                     ->numeric()
-                                    ->step(0.01)
-                                    ->default(function () {
-                                        $config = ConfigurationCalculator::where('key', 'precio_promocion_multiplicador_default')->first();
-                                        return $config ? $config->value : 1.09;
-                                    })
+                                    ->suffix('%')
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText('Valor fijo desde configuración'),
+                                    ->helperText(function (callable $get) {
+                                        $stateName = $get('estado_propiedad');
+                                        return $stateName 
+                                            ? '% de comisión por estado: ' . $stateName
+                                            : 'Seleccione un estado en el paso anterior';
+                                    }),
                                 TextInput::make('monto_credito')
                                     ->label('Monto de Crédito')
                                     ->numeric()
@@ -247,19 +265,6 @@ class StepFourSchema
                                         'fovissste' => 'Fovissste',
                                         'otro' => 'Otro',
                                     ]),
-                                TextInput::make('state_commission_percentage')
-                                    ->label('% Multiplicador por estado')
-                                    ->numeric()
-                                    ->suffix('%')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText(function (callable $get) {
-                                        $stateName = $get('estado_propiedad');
-                                        return $stateName 
-                                            ? 'Valor desde configuración de estado: ' . $stateName
-                                            : 'Seleccione un estado en el paso anterior';
-                                    }),
                             ]),
                     ])
                     ->collapsible(),
@@ -270,20 +275,20 @@ class StepFourSchema
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('precio_promocion')
-                                    ->label('Precio Promoción')
-                                    ->prefix('$')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
-                                    ->helperText('Valor Convenio × Multiplicador Precio Promoción'),
-                                TextInput::make('valor_compraventa')
+                                  TextInput::make('valor_compraventa')
                                     ->label('Valor CompraVenta')
                                     ->prefix('$')
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
                                     ->helperText('Espejo del Valor Convenio'),
+                                TextInput::make('precio_promocion')
+                                    ->label('Precio Promoción')
+                                    ->prefix('$')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
+                                    ->helperText('Valor Convenio × % Multiplicador por estado'),
                                 TextInput::make('monto_comision_sin_iva')
                                     ->label('Monto Comisión (Sin IVA)')
                                     ->prefix('$')
@@ -297,7 +302,7 @@ class StepFourSchema
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
-                                    ->helperText('Valor Convenio × % Comisión IVA Incluido'),
+                                    ->helperText('Monto Comisión (Sin IVA) + IVA'),
                             ]),
                     ])
                     ->collapsible(),

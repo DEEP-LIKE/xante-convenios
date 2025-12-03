@@ -14,6 +14,8 @@ use Filament\Notifications\Notification;
 use Filament\Actions\Action;
 use App\Models\Client;
 use App\Models\Proposal;
+use App\Models\StateCommissionRate;
+use App\Models\ConfigurationCalculator;
 use App\Services\AgreementCalculatorService;
 use Illuminate\Support\Facades\Auth;
 use BackedEnum;
@@ -150,6 +152,24 @@ class QuoteCalculatorPage extends Page implements HasForms
                 ->schema([
                     Grid::make(3)
                         ->schema([
+                            Select::make('estado_propiedad')
+                                ->label('Estado de la Propiedad')
+                                ->options(StateCommissionRate::where('is_active', true)->pluck('state_name', 'state_name'))
+                                ->searchable()
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if ($state) {
+                                        $stateRate = StateCommissionRate::where('state_name', $state)->where('is_active', true)->first();
+                                        if ($stateRate) {
+                                            $set('state_commission_percentage', $stateRate->commission_percentage);
+                                        }
+                                    }
+                                    if ($this->data['valor_convenio'] ?? false) {
+                                        $this->recalculateAllFinancials();
+                                    }
+                                })
+                                ->helperText('Seleccione el estado para cargar el % de comisión'),
                             TextInput::make('porcentaje_comision_sin_iva')
                                 ->label('% Comisión (Sin IVA)')
                                 ->numeric()
@@ -159,23 +179,48 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-gray-50'])
                                 ->helperText('Valor fijo desde configuración'),
-                            TextInput::make('porcentaje_comision_iva_incluido')
-                                ->label('% Comisión IVA Incluido')
+                            TextInput::make('iva_percentage')
+                                ->label('Comisión IVA incluido')
                                 ->numeric()
                                 ->suffix('%')
                                 ->step(0.01)
+                                ->afterStateHydrated(function ($component, callable $get) {
+                                    $sinIva = (float) $get('porcentaje_comision_sin_iva');
+                                    $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
+                                    $ivaPercentage = $config ? (float) $config->value : 16.00;
+                                    
+                                    if ($sinIva > 0 && $ivaPercentage > 0) {
+                                        $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
+                                        $component->state($conIva);
+                                    }
+                                })
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-gray-50'])
-                                ->helperText('Valor fijo desde configuración'),
-                            TextInput::make('precio_promocion_multiplicador')
-                                ->label('Multiplicador Precio Promoción')
+                                ->helperText(function (callable $get) {
+                                    $sinIva = (float) $get('porcentaje_comision_sin_iva');
+                                    $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
+                                    $ivaPercentage = $config ? (float) $config->value : 16.00;
+                                    
+                                    if ($sinIva > 0 && $ivaPercentage > 0) {
+                                        $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
+                                        return number_format($sinIva, 2) . '% × (1 + ' . number_format($ivaPercentage, 0) . '%) = ' . number_format($conIva, 2) . '%';
+                                    }
+                                    return 'Comisión sin IVA × (1 + IVA%)';
+                                }),
+                            TextInput::make('state_commission_percentage')
+                                ->label('% Multiplicador por estado')
                                 ->numeric()
-                                ->step(0.01)
+                                ->suffix('%')
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-gray-50'])
-                                ->helperText('Valor fijo desde configuración'),
+                                ->helperText(function (callable $get) {
+                                    $stateName = $get('estado_propiedad');
+                                    return $stateName 
+                                        ? '% de comisión por estado: ' . $stateName
+                                        : 'Seleccione un estado';
+                                }),
                             TextInput::make('monto_credito')
                                 ->label('Monto de Crédito')
                                 ->numeric()
@@ -212,7 +257,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
-                                ->helperText('Valor Convenio × Multiplicador Precio Promoción'),
+                                ->helperText('Valor Convenio × % Multiplicador por estado'),
                             TextInput::make('valor_compraventa')
                                 ->label('Valor CompraVenta')
                                 ->prefix('$')
@@ -280,7 +325,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-green-50 text-green-800 font-bold text-lg'])
-                                ->helperText('Valor CompraVenta - ISR - Cancelación - Comisión Total - Monto Crédito'),
+                                ->helperText('Monto Comisión (Sin IVA) + IVA'),
                         ]),
                 ])
                 ->collapsible(),
@@ -304,8 +349,14 @@ class QuoteCalculatorPage extends Page implements HasForms
             return;
         }
 
+        // Preparar parámetros con el multiplicador calculado desde el porcentaje de estado
+        $statePercentage = (float) ($this->data['state_commission_percentage'] ?? 9);
+        $dataWithMultiplier = $this->data;
+        $dataWithMultiplier['precio_promocion_multiplicador'] = 1 + ($statePercentage / 100);
+        $dataWithMultiplier['iva_percentage'] = (float) (ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->value('value') ?? 16.00);
+
         // Validar parámetros
-        $errors = $this->calculatorService->validateParameters($valorConvenio, $this->data);
+        $errors = $this->calculatorService->validateParameters($valorConvenio, $dataWithMultiplier);
         if (!empty($errors)) {
             foreach ($errors as $error) {
                 Notification::make()
@@ -318,7 +369,7 @@ class QuoteCalculatorPage extends Page implements HasForms
         }
 
         // Calcular valores
-        $calculations = $this->calculatorService->calculateAllFinancials($valorConvenio, $this->data);
+        $calculations = $this->calculatorService->calculateAllFinancials($valorConvenio, $dataWithMultiplier);
         $formattedValues = $this->calculatorService->formatCalculationsForUI($calculations);
 
         // Actualizar campos calculados con valores formateados para UI

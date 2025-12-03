@@ -65,7 +65,7 @@ class StateBankAccountResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(10)
-                            ->disabled()
+                            // ->disabled()
                             ->dehydrated(),
                         \Filament\Forms\Components\TextInput::make('account_holder')
                             ->label('Nombre del Titular')

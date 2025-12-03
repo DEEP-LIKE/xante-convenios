@@ -323,8 +323,8 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
         $parameters = [
             'porcentaje_comision_sin_iva' => (float) ($get('porcentaje_comision_sin_iva') ?? 6.50),
-            'porcentaje_comision_iva_incluido' => (float) ($get('porcentaje_comision_iva_incluido') ?? 7.54),
-            'precio_promocion_multiplicador' => (float) ($get('precio_promocion_multiplicador') ?? 1.09),
+            'iva_percentage' => (float) (\App\Models\ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->value('value') ?? 16.00),
+            'precio_promocion_multiplicador' => (float) (1 + (($get('state_commission_percentage') ?? 9) / 100)),
             'isr' => (float) ($get('isr') ?? 0),
             'cancelacion_hipoteca' => (float) ($get('cancelacion_hipoteca') ?? 20000),
             'monto_credito' => (float) ($get('monto_credito') ?? 800000),

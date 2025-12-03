@@ -27,7 +27,7 @@ class StateCommissionRateSeeder extends Seeder
             ['name' => 'Guerrero', 'code' => 'GRO'],
             ['name' => 'Hidalgo', 'code' => 'HGO'],
             ['name' => 'Jalisco', 'code' => 'JAL'],
-            ['name' => 'México', 'code' => 'MEX'],
+            ['name' => 'Estado de México', 'code' => 'MEX'],
             ['name' => 'Michoacán', 'code' => 'MICH'],
             ['name' => 'Morelos', 'code' => 'MOR'],
             ['name' => 'Nayarit', 'code' => 'NAY'],
