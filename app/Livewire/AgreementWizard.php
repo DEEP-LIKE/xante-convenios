@@ -78,6 +78,11 @@ class AgreementWizard extends Component
         if ($this->validateCurrentStep()) {
             $this->saveCurrentStep();
             
+            // Si está en paso 4 (calculadora), enviar a validación
+            if ($this->currentStep === 4) {
+                $this->sendToValidation();
+            }
+            
             $nextStep = $this->wizardService->getNextStep($this->currentStep, $this->wizardData);
             
             if ($nextStep && $nextStep <= 6) {
@@ -133,6 +138,15 @@ class AgreementWizard extends Component
      */
     public function completeWizard()
     {
+        // Verificar que la validación esté aprobada
+        if (!$this->agreement->hasApprovedValidation()) {
+            $this->addError('validation', 'No puedes completar el convenio sin la aprobación del Coordinador FI.');
+            
+            session()->flash('error', 'Debes esperar la aprobación del Coordinador FI antes de continuar.');
+            
+            return;
+        }
+
         if ($this->validateAllSteps()) {
             $this->saveCurrentStep();
             
@@ -746,5 +760,69 @@ class AgreementWizard extends Component
         if (!empty($this->stepData)) {
             $this->saveCurrentStep();
         }
+    }
+
+    /**
+     * Enviar a validación
+     */
+    private function sendToValidation()
+    {
+        \Log::info('sendToValidation called', [
+            'agreement_id' => $this->agreement->id,
+            'user_id' => auth()->id(),
+        ]);
+
+        $validationService = app(\App\Services\ValidationService::class);
+        
+        try {
+            // Crear solicitud de validación
+            $validation = $validationService->requestValidation(
+                $this->agreement, 
+                auth()->user()
+            );
+            
+            \Log::info('Validation created successfully', [
+                'validation_id' => $validation->id,
+                'agreement_id' => $this->agreement->id,
+            ]);
+            
+            session()->flash('message', '✓ Calculadora enviada a validación del Coordinador FI');
+            session()->flash('message_type', 'success');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar a validación', [
+                'agreement_id' => $this->agreement->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $this->addError('validation', 'Error al enviar a validación: ' . $e->getMessage());
+            
+            session()->flash('error', 'Error al enviar a validación: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reenviar a validación (después de hacer cambios)
+     */
+    public function resendToValidation()
+    {
+        if ($this->agreement->hasObservations()) {
+            $this->sendToValidation();
+            
+            // Recargar el agreement para obtener el nuevo estado
+            $this->agreement->refresh();
+            
+            session()->flash('message', 'Calculadora reenviada a validación');
+            session()->flash('message_type', 'success');
+        }
+    }
+
+    /**
+     * Verificar si puede avanzar desde validación
+     */
+    public function canProceedFromValidation(): bool
+    {
+        return $this->agreement->hasApprovedValidation();
     }
 }

@@ -32,6 +32,11 @@ class StateBankAccountResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'state_name';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return in_array(auth()->user()?->role, ['gerencia', 'coordinador_fi']);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -67,6 +72,10 @@ class StateBankAccountResource extends Resource
                             ->maxLength(10)
                             // ->disabled()
                             ->dehydrated(),
+                        \Filament\Forms\Components\TextInput::make('municipality')
+                            ->label('Municipio (Opcional)')
+                            ->maxLength(100)
+                            ->helperText('Ej: Pachuca, Tula. Dejar vacío si no aplica.'),
                         \Filament\Forms\Components\TextInput::make('account_holder')
                             ->label('Nombre del Titular')
                             ->required()
@@ -105,7 +114,13 @@ class StateBankAccountResource extends Resource
                 \Filament\Tables\Columns\TextColumn::make('state_name')
                     ->label('Estado')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(function ($record) {
+                        if ($record->municipality) {
+                            return $record->state_name . ' - ' . $record->municipality;
+                        }
+                        return $record->state_name;
+                    }),
                 \Filament\Tables\Columns\TextColumn::make('bank_name')
                     ->label('Banco')
                     ->searchable()

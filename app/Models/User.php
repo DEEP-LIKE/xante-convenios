@@ -17,7 +17,7 @@ class User extends Authenticatable implements FilamentUser
 
      public function canAccessPanel(Panel $panel): bool
     {
-        $allowedDomains = ['@xante.com', '@carbono.mx'];
+        $allowedDomains = ['@xante.com', '@carbono.mx', '@vinte.com'];
         foreach ($allowedDomains as $domain) {
             if (str_ends_with($this->email, $domain)) {
                 return true;

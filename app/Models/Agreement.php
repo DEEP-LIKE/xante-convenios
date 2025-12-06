@@ -103,6 +103,10 @@ class Agreement extends Model
         'proposal_saved_at',
         'has_co_borrower',
         'co_borrower_relationship',
+        // Campos de validación
+        'validation_status',
+        'current_validation_id',
+        'can_generate_documents',
     ];
 
     protected function casts(): array
@@ -188,6 +192,17 @@ class Agreement extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    // Relaciones de validación
+    public function validations(): HasMany
+    {
+        return $this->hasMany(QuoteValidation::class);
+    }
+
+    public function currentValidation(): BelongsTo
+    {
+        return $this->belongsTo(QuoteValidation::class, 'current_validation_id');
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
@@ -198,15 +213,18 @@ class Agreement extends Model
             'convenio_proceso' => 'Convenio en Proceso',
             'convenio_firmado' => 'Convenio Firmado',
             // Nuevos estados del sistema de dos wizards
-            'draft' => 'Borrador',
-            'pending_validation' => 'Pendiente de Validación',
-            'documents_generating' => 'Generando Documentos',
+            'wizard1_in_progress' => 'Wizard 1 en Progreso',
+            'wizard1_completed' => 'Wizard 1 Completado',
             'documents_generated' => 'Documentos Generados',
             'documents_sent' => 'Documentos Enviados',
-            'awaiting_client_docs' => 'Esperando Documentos del Cliente',
-            'documents_complete' => 'Documentos Completos',
+            'wizard2_in_progress' => 'Wizard 2 en Progreso',
+            'wizard2_completed' => 'Wizard 2 Completado',
             'completed' => 'Completado',
-            'error_generating_documents' => 'Error al Generar Documentos',
+            // Estados de validación
+            'pending_validation' => 'Pendiente de Validación',
+            'validation_approved' => 'Validación Aprobada',
+            'validation_rejected' => 'Validación Rechazada',
+            'validation_with_observations' => 'Con Observaciones',
             default => $this->status,
         };
     }
@@ -221,15 +239,18 @@ class Agreement extends Model
             'convenio_proceso' => 'info',
             'convenio_firmado' => 'success',
             // Nuevos estados del sistema de dos wizards
-            'draft' => 'gray',
-            'pending_validation' => 'warning',
-            'documents_generating' => 'info',
+            'wizard1_in_progress' => 'info',
+            'wizard1_completed' => 'success',
             'documents_generated' => 'success',
             'documents_sent' => 'info',
-            'awaiting_client_docs' => 'warning',
-            'documents_complete' => 'success',
+            'wizard2_in_progress' => 'info',
+            'wizard2_completed' => 'success',
             'completed' => 'success',
-            'error_generating_documents' => 'danger',
+            // Estados de validación
+            'pending_validation' => 'warning',
+            'validation_approved' => 'success',
+            'validation_rejected' => 'danger',
+            'validation_with_observations' => 'info',
             default => 'gray',
         };
     }
@@ -357,5 +378,122 @@ class Agreement extends Model
         }
         
         return null;
+    }
+
+    // Métodos de validación
+    public function requestValidation(int $userId): QuoteValidation
+    {
+        // Obtener el número de revisión
+        $revisionNumber = $this->validations()->count() + 1;
+
+        // Crear snapshot de la calculadora desde wizard_data
+        $wizardData = $this->wizard_data ?? [];
+        
+        $snapshot = [
+            'precio_promocion' => $wizardData['precio_promocion'] ?? $this->precio_promocion ?? 0,
+            'precio_promocion' => $wizardData['precio_promocion'] ?? $this->precio_promocion ?? 0,
+            'valor_convenio' => $wizardData['valor_convenio'] ?? $this->valor_convenio ?? 0,
+            'valor_compraventa' => $wizardData['valor_compraventa'] ?? $wizardData['valor_convenio'] ?? $this->valor_convenio ?? 0, 
+            'porcentaje_comision_sin_iva' => $wizardData['porcentaje_comision_sin_iva'] ?? $this->porcentaje_comision_sin_iva ?? 0,
+            'multiplicador_estado' => $wizardData['state_commission_percentage'] ?? (($wizardData['valor_convenio'] ?? 0) > 0 ? ((($wizardData['precio_promocion'] ?? 0) / ($wizardData['valor_convenio'] ?? 1)) - 1) * 100 : 0), 
+            'comision_iva_incluido' => ($wizardData['porcentaje_comision_sin_iva'] ?? 0) * 1.16, 
+            'estado_propiedad' => $wizardData['holder_state'] ?? 'Desconocido',
+            'monto_credito' => $wizardData['monto_credito'] ?? $this->monto_credito ?? 0,
+            'tipo_credito' => $wizardData['tipo_credito'] ?? 'No seleccionado',
+            'monto_comision_sin_iva' => ($wizardData['monto_comision_sin_iva'] ?? (($wizardData['valor_convenio'] ?? 0) * (($wizardData['porcentaje_comision_sin_iva'] ?? 0) / 100))),
+            'comision_total' => ($wizardData['comision_total'] ?? ((($wizardData['valor_convenio'] ?? 0) * (($wizardData['porcentaje_comision_sin_iva'] ?? 0) / 100)) * 1.16)),
+            'isr' => $wizardData['isr'] ?? $this->isr ?? 0,
+            'cancelacion_hipoteca' => $wizardData['cancelacion_hipoteca'] ?? $this->cancelacion_hipoteca ?? 0,
+            'total_gastos_fi' => ($wizardData['isr'] ?? 0) + ($wizardData['cancelacion_hipoteca'] ?? 0),
+            'ganancia_final' => $wizardData['ganancia_final'] ?? $this->ganancia_final ?? (($wizardData['valor_convenio'] ?? 0) - (($wizardData['isr'] ?? 0) + ($wizardData['cancelacion_hipoteca'] ?? 0)) - ((($wizardData['valor_convenio'] ?? 0) * (($wizardData['porcentaje_comision_sin_iva'] ?? 0) / 100)) * 1.16) - ($wizardData['monto_credito'] ?? 0)),
+            'indicador_ganancia' => $wizardData['indicador_ganancia'] ?? $this->indicador_ganancia ?? 'N/A',
+        ];
+
+        // Buscar si ya existe una validación pendiente
+        $pendingValidation = $this->validations()
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        if ($pendingValidation) {
+            $pendingValidation->update([
+                'calculator_snapshot' => $snapshot,
+                'requested_by' => $userId,
+            ]);
+            
+            // Asegurar que el acuerdo apunte a esta validación
+            $this->update([
+                'current_validation_id' => $pendingValidation->id,
+                'validation_status' => 'pending',
+                'can_generate_documents' => false,
+                'current_step' => 5,
+            ]);
+
+            return $pendingValidation;
+        }
+
+        // Si no hay pendiente, crear nueva validación
+        $revisionNumber = $this->validations()->count() + 1;
+
+        $validation = $this->validations()->create([
+            'requested_by' => $userId,
+            'status' => 'pending',
+            'calculator_snapshot' => $snapshot,
+            'revision_number' => $revisionNumber,
+        ]);
+
+        // Actualizar estado del agreement
+        $this->update([
+            'validation_status' => 'pending',
+            'current_validation_id' => $validation->id,
+            'can_generate_documents' => false,
+            'current_step' => 5,
+        ]);
+
+        return $validation;
+    }
+
+    public function hasApprovedValidation(): bool
+    {
+        return $this->validation_status === 'approved' && $this->can_generate_documents;
+    }
+
+    public function hasPendingValidation(): bool
+    {
+        return $this->validation_status === 'pending';
+    }
+
+    public function hasObservations(): bool
+    {
+        return $this->validation_status === 'with_observations';
+    }
+
+    public function canGenerateDocuments(): bool
+    {
+        return $this->can_generate_documents && $this->validation_status === 'approved';
+    }
+
+    public function getValidationStatusLabelAttribute(): string
+    {
+        return match($this->validation_status) {
+            'not_required' => 'No Requerida',
+            'pending' => 'Pendiente de Validación',
+            'approved' => 'Validación Aprobada',
+            'rejected' => 'Validación Rechazada',
+            'with_observations' => 'Con Observaciones',
+            default => $this->validation_status,
+        };
+    }
+
+    public function getValidationStatusColorAttribute(): string
+    {
+        return match($this->validation_status) {
+            'not_required' => 'gray',
+            'pending' => 'warning',
+            'approved' => 'success',
+            'rejected' => 'danger',
+            'with_observations' => 'info',
+            default => 'gray',
+        };
     }
 }

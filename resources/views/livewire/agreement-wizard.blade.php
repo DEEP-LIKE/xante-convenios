@@ -121,19 +121,16 @@
                     @include('livewire.wizard-steps.step-1-search')
                     @break
                 @case(2)
-                    @include('livewire.wizard-steps.step-2-client-data')
+                    @include('livewire.wizard-steps.step-2-client-spouse-data')
                     @break
                 @case(3)
-                    @include('livewire.wizard-steps.step-3-spouse-data')
+                    @include('livewire.wizard-steps.step-3-property-data')
                     @break
                 @case(4)
-                    @include('livewire.wizard-steps.step-4-property-data')
+                    @include('livewire.wizard-steps.step-4-calculator')
                     @break
                 @case(5)
-                    @include('livewire.wizard-steps.step-5-calculator')
-                    @break
-                @case(6)
-                    @include('livewire.wizard-steps.step-6-documents')
+                    @include('livewire.wizard-steps.step-5-validation')
                     @break
                 @default
                     <div class="text-center py-12">
@@ -158,9 +155,15 @@
 
             <div class="flex space-x-3">
                 @if($currentStep < 6)
+                    @php
+                        // Deshabilitar botón en paso 5 si no está aprobado
+                        $isDisabled = $currentStep === 5 && !$agreement->hasApprovedValidation();
+                    @endphp
+                    
                     <button wire:click="nextStep" 
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            wire:loading.attr="disabled">
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white {{ $isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700' }} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            wire:loading.attr="disabled"
+                            @if($isDisabled) disabled @endif>
                         <span wire:loading.remove wire:target="nextStep">Siguiente</span>
                         <span wire:loading wire:target="nextStep">Guardando...</span>
                         <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" wire:loading.remove wire:target="nextStep">

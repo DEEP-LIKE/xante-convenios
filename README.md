@@ -1,290 +1,296 @@
-# Portal de Convenios XANTE.MX
+# Xante - Convenios
 
-Sistema de gestión de convenios de compraventa de propiedades integrado con HubSpot CRM, desarrollado con Laravel 12 y FilamentPHP 4.
+Sistema de gestión de convenios inmobiliarios con integración a HubSpot.
 
-## 🎯 Características Principales
+## 🚀 Características Principales
 
-### Integración HubSpot
-- **Sincronización Bidireccional**: Pull (HubSpot → Local) y Push (Local → HubSpot)
-- **Protección contra Race Conditions**: Validación de fechas de modificación
-- **Mapeo Automático**: Contactos y Deals sincronizados con campos personalizados
-- **Visualización en Tiempo Real**: Consulta de estado y monto desde HubSpot sin guardar localmente
+### Sistema de Usuarios y Roles
 
-### Sistema de Wizards
-- **Wizard 1 - Captura de Datos**: 4 pasos para datos del cliente, cónyuge, propiedad y cálculos financieros
-- **Wizard 2 - Gestión de Documentos**: 3 pasos para envío, recepción y cierre exitoso
-- **Generación Automática de PDFs**: 6 documentos profesionales generados al finalizar Wizard 1
-- **Envío por Email**: Notificaciones automáticas a cliente y asesor
+El sistema cuenta con 3 roles principales con permisos específicos:
 
-### Panel de Administración
-- **Dashboard Analítico**: Estadísticas de convenios y sincronización
-- **Gestión de Usuarios**: Roles (Administrador/Asesor) con permisos diferenciados
-- **Tabla de Clientes**: Visualización de estado HubSpot en tiempo real
-- **Restricción de Eliminación**: Solo administradores pueden eliminar registros
+- **Ejecutivo**: Realización de calculadoras y gestión de convenios
+- **Coordinador FI**: Validación de calculadoras, aprobación de cambios de precio, gestión de estados
+- **Gerencia**: Autorización de cambios de comisión, gestión completa del sistema
 
-## 🛠 Stack Tecnológico
+### Calculadora de Cotizaciones
 
-- **Framework**: Laravel 12
-- **Panel Admin**: FilamentPHP 4
-- **Frontend**: Livewire + Tailwind CSS
-- **PDF Generation**: Barryvdh/laravel-dompdf
-- **Queue System**: Laravel Queues
-- **CRM Integration**: HubSpot API v3
-- **Database**: MySQL/PostgreSQL
+- Cálculo automático de comisiones según estado
+- Porcentajes de Gastos de Escrituración (GE) por estado:
+  - Estado de México: 9.5%
+  - Querétaro: 10%
+  - Puebla: 7.5%
+  - Hidalgo: 8%
+  - Quintana Roo: 8%
+- Integración con clientes y propuestas
+- Sistema de autorizaciones para cambios
+
+### Gestión de Cuentas Bancarias
+
+Matriz de cuentas bancarias por estado con soporte para múltiples cuentas:
+
+| Estado | Municipio | Banco | Cuenta | CLABE |
+|--------|-----------|-------|--------|-------|
+| Estado de México | Tecámac | BBVA | 0154352572 | 012180001543525726 |
+| Hidalgo | Tula | BBVA | 0183189163 | 012180001831891638 |
+| Hidalgo | Pachuca | BBVA | 0154870212 | 012180001548702120 |
+| Querétaro | - | BBVA | 0177112955 | 012180001771129554 |
+| Puebla | - | BBVA | 0108111332 | 012180001081113328 |
+| Quintana Roo | Cancún | BBVA | 0183189759 | 012180001831897593 |
+
+### Integración con HubSpot
+
+- Sincronización bidireccional de clientes
+- Gestión de Deals y Contacts
+- Campo para nombre de inmueble (supervisor)
+- Documentación completa en `HUBSPOT_INTEGRATION.md`
+
+### Sistema de Autorizaciones
+
+- Solicitudes de cambio de comisión (requiere aprobación de Gerencia)
+- Solicitudes de cambio de precio (requiere aprobación de Coordinador FI o Gerencia)
+- Tracking completo de autorizaciones con motivos y montos
+- Políticas de acceso por rol
 
 ## 📦 Instalación
 
-### 1. Clonar el repositorio
-```bash
-git clone <repository-url>
-cd xante
-```
+### Requisitos
 
-### 2. Instalar dependencias
+- PHP 8.2+
+- MySQL 8.0+
+- Composer
+- Node.js & NPM
+
+### Configuración Inicial
+
 ```bash
+# Clonar repositorio
+git clone [repository-url]
+cd xante
+
+# Instalar dependencias
 composer install
 npm install
-```
 
-### 3. Configurar el entorno
-```bash
+# Configurar environment
 cp .env.example .env
 php artisan key:generate
-```
 
-### 4. Configurar la base de datos
-Edita el archivo `.env`:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=xante_convenios
-DB_USERNAME=tu_usuario
-DB_PASSWORD=tu_password
-```
+# Configurar base de datos en .env
+DB_DATABASE=xante
+DB_USERNAME=root
+DB_PASSWORD=
 
-### 5. Configurar HubSpot
-Agrega tu token de HubSpot en `.env`:
-```env
-HUBSPOT_API_TOKEN=tu_token_aqui
-HUBSPOT_API_BASE_URL=https://api.hubapi.com
-```
+# Ejecutar migraciones y seeders
+php artisan migrate --seed
 
-### 6. Configurar el correo electrónico
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=tu_email@gmail.com
-MAIL_PASSWORD=tu_password_app
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@xante.mx
-MAIL_FROM_NAME="XANTE.MX"
-```
-
-### 7. Ejecutar migraciones y seeders
-```bash
-php artisan migrate
-php artisan db:seed --class=UserSeeder
-```
-
-### 8. Crear enlace simbólico para storage
-```bash
-php artisan storage:link
-```
-
-### 9. Compilar assets
-```bash
+# Compilar assets
 npm run build
 ```
 
-## 🚀 Uso
+### Seeders Importantes
 
-### 1. Iniciar el servidor
 ```bash
-php artisan serve
+# Usuarios de prueba
+php artisan db:seed --class=UserSeeder
+
+# Porcentajes de GE por estado
+php artisan db:seed --class=StateCommissionRateSeeder
+
+# Cuentas bancarias
+php artisan db:seed --class=StateBankAccountSeeder
 ```
 
-### 2. Iniciar el worker de colas (en otra terminal)
+## 🔐 Usuarios de Prueba
+
+| Usuario | Email | Contraseña | Rol |
+|---------|-------|------------|-----|
+| Gerencia Xante | gerencia@xante.com | `Xante2025!` | gerencia |
+| Coordinador FI | coordinador@xante.com | `Xante2025!` | coordinador_fi |
+| Ejecutivo Demo | ejecutivo@xante.com | `Xante2025!` | ejecutivo |
+| Admin Carbono | admin@carbono.mx | `Carbono2025!` | gerencia |
+| Usuario Vinte | usuario@vinte.com | `Vinte2025!` | ejecutivo |
+
+### Dominios Permitidos
+
+- @xante.com
+- @carbono.mx
+- @vinte.com
+
+## 🗄️ Estructura de Base de Datos
+
+### Tablas Principales
+
+- `users` - Usuarios del sistema con roles
+- `clients` - Clientes sincronizados con HubSpot
+- `agreements` - Convenios inmobiliarios
+- `proposals` - Propuestas de cotización
+- `state_commission_rates` - Porcentajes de GE por estado
+- `state_bank_accounts` - Cuentas bancarias por estado/municipio
+- `quote_authorizations` - Sistema de autorizaciones
+
+### Migraciones Recientes
+
 ```bash
-php artisan queue:work
+2025_12_04_210357_update_user_roles_to_new_structure
+2025_12_04_210357_add_municipality_to_state_bank_accounts
+2025_12_04_211813_create_quote_authorizations_table
+2025_12_04_212153_add_bank_account_id_to_agreements_table
+2025_12_04_213234_add_nombre_inmueble_to_agreements_table
+2025_12_04_213235_add_tipo_credito_conyugal_to_agreements_table
 ```
 
-### 3. Acceder al panel
-Visita `http://localhost:8000/admin` y usa las credenciales por defecto:
+## 🔧 Configuración de HubSpot
 
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| **Administrador** | admin@xante.com | admin123 |
-| **Asesor** | asesor@xante.com | asesor123 |
+### Variables de Entorno
 
-## 🔄 Flujo de Trabajo
+```env
+HUBSPOT_ACCESS_TOKEN=your_access_token
+HUBSPOT_PORTAL_ID=your_portal_id
+```
 
-### 1. Sincronización desde HubSpot (Pull)
-1. En `/admin/clients`, clic en **"Sincronizar HubSpot"**
-2. El sistema trae Deals con `estatus_de_convenio = "Aceptado"`
-3. Crea/actualiza clientes locales con `xante_id` válido
-4. **Protección**: No sobrescribe convenios en proceso o completados
+### Comandos Disponibles
 
-### 2. Creación de Convenio (Wizard 1)
-1. Seleccionar cliente sincronizado desde HubSpot
-2. **Paso 1**: Datos personales del titular
-3. **Paso 2**: Datos del cónyuge (si aplica)
-4. **Paso 3**: Datos de la propiedad (AC/Privada)
-5. **Paso 4**: Calculadora financiera automática
-6. Al finalizar:
-   - Genera 6 PDFs profesionales
-   - Envía email al cliente y asesor
-   - **Actualiza HubSpot**: `estatus_de_convenio = "En Proceso"`
-
-### 3. Gestión de Documentos (Wizard 2)
-1. **Paso 1 - Envío**: Enviar documentos generados al cliente
-2. **Paso 2 - Recepción**: Subir documentos firmados/validados del cliente
-   - Al avanzar: **Actualiza HubSpot**: `estatus_de_convenio = "Aceptado"`
-3. **Paso 3 - Cierre**: Capturar valor final de propuesta
-   - Al guardar: **Actualiza HubSpot**: `amount = valor_propuesta`
-
-## 📊 Estructura del Sistema
-
-### Modelos Principales
-
-- **User**: Usuarios con roles (admin/asesor)
-- **Client**: Clientes sincronizados desde HubSpot
-- **Agreement**: Convenios con wizard_data completo
-- **GeneratedDocument**: PDFs generados automáticamente
-- **ClientDocument**: Documentos subidos por el cliente
-
-### Sincronización HubSpot
-
-#### Mapeo de Campos (Pull: HubSpot → Local)
-
-**Contacto HubSpot → Cliente Local:**
-- `email` → `email`
-- `phone` → `phone`
-- `firstname + lastname` → `name`
-- `address` → `current_address`
-- `city` → `municipality`
-- `state` → `state`
-- `zip` → `postal_code`
-
-**Deal HubSpot → Agreement Local:**
-- `estatus_de_convenio` → Filtro de importación (solo "Aceptado")
-- `amount` → `proposal_value`
-- `createdate` → `fecha_registro`
-
-#### Mapeo de Campos (Push: Local → HubSpot)
-
-**Cliente Local → Deal HubSpot:**
-- `name` → `nombre_del_titular`
-- `current_address` → `calle_o_privada_`
-- `neighborhood` → `colonia`
-- `state` → `estado`
-
-**Agreement Local → Deal HubSpot:**
-- `status: draft/in_progress` → `estatus_de_convenio: "En Proceso"`
-- `status: completed` → `estatus_de_convenio: "Aceptado"`
-- `proposal_value` → `amount`
-
-### Documentos Generados (Wizard 1)
-
-1. **Datos Generales** - Información completa del convenio
-2. **Acuerdo de Promoción** - Términos y condiciones
-3. **Condiciones de Comercialización** - Detalles de la venta
-4. **Checklist de Expediente** - Lista de documentos requeridos
-5. **Checklist de Expediente (Actualizado)** - Con documentos marcados
-6. **ZIP con todos los documentos**
-
-## 🔐 Seguridad y Permisos
-
-### Roles de Usuario
-
-| Permiso | Administrador | Asesor |
-|---------|---------------|--------|
-| Ver clientes | ✅ | ✅ |
-| Crear convenios | ✅ | ✅ |
-| Ver monto HubSpot | ✅ | ❌ |
-| Eliminar registros | ✅ | ❌ |
-| Gestionar usuarios | ✅ | ❌ |
-| Sincronizar HubSpot | ✅ | ✅ |
-
-### Protecciones Implementadas
-
-1. **Race Conditions**: Compara `updated_at` local vs `lastmodifieddate` de HubSpot
-2. **Convenios en Proceso**: No se sobrescriben desde HubSpot si están activos
-3. **Validación de Email**: Solo dominios `@xante.com` y `@carbono.mx`
-4. **Campos Vacíos**: HubSpot no borra datos locales si envía campos vacíos
-
-## 🧪 Scripts de Utilidad
-
-### Comparar Datos HubSpot vs Local
 ```bash
-php scripts/compare-hubspot-contact.php
+# Sincronizar clientes desde HubSpot
+php artisan hubspot:sync
+
+# Explorar propiedades de HubSpot
+php artisan hubspot:explore
+
+# Probar conexión
+php artisan hubspot:test
 ```
 
-### Auditoría Profunda de Sincronización
+Ver documentación completa en `HUBSPOT_INTEGRATION.md`
+
+## 📋 Permisos por Rol
+
+### Ejecutivo
+- ✅ Crear y editar convenios
+- ✅ Usar calculadora de cotizaciones
+- ✅ Solicitar cambios de comisión/precio
+- ✅ Ver sus propias autorizaciones
+- ❌ Aprobar autorizaciones
+- ❌ Editar configuraciones del sistema
+
+### Coordinador FI
+- ✅ Todo lo de Ejecutivo
+- ✅ Aprobar cambios de precio
+- ✅ Crear/editar estados y % GE
+- ✅ Ver todas las autorizaciones
+- ❌ Aprobar cambios de comisión
+- ❌ Eliminar estados
+
+### Gerencia
+- ✅ Acceso completo al sistema
+- ✅ Aprobar cambios de comisión
+- ✅ Aprobar cambios de precio
+- ✅ Eliminar estados
+- ✅ Gestión completa de usuarios
+
+## 🎯 Flujos de Trabajo
+
+### Creación de Convenio
+
+1. Ejecutivo crea convenio usando wizard
+2. Sistema calcula automáticamente comisiones según estado
+3. Selecciona cuenta bancaria (si hay múltiples opciones)
+4. Captura datos del cliente y cónyuge (si aplica)
+5. Genera PDFs automáticamente
+6. Sincroniza con HubSpot
+
+### Solicitud de Cambio de Precio
+
+1. Ejecutivo solicita cambio desde calculadora
+2. Captura motivo y monto de descuento
+3. Sistema crea registro en `quote_authorizations`
+4. Coordinador FI o Gerencia revisa solicitud
+5. Aprueba o rechaza con motivo
+6. Ejecutivo recibe notificación
+
+### Solicitud de Cambio de Comisión
+
+1. Ejecutivo solicita cambio
+2. Sistema crea registro en `quote_authorizations`
+3. Solo Gerencia puede aprobar
+4. Aprueba o rechaza con motivo
+5. Ejecutivo recibe notificación
+
+## 📊 Validaciones Importantes
+
+### Créditos Conyugales
+
+El sistema valida automáticamente:
+
+- Si estado civil es "casado" → régimen es obligatorio
+- Si régimen es "bienes mancomunados" → datos del cónyuge obligatorios
+- Si tipo de crédito es "coacreditado" o "conyugal" → datos del cónyuge obligatorios
+
+Tipos de crédito:
+- `individual` - Crédito individual
+- `coacreditado` - Crédito coacreditado
+- `conyugal` - Crédito conyugal
+
+## 🛠️ Desarrollo
+
+### Comandos Útiles
+
 ```bash
-php scripts/deep-audit-sync.php
+# Limpiar caché
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+
+# Ejecutar migraciones
+php artisan migrate
+
+# Rollback última migración
+php artisan migrate:rollback
+
+# Recrear base de datos
+php artisan migrate:fresh --seed
 ```
 
-### Forzar Sincronización de un Convenio
+### Testing
+
 ```bash
-php scripts/force-sync-106.php
+# Ejecutar tests
+php artisan test
+
+# Con coverage
+php artisan test --coverage
 ```
 
-## 🚀 Configuración de Producción
+## 📝 Documentación Adicional
 
-### 1. Optimizaciones
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-composer install --optimize-autoloader --no-dev
-```
+- `HUBSPOT_INTEGRATION.md` - Documentación completa de integración con HubSpot
+- `gap_analysis.md` - Análisis de cumplimiento de requerimientos
+- `implementation_plan.md` - Plan de implementación detallado
+- `walkthrough.md` - Guía de funcionalidades implementadas
 
-### 2. Supervisor para colas
-Crear archivo `/etc/supervisor/conf.d/xante-worker.conf`:
-```ini
-[program:xante-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/xante/artisan queue:work --sleep=3 --tries=3
-autostart=true
-autorestart=true
-user=www-data
-numprocs=2
-redirect_stderr=true
-stdout_logfile=/path/to/xante/storage/logs/worker.log
-```
+## 🔄 Estado del Proyecto
 
-### 3. Configurar cron para sincronización automática
-```bash
-# Sincronizar HubSpot cada hora
-0 * * * * cd /path/to/xante && php artisan hubspot:sync >> /dev/null 2>&1
-```
+**Última actualización**: 04/12/2025
 
-## 📝 Notas Importantes
+### Implementado (80%)
+- ✅ Sistema de roles y permisos
+- ✅ Calculadora con % GE correctos
+- ✅ Cuentas bancarias por estado
+- ✅ Sistema de autorizaciones (backend)
+- ✅ Integración HubSpot (parcial)
+- ✅ Validaciones de cónyuge (estructura)
 
-- **HubSpot como Fuente de Verdad**: Los clientes se importan desde HubSpot, no se crean manualmente
-- **No hay Seeders de Clientes**: Los clientes vienen exclusivamente de la sincronización con HubSpot
-- **Convenios Locales**: Se crean en la plataforma y sincronizan su estado a HubSpot
-- **Documentos**: Se generan y almacenan localmente, no en HubSpot
-
-## 🐛 Troubleshooting
-
-### Error: "Cliente no tiene HubSpot ID"
-**Solución**: Ejecutar sincronización desde `/admin/clients` → "Sincronizar HubSpot"
-
-### Datos desactualizados en tabla
-**Solución**: Las columnas de HubSpot consultan en tiempo real. Refrescar la página.
-
-### Convenio sobrescrito por sincronización
-**Solución**: El sistema protege convenios `in_progress` y `completed`. Verificar el estado del convenio.
+### Pendiente (20%)
+- ⏳ UI de autorizaciones (QuoteAuthorizationResource)
+- ⏳ Selector de cuenta bancaria en wizard
+- ⏳ Sincronización completa con HubSpot
+- ⏳ Validaciones obligatorias de cónyuge en UI
+- ⏳ Integración de PDFs con cuenta seleccionada
 
 ## 📞 Soporte
 
-Para soporte técnico o consultas:
-- Email: info@xante.mx
-- Tel: +52 (55) 1234-5678
+Para dudas o problemas, contactar al equipo de desarrollo.
 
 ## 📄 Licencia
 
-Este proyecto es propiedad de XANTE.MX. Todos los derechos reservados.
+Propietario: Xante & VI, SAPI de CV

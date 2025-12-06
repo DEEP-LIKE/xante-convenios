@@ -365,10 +365,10 @@ class PdfGenerationService
             'monthNames' => $monthNames,
             'xante_id' => $agreement->client_xante_id ?? $wizardData['xante_id'] ?? '',
             
-            // Datos bancarios (buscar por estado de la propiedad)
-            'bank_name' => $this->getBankDataForState($wizardData['estado_propiedad'] ?? null, 'bank_name'),
-            'bank_account' => $this->getBankDataForState($wizardData['estado_propiedad'] ?? null, 'account_number'),
-            'bank_clabe' => $this->getBankDataForState($wizardData['estado_propiedad'] ?? null, 'clabe'),
+            // Datos bancarios (usar cuenta seleccionada o buscar por estado)
+            'bank_name' => $this->getBankData($wizardData, 'bank_name'),
+            'bank_account' => $this->getBankData($wizardData, 'account_number'),
+            'bank_clabe' => $this->getBankData($wizardData, 'clabe'),
             
             // Imágenes en formato base64 para PDFs
             'logo_path' => $this->getImageBase64('Logo-Xante.png'),
@@ -446,6 +446,40 @@ class PdfGenerationService
             Log::error("Error al convertir imagen a base64: {$filename}", ['error' => $e->getMessage()]);
             return '';
         }
+    }
+    
+    /**
+     * Obtiene datos bancarios usando el bank_account_id seleccionado o por estado
+     */
+    private function getBankData(array $wizardData, string $field): string
+    {
+        // Prioridad 1: Usar bank_account_id si fue seleccionado en el wizard
+        if (!empty($wizardData['bank_account_id'])) {
+            $bankAccount = \App\Models\StateBankAccount::find($wizardData['bank_account_id']);
+            
+            if ($bankAccount) {
+                Log::info("Usando cuenta bancaria seleccionada en wizard", [
+                    'bank_account_id' => $wizardData['bank_account_id'],
+                    'bank_name' => $bankAccount->bank_name,
+                    'municipality' => $bankAccount->municipality
+                ]);
+                
+                return $bankAccount->{$field} ?? $this->getDefaultBankData($field);
+            }
+        }
+        
+        // Prioridad 2: Fallback a búsqueda por estado (para convenios antiguos)
+        if (!empty($wizardData['estado_propiedad'])) {
+            Log::info("Fallback: Buscando cuenta bancaria por estado", [
+                'estado_propiedad' => $wizardData['estado_propiedad']
+            ]);
+            
+            return $this->getBankDataForState($wizardData['estado_propiedad'], $field);
+        }
+        
+        // Prioridad 3: Valores por defecto
+        Log::warning("No se encontró bank_account_id ni estado_propiedad, usando valores por defecto");
+        return $this->getDefaultBankData($field);
     }
     
     /**

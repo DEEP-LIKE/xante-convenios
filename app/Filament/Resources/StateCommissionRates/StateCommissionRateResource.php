@@ -32,6 +32,11 @@ class StateCommissionRateResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'state_name';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return in_array(auth()->user()?->role, ['gerencia', 'coordinador_fi']);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema

@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
@@ -13,32 +13,49 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Crear usuario administrador
-        User::updateOrCreate(
-            ['email' => 'admin@xante.com'],
+        $users = [
             [
-                'name' => 'Administrador',
-                'email' => 'admin@xante.com',
-                'password' => Hash::make('admin123'),
-                'role' => 'admin',
+                'name' => 'Gerencia Xante',
+                'email' => 'gerencia@xante.com',
+                'password' => Hash::make('Xante2025!'),
+                'role' => 'gerencia',
                 'email_verified_at' => now(),
-            ]
-        );
-
-        // Crear usuario asesor de ejemplo
-        User::updateOrCreate(
-            ['email' => 'asesor@xante.com'],
+            ],
             [
-                'name' => 'Asesor Demo',
-                'email' => 'asesor@xante.com',
-                'password' => Hash::make('asesor123'),
-                'role' => 'asesor',
+                'name' => 'Coordinador FI',
+                'email' => 'coordinador@xante.com',
+                'password' => Hash::make('Xante2025!'),
+                'role' => 'coordinador_fi',
                 'email_verified_at' => now(),
-            ]
-        );
+            ],
+            [
+                'name' => 'Ejecutivo Demo',
+                'email' => 'ejecutivo@xante.com',
+                'password' => Hash::make('Xante2025!'),
+                'role' => 'ejecutivo',
+                'email_verified_at' => now(),
+            ],
+            [
+                'name' => 'Admin Carbono',
+                'email' => 'admin@carbono.mx',
+                'password' => Hash::make('Carbono2025!'),
+                'role' => 'gerencia',
+                'email_verified_at' => now(),
+            ],
+            [
+                'name' => 'Usuario Vinte',
+                'email' => 'usuario@vinte.com',
+                'password' => Hash::make('Vinte2025!'),
+                'role' => 'ejecutivo',
+                'email_verified_at' => now(),
+            ],
+        ];
 
-        $this->command->info('Usuarios creados exitosamente:');
-        $this->command->info('- admin@xante.com / admin123 (Administrador)');
-        $this->command->info('- asesor@xante.com / asesor123 (Asesor)');
+        foreach ($users as $userData) {
+            User::updateOrCreate(
+                ['email' => $userData['email']],
+                $userData
+            );
+        }
     }
 }

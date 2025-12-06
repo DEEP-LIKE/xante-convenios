@@ -696,6 +696,32 @@ class AgreementResource extends Resource
                         'convenio_firmado' => 'Convenio Firmado',
                         default => $state,
                     }),
+                Tables\Columns\TextColumn::make('validation_status')
+                    ->label('Estado Validación')
+                    ->badge()
+                    ->icon(fn (string $state): ?string => match ($state) {
+                        'pending' => 'heroicon-m-clock',
+                        'approved' => 'heroicon-m-check-circle',
+                        'rejected' => 'heroicon-m-x-circle',
+                        'with_observations' => 'heroicon-m-exclamation-triangle',
+                        default => null,
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        'with_observations' => 'orange',
+                        'not_required' => 'gray',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending' => 'En Revisión',
+                        'approved' => 'Aprobado',
+                        'rejected' => 'Rechazado',
+                        'with_observations' => 'Con Observaciones',
+                        'not_required' => 'No Requerido',
+                        default => 'Pendiente',
+                    }),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha Creación')
                     ->dateTime('d/m/Y H:i')
@@ -710,7 +736,7 @@ class AgreementResource extends Resource
                     ->icon('heroicon-o-pencil'),
             ])
             ->bulkActions(
-                auth()->user()?->role === 'admin' 
+                in_array(auth()->user()?->role, ['admin', 'gerencia'])
                     ? [
                         BulkActionGroup::make([
                             DeleteBulkAction::make(),
@@ -719,7 +745,7 @@ class AgreementResource extends Resource
                     : []
             )
             ->checkIfRecordIsSelectableUsing(
-                fn ($record): bool => auth()->user()?->role === 'admin',
+                fn ($record): bool => in_array(auth()->user()?->role, ['admin', 'gerencia']),
             );
     }
 

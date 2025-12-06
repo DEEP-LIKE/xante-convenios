@@ -12,6 +12,13 @@ class StateCommissionRateSeeder extends Seeder
      */
     public function run(): void
     {
+        // Estados con municipios específicos (Hidalgo tiene 2 entradas)
+        $statesWithMunicipality = [
+            ['name' => 'Hidalgo', 'code' => 'HGO', 'municipality' => 'Pachuca', 'percentage' => 8.0],
+            ['name' => 'Hidalgo', 'code' => 'HGO', 'municipality' => 'Tula', 'percentage' => 8.0],
+        ];
+
+        // Estados sin municipio específico
         $states = [
             ['name' => 'Aguascalientes', 'code' => 'AGS'],
             ['name' => 'Baja California', 'code' => 'BC'],
@@ -25,7 +32,6 @@ class StateCommissionRateSeeder extends Seeder
             ['name' => 'Durango', 'code' => 'DGO'],
             ['name' => 'Guanajuato', 'code' => 'GTO'],
             ['name' => 'Guerrero', 'code' => 'GRO'],
-            ['name' => 'Hidalgo', 'code' => 'HGO'],
             ['name' => 'Jalisco', 'code' => 'JAL'],
             ['name' => 'Estado de México', 'code' => 'MEX'],
             ['name' => 'Michoacán', 'code' => 'MICH'],
@@ -47,13 +53,49 @@ class StateCommissionRateSeeder extends Seeder
             ['name' => 'Zacatecas', 'code' => 'ZAC'],
         ];
 
-        foreach ($states as $state) {
+        // Porcentajes específicos según requerimientos del cliente
+        $statePercentages = [
+            'Estado de México' => 9.5,
+            'Querétaro' => 10.0,
+            'Puebla' => 7.5,
+            'Quintana Roo' => 8.0,
+        ];
+
+        // Solo estos estados tienen cuentas bancarias configuradas
+        $statesWithBankAccounts = [
+            'Estado de México',
+            'Querétaro',
+            'Puebla',
+            'Quintana Roo',
+        ];
+
+        // Insertar estados con municipio (Hidalgo)
+        foreach ($statesWithMunicipality as $state) {
             StateCommissionRate::updateOrCreate(
-                ['state_code' => $state['code']],
+                [
+                    'state_code' => $state['code'],
+                    'municipality' => $state['municipality']
+                ],
                 [
                     'state_name' => $state['name'],
-                    'commission_percentage' => 5.00, // Valor por defecto
-                    'is_active' => true,
+                    'commission_percentage' => $state['percentage'],
+                    'is_active' => true, // Hidalgo tiene cuentas bancarias
+                ]
+            );
+        }
+
+        // Insertar estados sin municipio
+        foreach ($states as $state) {
+            StateCommissionRate::updateOrCreate(
+                [
+                    'state_code' => $state['code'],
+                    'municipality' => null
+                ],
+                [
+                    'state_name' => $state['name'],
+                    'commission_percentage' => $statePercentages[$state['name']] ?? 5.00,
+                    // Solo habilitar estados con cuentas bancarias
+                    'is_active' => in_array($state['name'], $statesWithBankAccounts),
                 ]
             );
         }

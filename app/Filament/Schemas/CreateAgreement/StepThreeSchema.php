@@ -80,8 +80,11 @@ class StepThreeSchema
                                         if ($state) {
                                             $rate = \App\Models\StateCommissionRate::where('state_name', $state)->first();
                                             $set('state_commission_percentage', $rate ? $rate->commission_percentage : 0);
+                                            // Limpiar la cuenta bancaria seleccionada cuando cambia el estado
+                                            $set('bank_account_id', null);
                                         } else {
                                             $set('state_commission_percentage', 0);
+                                            $set('bank_account_id', null);
                                         }
                                     }),
                                 \Filament\Forms\Components\Hidden::make('state_commission_percentage')
@@ -118,6 +121,39 @@ class StepThreeSchema
                                     ]),
                             ]),
                     ])
+                    ->collapsible(),
+
+                Section::make('CUENTA BANCARIA')
+                    ->description('Seleccione la cuenta donde se realizará el depósito')
+                    ->schema([
+                        \Filament\Forms\Components\Select::make('bank_account_id')
+                            ->label('Cuenta Bancaria')
+                            ->options(function (callable $get) {
+                                $stateName = $get('estado_propiedad');
+                                if (!$stateName) {
+                                    return [];
+                                }
+
+                                return \App\Models\StateBankAccount::where('state_name', $stateName)
+                                    ->whereHas('commissionRate', function ($query) {
+                                        $query->where('is_active', true);
+                                    })
+                                    ->get()
+                                    ->mapWithKeys(function ($account) {
+                                        $label = "{$account->bank_name} - {$account->account_number}";
+                                        if ($account->municipality) {
+                                            $label .= " ({$account->municipality})";
+                                        }
+                                        return [$account->id => $label];
+                                    });
+                            })
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->helperText('Seleccione la cuenta bancaria correspondiente al estado y municipio de la propiedad.'),
+                    ])
+                    ->visible(fn (callable $get) => !empty($get('estado_propiedad')))
                     ->collapsible(),
             ]);
     }

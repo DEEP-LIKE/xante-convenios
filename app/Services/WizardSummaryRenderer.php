@@ -157,4 +157,96 @@ class WizardSummaryRenderer
             </div>
         ', ['message' => $message]);
     }
+    /**
+     * Renderiza el estado de validación con el mismo diseño que los otros cards
+     */
+    public function renderValidationStatus(string $status, ?object $currentValidation = null): string
+    {
+        // Estado: Aprobado
+        if ($status === 'approved') {
+            $aprobadoPor = $currentValidation?->validatedBy?->name ?? 'Coordinador FI';
+            $fecha = $currentValidation?->validated_at->format('d/m/Y H:i') ?? '';
+            
+            return Blade::render('
+                <x-wizard.summary-card title="Validación Aprobada" icon="heroicon-s-check-circle" color="success">
+                    <p style="font-size: 15px; color: #047857; margin-bottom: 20px; line-height: 1.6;">
+                        ¡Excelente! Tu calculadora ha sido aprobada por el Coordinador FI. 
+                        Ya puedes continuar con la generación de documentos.
+                    </p>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #A7F3D0;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <svg style="width: 20px; height: 20px; color: #10B981;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                <div>
+                                    <span style="display: block; font-size: 13px; color: #064e3b; font-weight: 600;">Aprobado por</span>
+                                    <span style="font-size: 14px; color: #059669;">{{ $aprobadoPor }}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <svg style="width: 20px; height: 20px; color: #10B981;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <div>
+                                    <span style="display: block; font-size: 13px; color: #064e3b; font-weight: 600;">Fecha</span>
+                                    <span style="font-size: 14px; color: #059669; font-weight: 600;">{{ $fecha }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </x-wizard.summary-card>
+            ', ['aprobadoPor' => $aprobadoPor, 'fecha' => $fecha]);
+        }
+        
+        // Estado: Pendiente
+        if ($status === 'pending') {
+            $fecha = $currentValidation?->created_at->format('d/m/Y H:i') ?? '';
+            $revision = $currentValidation?->revision_number ?? 1;
+            
+            return Blade::render('
+                <x-wizard.summary-card title="En Proceso de Validación" icon="heroicon-o-clock" color="warning">
+                    <p style="font-size: 15px; color: #B45309; margin-bottom: 20px; line-height: 1.6;">
+                        Tu calculadora está siendo revisada por el Coordinador FI. 
+                        Recibirás una notificación cuando sea aprobada o si requiere cambios.
+                    </p>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #FED7AA; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <svg style="width: 20px; height: 20px; color: #F97316;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <div>
+                                    <span style="display: block; font-size: 13px; color: #7c2d12; font-weight: 600;">Solicitud enviada</span>
+                                    <span style="font-size: 14px; color: #ea580c;">{{ $fecha }}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <svg style="width: 20px; height: 20px; color: #F97316;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                </svg>
+                                <div>
+                                    <span style="display: block; font-size: 13px; color: #7c2d12; font-weight: 600;">Revisión</span>
+                                    <span style="font-size: 14px; color: #ea580c; font-weight: 600;">#{{ $revision }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255, 237, 213, 0.5); border-radius: 8px; border-left: 3px solid #F97316;">
+                        <svg style="width: 20px; height: 20px; color: #EA580C; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p style="font-size: 13px; color: #9A3412; margin: 0;">
+                            No puedes continuar hasta que el coordinador apruebe la calculadora. El botón "Continuar y Generar Documentos" estará deshabilitado.
+                        </p>
+                    </div>
+                </x-wizard.summary-card>
+            ', ['fecha' => $fecha, 'revision' => $revision]);
+        }
+        
+        return $this->renderEmptyState('Esperando inicio de validación...');
+    }
 }

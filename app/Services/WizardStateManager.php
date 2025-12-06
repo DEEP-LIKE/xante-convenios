@@ -24,10 +24,14 @@ class WizardStateManager
     public function initializeWizard(?int $agreementId, ?int $clientId): WizardStateDTO
     {
         // Prioridad 1: Recuperar desde la sesión
-        $sessionAgreementId = $this->loadFromSession();
+        // $sessionAgreementId = $this->loadFromSession();
 
         // Prioridad 2: Usar el parámetro proporcionado
-        $finalAgreementId = $agreementId ?? $sessionAgreementId;
+        // $finalAgreementId = $agreementId ?? $sessionAgreementId;
+        
+        // CORRECCIÓN: Si no viene ID en la URL, asumimos que es NUEVO convenio.
+        // No recuperamos de sesión para evitar que "Crear Nuevo" te mande al anterior.
+        $finalAgreementId = $agreementId;
 
         if ($finalAgreementId) {
             return $this->loadExistingAgreement($finalAgreementId);

@@ -19,7 +19,38 @@ class StepFourSchema
             ->description('Cálculos financieros del convenio')
             ->icon('heroicon-o-calculator')
             ->afterValidation(function () use ($page) {
-                $page->saveStepData(5);
+                $page->saveStepData(4);
+                
+                // Enviar a validación después de completar la calculadora
+                $agreementId = $page->agreementId ?? request()->get('agreement');
+                
+                \Log::info('Step 4 completed - Checking validation request', [
+                    'agreement_id' => $agreementId,
+                    'has_agreement_id' => (bool) $agreementId
+                ]);
+
+                if ($agreementId) {
+                    $agreement = \App\Models\Agreement::find($agreementId);
+                    if ($agreement) {
+                        $validationService = app(\App\Services\ValidationService::class);
+                        try {
+                            $validationService->requestValidation($agreement, auth()->user());
+                            \Log::info('Validation requested from Filament wizard', [
+                                'agreement_id' => $agreement->id,
+                                'user_id' => auth()->id(),
+                            ]);
+                        } catch (\Exception $e) {
+                            \Log::error('Error requesting validation from Filament wizard', [
+                                'agreement_id' => $agreement->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    } else {
+                        \Log::warning('Agreement not found for validation request', ['agreement_id' => $agreementId]);
+                    }
+                } else {
+                    \Log::warning('No agreement ID found in Step 4 completion');
+                }
             })
             ->schema([
                 // ⭐ Indicador de Pre-cálculo Previo
@@ -196,7 +227,7 @@ class StepFourSchema
                                         return $config ? $config->value : 6.50;
                                     })
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText('Valor fijo desde configuración'),
                                 TextInput::make('iva_percentage')
@@ -215,7 +246,7 @@ class StepFourSchema
                                         }
                                     })
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText(function (callable $get) {
                                         $sinIva = (float) $get('porcentaje_comision_sin_iva');
@@ -234,7 +265,7 @@ class StepFourSchema
                                     ->numeric()
                                     ->suffix('%')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText(function (callable $get) {
                                         $stateName = $get('estado_propiedad');
@@ -279,28 +310,28 @@ class StepFourSchema
                                     ->label('Valor CompraVenta')
                                     ->prefix('$')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
                                     ->helperText('Espejo del Valor Convenio'),
                                 TextInput::make('precio_promocion')
                                     ->label('Precio Promoción')
                                     ->prefix('$')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
                                     ->helperText('Valor Convenio × % Multiplicador por estado'),
                                 TextInput::make('monto_comision_sin_iva')
                                     ->label('Monto Comisión (Sin IVA)')
                                     ->prefix('$')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
                                     ->helperText('Valor Convenio × % Comisión'),
                                 TextInput::make('comision_total_pagar')
                                     ->label('Comisión Total a Pagar')
                                     ->prefix('$')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
                                     ->helperText('Monto Comisión (Sin IVA) + IVA'),
                             ]),
@@ -339,14 +370,14 @@ class StepFourSchema
                                     ->label('Total Gastos FI (Venta)')
                                     ->prefix('$')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
                                     ->helperText('ISR + Cancelación de Hipoteca'),
                                 TextInput::make('ganancia_final')
                                     ->label('Ganancia Final (Est.)')
                                     ->prefix('$')
                                     ->disabled()
-                                    ->dehydrated(false)
+                                    ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-green-50 text-green-800 font-bold text-lg'])
                                     ->helperText('Valor CompraVenta - ISR - Cancelación - Comisión Total - Monto Crédito'),
                             ]),

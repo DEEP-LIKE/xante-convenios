@@ -38,7 +38,7 @@ class ConfigurationCalculatorResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->role === 'admin';
+        return in_array(auth()->user()?->role, ['gerencia', 'coordinador_fi']);
     }
 
     public static function form(Schema $schema): Schema

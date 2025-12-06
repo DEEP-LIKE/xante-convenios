@@ -249,6 +249,22 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
         // Cargar defaults de calculadora
         $this->loadCalculatorDefaults();
+        
+        // Redirigir según estado del acuerdo
+        if ($this->agreementId) {
+            $agreement = Agreement::find($this->agreementId);
+            if ($agreement) {
+                // Si la validación está aprobada, ir al Paso 5 (Validación) para que vean el estado
+                // y puedan dar click en "Siguiente/Continuar"
+                if ($agreement->validation_status === 'approved' || $agreement->can_generate_documents) {
+                   $this->currentStep = 5; 
+                } 
+                // Si la validación está pendiente, ir a Validación (Paso 5)
+                elseif ($agreement->validation_status === 'pending') {
+                    $this->currentStep = 5;
+                }
+            }
+        }
 
         // Precargar propuesta si estamos en paso 4 o superior
         if ($state->isInCalculatorStep() && $this->data['client_id'] ?? null) {
@@ -275,13 +291,27 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
             ->submitAction(
                 Action::make('submit')
                     ->action('generateDocumentsAndProceed')
-                    ->label('Validar y Generar Documentos')
+                    ->label('Continuar y Generar Documentos')
                     ->icon('heroicon-o-document-plus')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->modalHeading('Confirmar Envío')
                     ->modalDescription('¿Estás seguro de que desea finalizar y generar los documentos?')
                     ->modalSubmitActionLabel('Sí, Confirmar')
+                    ->disabled(function () {
+                        $agreementId = request()->get('agreement');
+                        if (!$agreementId) {
+                            return true; // Deshabilitar si no hay agreement
+                        }
+                        
+                        $agreement = \App\Models\Agreement::find($agreementId);
+                        if (!$agreement) {
+                            return true; // Deshabilitar si no se encuentra el agreement
+                        }
+                        
+                        // Solo habilitar si está aprobado
+                        return $agreement->validation_status !== 'approved';
+                    })
             )
             ->nextAction(fn (Action $action) => $action->label('Siguiente'))
             ->previousAction(fn (Action $action) => $action->label('Anterior'))

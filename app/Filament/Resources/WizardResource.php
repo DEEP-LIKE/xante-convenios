@@ -129,18 +129,67 @@ class WizardResource extends Resource
                         }
                     })
                     ->badge()
+                    ->html()
                     ->color(function ($state, $record) {
                         $currentWizard = $record->current_wizard ?? 1;
                         $currentStep = $currentWizard === 1 ? $state : ($record->wizard2_current_step ?? 1);
                         
+                        // Si es Paso 5 (Validación), usar color del estado de validación
+                        if ($currentStep == 5) {
+                            return match($record->validation_status) {
+                                'pending' => 'warning',
+                                'approved' => 'success',
+                                'rejected' => 'danger',
+                                'with_observations' => 'orange',
+                                default => 'primary'
+                            };
+                        }
+
                         return match($currentStep) {
                             1 => 'gray',
                             2 => 'blue', 
                             3 => 'info',
                             4 => 'yellow',
-                            5 => 'green',
                             default => 'gray'
                         };
+                    })
+                    ->description(function ($record) {
+                        // Solo mostrar estado de validación si estamos en el paso 5 (Validación)
+                        if (($record->current_wizard ?? 1) === 1 && ($record->current_step == 5)) {
+                            // Retornar iconos SVG directos con estilos inline para controlar tamaño y alineación
+                            return match($record->validation_status) {
+                                'pending' => new \Illuminate\Support\HtmlString('
+                                    <div style="margin-top: 4px;">
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 12px; font-weight: 500;">
+                                            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 
+                                            En Revisión
+                                        </span>
+                                    </div>'),
+                                'approved' => new \Illuminate\Support\HtmlString('
+                                    <div style="margin-top: 4px;">
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-size: 12px; font-weight: 500;">
+                                            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 
+                                            Aprobado
+                                        </span>
+                                    </div>'),
+                                'rejected' => new \Illuminate\Support\HtmlString('
+                                    <div style="margin-top: 4px;">
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-size: 12px; font-weight: 500;">
+                                            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> 
+                                            Rechazado
+                                        </span>
+                                    </div>'),
+                                'with_observations' => new \Illuminate\Support\HtmlString('
+                                    <div style="margin-top: 4px;">
+                                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; font-size: 12px; font-weight: 500;">
+                                            <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> 
+                                            Obs.
+                                        </span>
+                                    </div>'),
+                                default => ''
+                            };
+                        }
+                        return null;
                     }),
                     
                 TextColumn::make('status')
@@ -247,7 +296,7 @@ class WizardResource extends Resource
                     }),
             ])
             ->bulkActions(
-                auth()->user()?->role === 'admin' 
+                in_array(auth()->user()?->role, ['admin', 'gerencia'])
                     ? [
                         BulkActionGroup::make([
                             DeleteBulkAction::make()
@@ -257,7 +306,7 @@ class WizardResource extends Resource
                     : []
             )
             ->checkIfRecordIsSelectableUsing(
-                fn ($record): bool => auth()->user()?->role === 'admin',
+                fn ($record): bool => in_array(auth()->user()?->role, ['admin', 'gerencia']),
             )
             ->emptyStateActions([
                 Action::make('create_first_agreement')
