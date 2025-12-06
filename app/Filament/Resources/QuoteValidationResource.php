@@ -78,13 +78,41 @@ class QuoteValidationResource extends Resource
                 \Filament\Schemas\Components\Section::make('Valor Principal del Convenio')
                     ->description('Campo principal que rige todos los cálculos financieros')
                     ->schema([
+                        \Filament\Forms\Components\Hidden::make('original_valor_convenio')
+                            ->default(fn ($record) => $record?->calculator_snapshot['valor_convenio'] ?? 0),
+                        
+                        \Filament\Forms\Components\Hidden::make('original_porcentaje_comision')
+                            ->default(fn ($record) => $record?->calculator_snapshot['porcentaje_comision_sin_iva'] ?? 0),
+                            
                         \Filament\Forms\Components\TextInput::make('calculator_snapshot.valor_convenio')
                             ->label('Valor Convenio')
                             ->prefix('$')
-                            ->disabled()
+                            ->disabled(fn () => !auth()->check() || auth()->user()->role !== 'coordinador_fi')
                             ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                             ->helperText('Ingrese el valor del convenio para activar todos los cálculos automáticos')
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                // Recalcular valores si es coordinador FI
+                                if (auth()->check() && auth()->user()->role === 'coordinador_fi') {
+                                    $calculatorService = app(\App\Services\AgreementCalculatorService::class);
+                                    $snapshot = $get('calculator_snapshot');
+                                    
+                                    $recalculated = $calculatorService->calculateFromConvenioValue(
+                                        (float) str_replace([',', '$'], '', $state),
+                                        $snapshot['estado_propiedad'] ?? 'CDMX',
+                                        $snapshot['monto_credito'] ?? 0,
+                                        $snapshot['tipo_credito'] ?? 'ninguno',
+                                        (float) ($snapshot['isr'] ?? 0),
+                                        (float) ($snapshot['cancelacion_hipoteca'] ?? 0)
+                                    );
+                                    
+                                    // Actualizar campos calculados
+                                    foreach ($recalculated as $key => $value) {
+                                        $set("calculator_snapshot.{$key}", $value);
+                                    }
+                                }
+                            }),
                     ]),
 
                 \Filament\Schemas\Components\Section::make('Parámetros de Cálculo')
@@ -95,8 +123,31 @@ class QuoteValidationResource extends Resource
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.porcentaje_comision_sin_iva')
                                     ->label('% Comisión (Sin IVA)')
                                     ->suffix('%')
-                                    ->disabled()
-                                    ->helperText('Valor fijo desde configuración'),
+                                    ->disabled(fn () => !auth()->check() || auth()->user()->role !== 'coordinador_fi')
+                                    ->helperText('Valor variable desde configuración')
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        // Recalcular si cambia la comisión
+                                        if (auth()->check() && auth()->user()->role === 'coordinador_fi') {
+                                            $valConvenio = (float) str_replace([',', '$'], '', $get('calculator_snapshot.valor_convenio'));
+                                            $comision = (float) $state;
+                                            
+                                            $montoComision = $valConvenio * ($comision / 100);
+                                            $iva = $montoComision * 0.16;
+                                            $total = $montoComision + $iva;
+                                            
+                                            $set('calculator_snapshot.monto_comision_sin_iva', $montoComision);
+                                            $set('calculator_snapshot.comision_total', $total);
+                                            
+                                            // Recalcular ganancia final
+                                            $isr = (float) str_replace([',', '$'], '', $get('calculator_snapshot.isr') ?? 0);
+                                            $cancelacion = (float) str_replace([',', '$'], '', $get('calculator_snapshot.cancelacion_hipoteca') ?? 0);
+                                            $credito = (float) str_replace([',', '$'], '', $get('calculator_snapshot.monto_credito') ?? 0);
+                                            
+                                            $ganancia = $valConvenio - $isr - $cancelacion - $total - $credito;
+                                            $set('calculator_snapshot.ganancia_final', $ganancia);
+                                        }
+                                    }),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.comision_iva_incluido')
                                     ->label('Comisión IVA incluido')
                                     ->suffix('%')
@@ -273,7 +324,12 @@ class QuoteValidationResource extends Resource
                     ->modalHeading('Aprobar Validación')
                     ->modalDescription('¿Está seguro de que desea aprobar esta validación?')
                     ->visible(fn (QuoteValidation $record): bool => 
-                        $record->isPending() && auth()->user()->can('approve', $record))
+                        $record->isPending() && 
+                        auth()->user()->can('approve', $record) &&
+                        !$record->hasValueChanges(
+                            (float) ($record->calculator_snapshot['valor_convenio'] ?? 0),
+                            (float) ($record->calculator_snapshot['porcentaje_comision_sin_iva'] ?? 0)
+                        ))
                     ->action(function (QuoteValidation $record) {
                         app(ValidationService::class)->approveValidation($record, auth()->user());
                         
@@ -282,6 +338,47 @@ class QuoteValidationResource extends Resource
                             ->success()
                             ->send();
                     }),
+
+                Action::make('approve_with_changes')
+                    ->label('Solicitar Autorización')
+                    ->icon('heroicon-o-shield-check')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Solicitar Autorización de Cambios')
+                    ->modalDescription(function (QuoteValidation $record) {
+                        $snapshot = $record->calculator_snapshot;
+                        $oldPrice = number_format((float) ($snapshot['valor_convenio'] ?? 0), 2);
+                        $oldCommission = number_format((float) ($snapshot['porcentaje_comision_sin_iva'] ?? 0), 2);
+                        
+                        return "Se han detectado cambios en los valores originales.\n\n" .
+                               "Estos cambios requieren autorización de gerencia antes de proceder.\n\n" .
+                               "¿Desea enviar una solicitud de autorización?";
+                    })
+                    ->visible(fn (QuoteValidation $record): bool => 
+                        $record->isPending() && 
+                        auth()->user()->role === 'coordinador_fi' &&
+                        $record->hasValueChanges(
+                            (float) ($record->calculator_snapshot['valor_convenio'] ?? 0),
+                            (float) ($record->calculator_snapshot['porcentaje_comision_sin_iva'] ?? 0)
+                        ))
+                    ->action(function (QuoteValidation $record) {
+                        $snapshot = $record->calculator_snapshot;
+                        $newPrice = (float) ($snapshot['valor_convenio'] ?? 0);
+                        $newCommission = (float) ($snapshot['porcentaje_comision_sin_iva'] ?? 0);
+                        
+                        $record->requestAuthorization(
+                            auth()->id(),
+                            $newPrice,
+                            $newCommission
+                        );
+                        
+                        Notification::make()
+                            ->title('Autorización Solicitada')
+                            ->body('Se ha enviado la solicitud a gerencia.')
+                            ->success()
+                            ->send();
+                    }),
+
                 
                 Action::make('request_changes')
                     ->label('Solicitar Cambios')

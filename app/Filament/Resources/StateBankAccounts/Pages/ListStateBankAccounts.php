@@ -19,6 +19,6 @@ class ListStateBankAccounts extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'Las cuentas activas están atadas a los porcentajes activos por estado. Ver la tabla de Porcentajes por Estado.';
+        return 'Las cuentas activas están atados a los gastos notariales.';
     }
 }

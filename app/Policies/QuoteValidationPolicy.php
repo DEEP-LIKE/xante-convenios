@@ -45,9 +45,18 @@ class QuoteValidationPolicy
      */
     public function update(User $user, QuoteValidation $quoteValidation): bool
     {
-        // Solo el solicitante puede actualizar si está pendiente
-        return $user->id === $quoteValidation->requested_by 
-            && $quoteValidation->isPending();
+        // Solo puede actualizar si está pendiente
+        if (!$quoteValidation->isPending()) {
+            return false;
+        }
+
+        // El solicitante puede actualizar
+        if ($user->id === $quoteValidation->requested_by) {
+            return true;
+        }
+
+        // Coordinadores FI también pueden actualizar (para editar valores)
+        return $user->role === 'coordinador_fi';
     }
 
     /**

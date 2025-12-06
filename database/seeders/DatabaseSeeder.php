@@ -22,9 +22,9 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🎉 ¡Base de datos poblada exitosamente!');
         $this->command->info('');
         $this->command->info('📋 CREDENCIALES DE ACCESO:');
-        $this->command->info('   🔐 admin@xante.com / admin123 (Administrador)');
-        $this->command->info('   🔐 asesor@xante.com / asesor123 (Asesor de Ventas)');
-        $this->command->info('   🔐 viewer@xante.com / viewer123 (Viewer)');
+        $this->command->info('   🔐 gerencia@xante.com / Xante2025! (Gerencia)');
+        $this->command->info('   🔐 coordinador@xante.com / Xante2025! (Coordinador FI)');
+        $this->command->info('   🔐 ejecutivo@xante.com / Xante2025! (Ejecutivo)');
         $this->command->info('');
         $this->command->info('🎯 DATOS DE PRUEBA DISPONIBLES:');
         $this->command->info('   👥 3 Clientes (2 con cónyuge/pareja)');

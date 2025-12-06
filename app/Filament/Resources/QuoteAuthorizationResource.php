@@ -109,6 +109,32 @@ class QuoteAuthorizationResource extends Resource
                     ->label('ID')
                     ->sortable(),
                 
+                \Filament\Tables\Columns\TextColumn::make('quoteValidation.agreement_id')
+                    ->label('Convenio')
+                    ->sortable()
+                    ->searchable(),
+
+                \Filament\Tables\Columns\TextColumn::make('quoteValidation.status')
+                    ->label('Estado Validación')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        'with_observations' => 'info',
+                        'awaiting_management_authorization' => 'primary',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending' => 'Pendiente',
+                        'approved' => 'Aprobada',
+                        'rejected' => 'Rechazada',
+                        'with_observations' => 'Con Observaciones',
+                        'awaiting_management_authorization' => 'Esperando Autorización',
+                        default => $state,
+                    })
+                    ->toggleable(),
+
                 \Filament\Tables\Columns\TextColumn::make('requestedBy.name')
                     ->label('Solicitado por')
                     ->searchable()

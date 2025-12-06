@@ -26,13 +26,15 @@ class UsersTable
                     ->label('Rol')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'admin' => 'danger',
-                        'asesor' => 'info',
+                        'gerencia' => 'danger',
+                        'coordinador_fi' => 'warning',
+                        'ejecutivo' => 'info',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'admin' => 'Administrador',
-                        'asesor' => 'Asesor',
+                        'gerencia' => 'Gerencia',
+                        'coordinador_fi' => 'Coordinador FI',
+                        'ejecutivo' => 'Ejecutivo',
                         default => $state,
                     }),
                 TextColumn::make('created_at')  

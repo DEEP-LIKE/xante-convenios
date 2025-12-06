@@ -105,7 +105,13 @@ class StateBankAccountResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
-                ->join('state_commission_rates', 'state_bank_accounts.state_code', '=', 'state_commission_rates.state_code')
+                ->join('state_commission_rates', function ($join) {
+                    $join->on('state_bank_accounts.state_code', '=', 'state_commission_rates.state_code')
+                        ->where(function ($query) {
+                            $query->whereColumn('state_bank_accounts.municipality', 'state_commission_rates.municipality')
+                                ->orWhereNull('state_commission_rates.municipality');
+                        });
+                })
                 ->orderBy('state_commission_rates.is_active', 'desc')
                 ->orderBy('state_commission_rates.commission_percentage', 'desc')
                 ->select('state_bank_accounts.*')
@@ -114,13 +120,7 @@ class StateBankAccountResource extends Resource
                 \Filament\Tables\Columns\TextColumn::make('state_name')
                     ->label('Estado')
                     ->searchable()
-                    ->sortable()
-                    ->formatStateUsing(function ($record) {
-                        if ($record->municipality) {
-                            return $record->state_name . ' - ' . $record->municipality;
-                        }
-                        return $record->state_name;
-                    }),
+                    ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('bank_name')
                     ->label('Banco')
                     ->searchable()

@@ -13,6 +13,7 @@ class QuoteAuthorization extends Model
     protected $fillable = [
         'proposal_id',
         'agreement_id',
+        'quote_validation_id',
         'requested_by',
         'authorized_by',
         'status',
@@ -58,6 +59,11 @@ class QuoteAuthorization extends Model
     public function authorizedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'authorized_by');
+    }
+
+    public function quoteValidation(): BelongsTo
+    {
+        return $this->belongsTo(QuoteValidation::class, 'quote_validation_id');
     }
 
     // Métodos de estado
@@ -114,7 +120,50 @@ class QuoteAuthorization extends Model
         $this->status = 'approved';
         $this->authorized_by = $authorizedById;
         $this->authorized_at = now();
-        return $this->save();
+        
+        $saved = $this->save();
+        
+        // Si hay una validación vinculada, actualizar sus valores
+        if ($saved && $this->quote_validation_id) {
+            $validation = $this->quoteValidation;
+            if ($validation) {
+                $snapshot = $validation->calculator_snapshot;
+                
+                // Actualizar precio si aplica
+                if ($this->isPriceChange() && $this->new_price) {
+                    $snapshot['valor_convenio'] = $this->new_price;
+                    $snapshot['valor_compraventa'] = $this->new_price;
+                }
+                
+                // Actualizar comisión si aplica
+                if ($this->isCommissionChange() && $this->new_commission_percentage) {
+                    $snapshot['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
+                }
+                
+                // Recalcular valores con el servicio de calculadora
+                if ($this->isPriceChange() || $this->isCommissionChange()) {
+                    $calculatorService = app(\App\Services\AgreementCalculatorService::class);
+                    $recalculated = $calculatorService->calculateFromConvenioValue(
+                        $snapshot['valor_convenio'],
+                        $snapshot['estado_propiedad'] ?? 'CDMX',
+                        $snapshot['monto_credito'] ?? 0,
+                        $snapshot['tipo_credito'] ?? 'ninguno',
+                        $snapshot['isr'] ?? 0,
+                        $snapshot['cancelacion_hipoteca'] ?? 0
+                    );
+                    
+                    // Actualizar todos los valores calculados
+                    $snapshot = array_merge($snapshot, $recalculated);
+                }
+                
+                $validation->calculator_snapshot = $snapshot;
+                // Cambiar estado de vuelta a pending para que el coordinador pueda aprobar
+                $validation->status = 'pending';
+                $validation->save();
+            }
+        }
+        
+        return $saved;
     }
 
     public function reject(int $authorizedById, string $reason): bool
@@ -123,6 +172,19 @@ class QuoteAuthorization extends Model
         $this->authorized_by = $authorizedById;
         $this->authorized_at = now();
         $this->rejection_reason = $reason;
-        return $this->save();
+        
+        $saved = $this->save();
+        
+        // Si hay una validación vinculada, revertir su estado a pending
+        if ($saved && $this->quote_validation_id) {
+            $validation = $this->quoteValidation;
+            if ($validation) {
+                // Cambiar estado de vuelta a pending para que el coordinador revise
+                $validation->status = 'pending';
+                $validation->save();
+            }
+        }
+        
+        return $saved;
     }
 }

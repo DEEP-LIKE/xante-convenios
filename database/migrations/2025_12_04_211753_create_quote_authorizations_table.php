@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('proposal_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('agreement_id')->nullable()->constrained()->onDelete('cascade');
+            // Adding quote_validation_id directly here
+            $table->foreignId('quote_validation_id')->nullable()->constrained('quote_validations')->onDelete('cascade');
             $table->foreignId('requested_by')->constrained('users')->onDelete('cascade');
             $table->foreignId('authorized_by')->nullable()->constrained('users')->onDelete('set null');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');

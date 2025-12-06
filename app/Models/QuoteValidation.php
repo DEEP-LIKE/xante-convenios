@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class QuoteValidation extends Model
 {
@@ -46,6 +47,16 @@ class QuoteValidation extends Model
         return $this->belongsTo(User::class, 'validated_by');
     }
 
+    public function authorizations(): HasMany
+    {
+        return $this->hasMany(QuoteAuthorization::class, 'quote_validation_id');
+    }
+
+    public function latestAuthorization()
+    {
+        return $this->hasOne(QuoteAuthorization::class, 'quote_validation_id')->latestOfMany();
+    }
+
     // Métodos de estado
     public function isPending(): bool
     {
@@ -65,6 +76,11 @@ class QuoteValidation extends Model
     public function hasObservations(): bool
     {
         return $this->status === 'with_observations';
+    }
+
+    public function isAwaitingAuthorization(): bool
+    {
+        return $this->status === 'awaiting_management_authorization';
     }
 
     // Scopes
@@ -96,6 +112,11 @@ class QuoteValidation extends Model
     public function scopeForAgreement($query, int $agreementId)
     {
         return $query->where('agreement_id', $agreementId);
+    }
+
+    public function scopeAwaitingAuthorization($query)
+    {
+        return $query->where('status', 'awaiting_management_authorization');
     }
 
     // Métodos de acción
@@ -177,7 +198,64 @@ class QuoteValidation extends Model
             'approved' => 'success',
             'rejected' => 'danger',
             'with_observations' => 'info',
+            'awaiting_management_authorization' => 'primary',
             default => 'gray',
         };
+    }
+
+    /**
+     * Solicita autorización de gerencia para cambios en valores
+     */
+    public function requestAuthorization(
+        int $requestedById,
+        ?float $newPrice = null,
+        ?float $newCommissionPercentage = null
+    ): QuoteAuthorization {
+        // Determinar tipo de cambio
+        $changeType = 'both';
+        if ($newPrice && !$newCommissionPercentage) {
+            $changeType = 'price';
+        } elseif (!$newPrice && $newCommissionPercentage) {
+            $changeType = 'commission';
+        }
+
+        // Obtener valores originales del snapshot
+        $snapshot = $this->calculator_snapshot;
+        $oldPrice = $snapshot['valor_convenio'] ?? null;
+        $oldCommission = $snapshot['porcentaje_comision_sin_iva'] ?? null;
+
+        // Crear la autorización
+        $authorization = QuoteAuthorization::create([
+            'quote_validation_id' => $this->id,
+            'agreement_id' => $this->agreement_id,
+            'requested_by' => $requestedById,
+            'status' => 'pending',
+            'change_type' => $changeType,
+            'old_price' => $oldPrice,
+            'new_price' => $newPrice,
+            'old_commission_percentage' => $oldCommission,
+            'new_commission_percentage' => $newCommissionPercentage,
+        ]);
+
+        // Actualizar estado de la validación
+        $this->status = 'awaiting_management_authorization';
+        $this->save();
+
+        return $authorization;
+    }
+
+    /**
+     * Verifica si hay cambios en los valores comparado con el snapshot original
+     */
+    public function hasValueChanges(float $currentPrice, float $currentCommission): bool
+    {
+        $snapshot = $this->calculator_snapshot;
+        $originalPrice = (float) ($snapshot['valor_convenio'] ?? 0);
+        $originalCommission = (float) ($snapshot['porcentaje_comision_sin_iva'] ?? 0);
+
+        $priceChanged = abs($currentPrice - $originalPrice) > 0.01;
+        $commissionChanged = abs($currentCommission - $originalCommission) > 0.01;
+
+        return $priceChanged || $commissionChanged;
     }
 }

@@ -23,10 +23,11 @@ class UserForm
                 \Filament\Forms\Components\Select::make('role')
                     ->label('Rol')
                     ->options([
-                        'admin' => 'Administrador',
-                        'asesor' => 'Asesor',
+                        'gerencia' => 'Gerencia',
+                        'coordinador_fi' => 'Coordinador FI',
+                        'ejecutivo' => 'Ejecutivo',
                     ])
-                    ->default('asesor')
+                    ->default('ejecutivo')
                     ->required(),
                 TextInput::make('password')
                     ->label('Contraseña')
