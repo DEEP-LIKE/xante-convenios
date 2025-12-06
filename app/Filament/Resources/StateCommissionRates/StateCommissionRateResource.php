@@ -88,7 +88,7 @@ class StateCommissionRateResource extends Resource
                                     'Campeche' => 'CAM', 'Chiapas' => 'CHIS', 'Chihuahua' => 'CHIH',
                                     'Ciudad de México' => 'CDMX', 'Coahuila' => 'COAH', 'Colima' => 'COL',
                                     'Durango' => 'DGO', 'Guanajuato' => 'GTO', 'Guerrero' => 'GRO',
-                                    'Hidalgo' => 'HGO', 'Jalisco' => 'JAL', 'Estado de México' => 'MEX',
+                                    'Hidalgo' => 'HGO', 'Jalisco' => 'JAL', 'Estado de México' => 'MEX', 'México' => 'MEX',
                                     'Michoacán' => 'MICH', 'Morelos' => 'MOR', 'Nayarit' => 'NAY',
                                     'Nuevo León' => 'NL', 'Oaxaca' => 'OAX', 'Puebla' => 'PUE',
                                     'Querétaro' => 'QRO', 'Quintana Roo' => 'QROO', 'San Luis Potosí' => 'SLP',
@@ -138,9 +138,8 @@ class StateCommissionRateResource extends Resource
                     ->label('GE %')
                     ->suffix('%')
                     ->sortable(),
-                \Filament\Tables\Columns\IconColumn::make('is_active')
+                \Filament\Tables\Columns\ToggleColumn::make('is_active')
                     ->label('Activo')
-                    ->boolean()
                     ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

@@ -143,16 +143,23 @@ class QuoteAuthorization extends Model
                 // Recalcular valores con el servicio de calculadora
                 if ($this->isPriceChange() || $this->isCommissionChange()) {
                     $calculatorService = app(\App\Services\AgreementCalculatorService::class);
-                    $recalculated = $calculatorService->calculateFromConvenioValue(
-                        $snapshot['valor_convenio'],
-                        $snapshot['estado_propiedad'] ?? 'CDMX',
-                        $snapshot['monto_credito'] ?? 0,
-                        $snapshot['tipo_credito'] ?? 'ninguno',
-                        $snapshot['isr'] ?? 0,
-                        $snapshot['cancelacion_hipoteca'] ?? 0
+                    
+                    // Preparar parámetros para el cálculo
+                    // Aseguramos que los valores sean float/int correctos
+                    $params = $snapshot;
+                    
+                    // Si cambió la comisión, asegurarse que el nuevo valor se use en el cálculo
+                    if ($this->isCommissionChange() && $this->new_commission_percentage) {
+                        $params['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
+                        $snapshot['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
+                    }
+                    
+                    $recalculated = $calculatorService->calculateAllFinancials(
+                        (float) ($snapshot['valor_convenio'] ?? 0),
+                        $params
                     );
                     
-                    // Actualizar todos los valores calculados
+                    // Actualizar todos los valores calculados en el snapshot
                     $snapshot = array_merge($snapshot, $recalculated);
                 }
                 
@@ -179,8 +186,8 @@ class QuoteAuthorization extends Model
         if ($saved && $this->quote_validation_id) {
             $validation = $this->quoteValidation;
             if ($validation) {
-                // Cambiar estado de vuelta a pending para que el coordinador revise
-                $validation->status = 'pending';
+                // Cambiar estado a rejected para que el coordinador sepa que fue rechazada la solicitud
+                $validation->status = 'rejected';
                 $validation->save();
             }
         }

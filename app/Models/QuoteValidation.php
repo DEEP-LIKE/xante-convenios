@@ -129,10 +129,28 @@ class QuoteValidation extends Model
         $saved = $this->save();
         
         if ($saved) {
-            // Actualizar el agreement
+            // Obtener snapshot con los valores finales validados
+            $snapshot = $this->calculator_snapshot;
+
+            // Actualizar el agreement con los nuevos valores financieros y el estado
             $this->agreement->update([
                 'validation_status' => 'approved',
                 'can_generate_documents' => true,
+                
+                // Actualizar valores financieros principales
+                'valor_convenio' => (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0),
+                'porcentaje_comision_sin_iva' => (float) str_replace([',', '$'], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0),
+                'precio_promocion' => (float) str_replace([',', '$'], '', $snapshot['precio_promocion'] ?? 0),
+                'monto_credito' => (float) str_replace([',', '$'], '', $snapshot['monto_credito'] ?? 0),
+                'tipo_credito' => $snapshot['tipo_credito'] ?? 'ninguno',
+                'isr' => (float) str_replace([',', '$'], '', $snapshot['isr'] ?? 0),
+                'cancelacion_hipoteca' => (float) str_replace([',', '$'], '', $snapshot['cancelacion_hipoteca'] ?? 0),
+                
+                // Actualizar calculados
+                'monto_comision' => (float) str_replace([',', '$'], '', $snapshot['monto_comision_sin_iva'] ?? 0),
+                'comision_total' => (float) str_replace([',', '$'], '', $snapshot['comision_total_pagar'] ?? 0),
+                'ganancia_final' => (float) str_replace([',', '$'], '', $snapshot['ganancia_final'] ?? 0),
+                'total_gastos_fi' => (float) str_replace([',', '$'], '', $snapshot['total_gastos_fi_venta'] ?? 0),
             ]);
         }
         
@@ -209,7 +227,10 @@ class QuoteValidation extends Model
     public function requestAuthorization(
         int $requestedById,
         ?float $newPrice = null,
-        ?float $newCommissionPercentage = null
+        ?float $newCommissionPercentage = null,
+        ?string $justification = null,
+        ?float $explicitOldPrice = null,
+        ?float $explicitOldCommission = null
     ): QuoteAuthorization {
         // Determinar tipo de cambio
         $changeType = 'both';
@@ -219,23 +240,55 @@ class QuoteValidation extends Model
             $changeType = 'commission';
         }
 
-        // Obtener valores originales del snapshot
-        $snapshot = $this->calculator_snapshot;
-        $oldPrice = $snapshot['valor_convenio'] ?? null;
-        $oldCommission = $snapshot['porcentaje_comision_sin_iva'] ?? null;
+        // Obtener valores originales
+        if ($explicitOldPrice !== null) {
+            $oldPrice = $explicitOldPrice;
+        } else {
+            $snapshot = $this->calculator_snapshot;
+            $oldPrice = (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0);
+        }
 
-        // Crear la autorización
-        $authorization = QuoteAuthorization::create([
-            'quote_validation_id' => $this->id,
-            'agreement_id' => $this->agreement_id,
-            'requested_by' => $requestedById,
-            'status' => 'pending',
-            'change_type' => $changeType,
-            'old_price' => $oldPrice,
-            'new_price' => $newPrice,
-            'old_commission_percentage' => $oldCommission,
-            'new_commission_percentage' => $newCommissionPercentage,
-        ]);
+        if ($explicitOldCommission !== null) {
+            $oldCommission = $explicitOldCommission;
+        } else {
+            $snapshot = $this->calculator_snapshot;
+            $oldCommission = (float) str_replace([',', '$'], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);
+        }
+
+        // Buscar autorización pendiente existente
+        $existingAuthorization = $this->authorizations()
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        if ($existingAuthorization) {
+            $existingAuthorization->update([
+                'agreement_id' => $this->agreement_id,
+                'requested_by' => $requestedById,
+                'change_type' => $changeType,
+                'old_price' => $oldPrice,
+                'new_price' => $newPrice,
+                'old_commission_percentage' => $oldCommission,
+                'new_commission_percentage' => $newCommissionPercentage,
+                'discount_reason' => $justification,
+            ]);
+            
+            $authorization = $existingAuthorization;
+        } else {
+            // Crear nueva autorización
+            $authorization = QuoteAuthorization::create([
+                'quote_validation_id' => $this->id,
+                'agreement_id' => $this->agreement_id,
+                'requested_by' => $requestedById,
+                'status' => 'pending',
+                'change_type' => $changeType,
+                'old_price' => $oldPrice,
+                'new_price' => $newPrice,
+                'old_commission_percentage' => $oldCommission,
+                'new_commission_percentage' => $newCommissionPercentage,
+                'discount_reason' => $justification,
+            ]);
+        }
 
         // Actualizar estado de la validación
         $this->status = 'awaiting_management_authorization';

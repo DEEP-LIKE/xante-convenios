@@ -45,8 +45,8 @@ class QuoteValidationPolicy
      */
     public function update(User $user, QuoteValidation $quoteValidation): bool
     {
-        // Solo puede actualizar si está pendiente
-        if (!$quoteValidation->isPending()) {
+        // Se puede actualizar si está pendiente o rechazado (para corregir)
+        if (!in_array($quoteValidation->status, ['pending', 'rejected'])) {
             return false;
         }
 
@@ -79,8 +79,8 @@ class QuoteValidationPolicy
             return false;
         }
 
-        // Solo puede aprobar si está pendiente
-        if (!$quoteValidation->isPending()) {
+        // Solo puede aprobar si está pendiente o rechazado
+        if (!in_array($quoteValidation->status, ['pending', 'rejected'])) {
             return false;
         }
 

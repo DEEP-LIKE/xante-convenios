@@ -19,7 +19,7 @@ class ViewQuoteValidation extends ViewRecord
                 ->modalHeading('Aprobar Validación')
                 ->modalDescription('¿Está seguro de que desea aprobar esta validación?')
                 ->visible(fn (): bool => 
-                    $this->record->isPending() && auth()->user()->can('approve', $this->record))
+                    in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('approve', $this->record))
                 ->action(function () {
                     app(\App\Services\ValidationService::class)->approveValidation($this->record, auth()->user());
                     
@@ -43,7 +43,7 @@ class ViewQuoteValidation extends ViewRecord
                         ->placeholder('Describe los cambios que necesitas que realice el ejecutivo...'),
                 ])
                 ->visible(fn (): bool => 
-                    $this->record->isPending() && auth()->user()->can('requestChanges', $this->record))
+                    in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('requestChanges', $this->record))
                 ->action(function (array $data) {
                     app(\App\Services\ValidationService::class)->requestChanges(
                         $this->record, 
@@ -71,7 +71,7 @@ class ViewQuoteValidation extends ViewRecord
                         ->rows(4),
                 ])
                 ->visible(fn (): bool => 
-                    $this->record->isPending() && auth()->user()->can('reject', $this->record))
+                    in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('reject', $this->record))
                 ->action(function (array $data) {
                     app(\App\Services\ValidationService::class)->rejectValidation(
                         $this->record, 

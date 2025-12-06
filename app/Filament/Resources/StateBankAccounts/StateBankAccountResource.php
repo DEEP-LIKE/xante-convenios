@@ -45,7 +45,40 @@ class StateBankAccountResource extends Resource
                     ->schema([
                         \Filament\Forms\Components\Select::make('state_name')
                             ->label('Nombre del Estado')
-                            ->options(\App\Models\StateCommissionRate::where('is_active', true)->pluck('state_name', 'state_name'))
+                            ->options([
+                                'Aguascalientes' => 'Aguascalientes',
+                                'Baja California' => 'Baja California',
+                                'Baja California Sur' => 'Baja California Sur',
+                                'Campeche' => 'Campeche',
+                                'Chiapas' => 'Chiapas',
+                                'Chihuahua' => 'Chihuahua',
+                                'Ciudad de México' => 'Ciudad de México',
+                                'Coahuila' => 'Coahuila',
+                                'Colima' => 'Colima',
+                                'Durango' => 'Durango',
+                                'Guanajuato' => 'Guanajuato',
+                                'Guerrero' => 'Guerrero',
+                                'Hidalgo' => 'Hidalgo',
+                                'Jalisco' => 'Jalisco',
+                                'Estado de México' => 'Estado de México',
+                                'Michoacán' => 'Michoacán',
+                                'Morelos' => 'Morelos',
+                                'Nayarit' => 'Nayarit',
+                                'Nuevo León' => 'Nuevo León',
+                                'Oaxaca' => 'Oaxaca',
+                                'Puebla' => 'Puebla',
+                                'Querétaro' => 'Querétaro',
+                                'Quintana Roo' => 'Quintana Roo',
+                                'San Luis Potosí' => 'San Luis Potosí',
+                                'Sinaloa' => 'Sinaloa',
+                                'Sonora' => 'Sonora',
+                                'Tabasco' => 'Tabasco',
+                                'Tamaulipas' => 'Tamaulipas',
+                                'Tlaxcala' => 'Tlaxcala',
+                                'Veracruz' => 'Veracruz',
+                                'Yucatán' => 'Yucatán',
+                                'Zacatecas' => 'Zacatecas',
+                            ])
                             ->searchable()
                             ->required()
                             ->live()
@@ -55,7 +88,7 @@ class StateBankAccountResource extends Resource
                                     'Campeche' => 'CAM', 'Chiapas' => 'CHIS', 'Chihuahua' => 'CHIH',
                                     'Ciudad de México' => 'CDMX', 'Coahuila' => 'COAH', 'Colima' => 'COL',
                                     'Durango' => 'DGO', 'Guanajuato' => 'GTO', 'Guerrero' => 'GRO',
-                                    'Hidalgo' => 'HGO', 'Jalisco' => 'JAL', 'México' => 'MEX',
+                                    'Hidalgo' => 'HGO', 'Jalisco' => 'JAL', 'Estado de México' => 'MEX', 'México' => 'MEX',
                                     'Michoacán' => 'MICH', 'Morelos' => 'MOR', 'Nayarit' => 'NAY',
                                     'Nuevo León' => 'NL', 'Oaxaca' => 'OAX', 'Puebla' => 'PUE',
                                     'Querétaro' => 'QRO', 'Quintana Roo' => 'QROO', 'San Luis Potosí' => 'SLP',
@@ -68,9 +101,9 @@ class StateBankAccountResource extends Resource
                         \Filament\Forms\Components\TextInput::make('state_code')
                             ->label('Código del Estado (Abreviatura)')
                             ->required()
-                            ->unique(ignoreRecord: true)
+                            // Unique validation removed effectively or needs scope adjustment if duplicates allowed per municipality
+                            // Keeping it simple as per request to allow creation
                             ->maxLength(10)
-                            // ->disabled()
                             ->dehydrated(),
                         \Filament\Forms\Components\TextInput::make('municipality')
                             ->label('Municipio (Opcional)')
@@ -96,6 +129,10 @@ class StateBankAccountResource extends Resource
                             ->length(18)
                             ->regex('/^[0-9]+$/')
                             ->inputMode('numeric'),
+                        \Filament\Forms\Components\Toggle::make('is_active')
+                            ->label('Activo')
+                            ->default(true)
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
@@ -104,18 +141,6 @@ class StateBankAccountResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
-                ->join('state_commission_rates', function ($join) {
-                    $join->on('state_bank_accounts.state_code', '=', 'state_commission_rates.state_code')
-                        ->where(function ($query) {
-                            $query->whereColumn('state_bank_accounts.municipality', 'state_commission_rates.municipality')
-                                ->orWhereNull('state_commission_rates.municipality');
-                        });
-                })
-                ->orderBy('state_commission_rates.is_active', 'desc')
-                ->orderBy('state_commission_rates.commission_percentage', 'desc')
-                ->select('state_bank_accounts.*')
-            )
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('state_name')
                     ->label('Estado')
@@ -131,9 +156,8 @@ class StateBankAccountResource extends Resource
                 \Filament\Tables\Columns\TextColumn::make('clabe')
                     ->label('CLABE')
                     ->searchable(),
-                \Filament\Tables\Columns\IconColumn::make('commissionRate.is_active')
+                \Filament\Tables\Columns\ToggleColumn::make('is_active')
                     ->label('Activo')
-                    ->boolean()
                     ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

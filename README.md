@@ -107,14 +107,10 @@ php artisan db:seed --class=StateBankAccountSeeder
 | Gerencia Xante | gerencia@xante.com | `Xante2025!` | gerencia |
 | Coordinador FI | coordinador@xante.com | `Xante2025!` | coordinador_fi |
 | Ejecutivo Demo | ejecutivo@xante.com | `Xante2025!` | ejecutivo |
-| Admin Carbono | admin@carbono.mx | `Carbono2025!` | gerencia |
-| Usuario Vinte | usuario@vinte.com | `Vinte2025!` | ejecutivo |
 
 ### Dominios Permitidos
 
 - @xante.com
-- @carbono.mx
-- @vinte.com
 
 ## 🗄️ Estructura de Base de Datos
 

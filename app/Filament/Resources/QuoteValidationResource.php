@@ -48,6 +48,48 @@ class QuoteValidationResource extends Resource
     {
         return $schema
             ->schema([
+                \Filament\Schemas\Components\Section::make()
+                    ->schema([
+                        \Filament\Forms\Components\Placeholder::make('rejection_alert')
+                            ->hiddenLabel()
+                            ->content(fn ($record) => new \Illuminate\Support\HtmlString('
+                                <div style="background-color: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; border: 1px solid #fca5a5;" role="alert">
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.25rem;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 1.5rem; height: 1.5rem; margin-right: 0.5rem;">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                        </svg>
+                                        <span style="font-weight: bold; font-size: 1.1em;">Solicitud de Autorización Rechazada</span>
+                                    </div>
+                                    <div style="margin-left: 2rem;">
+                                        <strong>Motivo:</strong> ' . ($record?->latestAuthorization?->rejection_reason ?? 'No especificado') . '
+                                    </div>
+                                </div>
+                            '))
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(fn ($record) => $record?->latestAuthorization?->status === 'rejected' && in_array($record->status, ['pending', 'rejected']))
+                    ->columnSpanFull(),
+
+                \Filament\Schemas\Components\Section::make()
+                    ->schema([
+                        \Filament\Forms\Components\Placeholder::make('status_alert')
+                            ->hiddenLabel()
+                            ->content(fn ($record) => new \Illuminate\Support\HtmlString('
+                                <div style="background-color: #eff6ff; color: #1e40af; padding: 1rem; border-radius: 0.5rem; border: 1px solid #60a5fa;" role="alert">
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.25rem;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 1.5rem; height: 1.5rem; margin-right: 0.5rem;">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        <span style="font-weight: bold; font-size: 1.1em;">En Espera de Autorización</span>
+                                    </div>
+                                    Esta validación tiene cambios pendientes de aprobar por gerencia.
+                                </div>
+                            '))
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(fn ($record) => $record?->status === 'awaiting_management_authorization')
+                    ->columnSpanFull(),
+
                 \Filament\Schemas\Components\Section::make('Información de la Validación')
                     ->schema([
                         \Filament\Forms\Components\TextInput::make('agreement_id')
@@ -71,6 +113,7 @@ class QuoteValidationResource extends Resource
                                 'approved' => 'Aprobada',
                                 'rejected' => 'Rechazada',
                                 'with_observations' => 'Con Observaciones',
+                                'awaiting_management_authorization' => 'En Espera de Autorización',
                             ])
                             ->disabled(),
                     ]),
@@ -98,19 +141,18 @@ class QuoteValidationResource extends Resource
                                     $calculatorService = app(\App\Services\AgreementCalculatorService::class);
                                     $snapshot = $get('calculator_snapshot');
                                     
-                                    $recalculated = $calculatorService->calculateFromConvenioValue(
+                                    $recalculated = $calculatorService->calculateAllFinancials(
                                         (float) str_replace([',', '$'], '', $state),
-                                        $snapshot['estado_propiedad'] ?? 'CDMX',
-                                        $snapshot['monto_credito'] ?? 0,
-                                        $snapshot['tipo_credito'] ?? 'ninguno',
-                                        (float) ($snapshot['isr'] ?? 0),
-                                        (float) ($snapshot['cancelacion_hipoteca'] ?? 0)
+                                        $snapshot
                                     );
                                     
                                     // Actualizar campos calculados
                                     foreach ($recalculated as $key => $value) {
                                         $set("calculator_snapshot.{$key}", $value);
                                     }
+                                    
+                                    // Asegurar actualización de comision IVA incluido
+                                    $set('calculator_snapshot.comision_iva_incluido', $recalculated['parametros_utilizados']['porcentaje_comision_iva_incluido'] ?? 0);
                                 }
                             }),
                     ]),
@@ -129,36 +171,37 @@ class QuoteValidationResource extends Resource
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                         // Recalcular si cambia la comisión
                                         if (auth()->check() && auth()->user()->role === 'coordinador_fi') {
-                                            $valConvenio = (float) str_replace([',', '$'], '', $get('calculator_snapshot.valor_convenio'));
-                                            $comision = (float) $state;
+                                            $calculatorService = app(\App\Services\AgreementCalculatorService::class);
+                                            $snapshot = $get('calculator_snapshot');
+                                            $snapshot['porcentaje_comision_sin_iva'] = $state;
                                             
-                                            $montoComision = $valConvenio * ($comision / 100);
-                                            $iva = $montoComision * 0.16;
-                                            $total = $montoComision + $iva;
+                                            $recalculated = $calculatorService->calculateAllFinancials(
+                                                (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0),
+                                                $snapshot
+                                            );
                                             
-                                            $set('calculator_snapshot.monto_comision_sin_iva', $montoComision);
-                                            $set('calculator_snapshot.comision_total', $total);
+                                            // Actualizar campos calculados
+                                            foreach ($recalculated as $key => $value) {
+                                                $set("calculator_snapshot.{$key}", $value);
+                                            }
                                             
-                                            // Recalcular ganancia final
-                                            $isr = (float) str_replace([',', '$'], '', $get('calculator_snapshot.isr') ?? 0);
-                                            $cancelacion = (float) str_replace([',', '$'], '', $get('calculator_snapshot.cancelacion_hipoteca') ?? 0);
-                                            $credito = (float) str_replace([',', '$'], '', $get('calculator_snapshot.monto_credito') ?? 0);
-                                            
-                                            $ganancia = $valConvenio - $isr - $cancelacion - $total - $credito;
-                                            $set('calculator_snapshot.ganancia_final', $ganancia);
+                                            // Asegurar actualización de comision IVA incluido
+                                            $set('calculator_snapshot.comision_iva_incluido', $recalculated['parametros_utilizados']['porcentaje_comision_iva_incluido'] ?? 0);
                                         }
                                     }),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.comision_iva_incluido')
                                     ->label('Comisión IVA incluido')
                                     ->suffix('%')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Comisión sin IVA × (1 + % IVA)'),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.multiplicador_estado')
                                     ->label('% Multiplicador por estado')
                                     ->suffix('%')
                                     ->disabled()
-                                    ->helperText(fn ($record) => '% de comisión por estado: ' . ($record?->calculator_snapshot['estado_propiedad'] ?? 'Desconocido')),
+                                    ->dehydrated()
+                                    ->helperText(fn ($record) => ($state = $record?->agreement?->wizard_data['estado_propiedad'] ?? $record?->agreement?->wizard_data['property_state'] ?? $record?->agreement?->wizard_data['estado'] ?? $record?->agreement?->wizard_data['state'] ?? $record?->calculator_snapshot['estado_propiedad'] ?? null) ? '% de comisión por estado: ' . $state : null),
                             ]),
                         
                         \Filament\Schemas\Components\Grid::make(2)
@@ -167,11 +210,13 @@ class QuoteValidationResource extends Resource
                                     ->label('Monto de Crédito')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Valor editable - precargado desde configuración'),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.tipo_credito')
                                     ->label('Tipo de Crédito')
-                                    ->disabled(),
+                                    ->disabled()
+                                    ->dehydrated(),
                             ]),
                     ]),
 
@@ -184,12 +229,14 @@ class QuoteValidationResource extends Resource
                                     ->label('Valor CompraVenta')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Espejo del Valor Convenio'),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.precio_promocion')
                                     ->label('Precio Promoción')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Valor Convenio × % Multiplicador por estado'),
                             ]),
@@ -199,12 +246,14 @@ class QuoteValidationResource extends Resource
                                     ->label('Monto Comisión (Sin IVA)')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Valor Convenio × % Comisión'),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.comision_total')
                                     ->label('Comisión Total a Pagar')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Monto Comisión (Sin IVA) + IVA'),
                             ]),
@@ -219,16 +268,19 @@ class QuoteValidationResource extends Resource
                                     ->label('ISR')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2)),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.cancelacion_hipoteca')
                                     ->label('Cancelación de Hipoteca')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2)),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.total_gastos_fi')
                                     ->label('Total Gastos FI (Venta)')
                                     ->prefix('$')
                                     ->disabled()
+                                    ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('ISR + Cancelación de Hipoteca'),
                             ]),
@@ -236,6 +288,7 @@ class QuoteValidationResource extends Resource
                             ->label('Ganancia Final (Est.)')
                             ->prefix('$')
                             ->disabled()
+                            ->dehydrated()
                             ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                             ->helperText('Valor CompraVenta - ISR - Cancelación - Comisión Total - Monto Crédito')
                             ->columnSpanFull(),
@@ -256,6 +309,11 @@ class QuoteValidationResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->recordUrl(fn (QuoteValidation $record): string => 
+                auth()->user()->can('update', $record) 
+                    ? Pages\EditQuoteValidation::getUrl(['record' => $record]) 
+                    : Pages\ViewQuoteValidation::getUrl(['record' => $record])
+            )
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -291,6 +349,7 @@ class QuoteValidationResource extends Resource
                         'approved' => 'Aprobada',
                         'rejected' => 'Rechazada',
                         'with_observations' => 'Con Observaciones',
+                        'awaiting_management_authorization' => 'En Espera de Autorización',
                         default => $state,
                     }),
                 
@@ -446,6 +505,7 @@ class QuoteValidationResource extends Resource
         return [
             'index' => Pages\ListQuoteValidations::route('/'),
             'view' => Pages\ViewQuoteValidation::route('/{record}'),
+            'edit' => Pages\EditQuoteValidation::route('/{record}/edit'),
         ];
     }
 

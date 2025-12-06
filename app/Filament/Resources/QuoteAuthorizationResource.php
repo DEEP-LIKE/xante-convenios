@@ -61,20 +61,15 @@ class QuoteAuthorizationResource extends Resource
                         \Filament\Schemas\Components\Grid::make(2)
                             ->schema([
                                 \Filament\Forms\Components\TextInput::make('old_price')
-                                    ->label('Precio Anterior')
+                                    ->label('Valor Convenio Anterior')
                                     ->numeric()
                                     ->prefix('$')
                                     ->disabled(),
                                 \Filament\Forms\Components\TextInput::make('new_price')
-                                    ->label('Precio Nuevo')
+                                    ->label('Valor Convenio Nuevo')
                                     ->numeric()
                                     ->prefix('$'),
                             ]),
-                        
-                        \Filament\Forms\Components\TextInput::make('discount_amount')
-                            ->label('Monto de Descuento')
-                            ->numeric()
-                            ->prefix('$'),
                         
                         \Filament\Forms\Components\Textarea::make('discount_reason')
                             ->label('Motivo del Descuento')
@@ -162,7 +157,7 @@ class QuoteAuthorizationResource extends Resource
                     ->toggleable(),
                 
                 \Filament\Tables\Columns\TextColumn::make('new_price')
-                    ->label('Nuevo Precio')
+                    ->label('Nuevo Valor Convenio')
                     ->money('MXN')
                     ->toggleable(),
                 
@@ -277,6 +272,17 @@ class QuoteAuthorizationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return true; // Visible para todos los roles definidos en la política
+        // Visible solo para gerencia
+        return auth()->check() && auth()->user()->role === 'gerencia';
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::where('status', 'pending')->count() ?: null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
     }
 }
