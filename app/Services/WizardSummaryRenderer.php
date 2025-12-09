@@ -200,6 +200,71 @@ class WizardSummaryRenderer
             ', ['aprobadoPor' => $aprobadoPor, 'fecha' => $fecha]);
         }
         
+        // Estado: Con Observaciones
+        if ($status === 'with_observations') {
+            $validadoPor = $currentValidation?->validatedBy?->name ?? 'Coordinador FI';
+            $fecha = $currentValidation?->validated_at->format('d/m/Y H:i') ?? '';
+            $observaciones = $currentValidation?->observations ?? 'Sin observaciones registradas.';
+            
+            return Blade::render('
+                <x-wizard.summary-card title="Requiere Cambios" icon="heroicon-o-exclamation-triangle" color="warning">
+                    <p style="font-size: 15px; color: #9a3412; margin-bottom: 20px; line-height: 1.6;">
+                        El Coordinador FI ha revisado esta calculadora y ha dejado observaciones que requieren tu atención antes de poder continuar.
+                    </p>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #fed7aa; margin-bottom: 20px;">
+                        <h4 style="font-size: 14px; font-weight: 700; color: #9a3412; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            Observaciones:
+                        </h4>
+                        <div style="font-size: 14px; color: #4b5563; background-color: #fff7ed; padding: 12px; border-radius: 6px; border: 1px dashed #fdba74;">
+                            {{ $observaciones }}
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ffedd5; display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg style="width: 16px; height: 16px; color: #f97316;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <span style="font-size: 13px; color: #9a3412;">Revisado por: <strong>{{ $validadoPor }}</strong></span>
+                            </div>
+                            <span style="color: #cbd5e1;">|</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg style="width: 16px; height: 16px; color: #f97316;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span style="font-size: 13px; color: #9a3412;">{{ $fecha }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </x-wizard.summary-card>
+            ', ['validadoPor' => $validadoPor, 'fecha' => $fecha, 'observaciones' => $observaciones]);
+        }
+
+        // Estado: Rechazado
+        if ($status === 'rejected') {
+            $validadoPor = $currentValidation?->validatedBy?->name ?? 'Coordinador FI';
+            $fecha = $currentValidation?->validated_at->format('d/m/Y H:i') ?? '';
+            $observaciones = $currentValidation?->observations ?? 'Sin motivo especificado.';
+            
+            return Blade::render('
+                <x-wizard.summary-card title="Solicitud Rechazada" icon="heroicon-o-x-circle" color="danger">
+                    <p style="font-size: 15px; color: #991b1b; margin-bottom: 20px; line-height: 1.6;">
+                        Tu solicitud ha sido rechazada. Revisa el motivo a continuación contacta al Coordinador FI para más detalles.
+                    </p>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #fecaca; margin-bottom: 20px;">
+                        <h4 style="font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 10px;">Motivo del rechazo:</h4>
+                        <div style="font-size: 14px; color: #4b5563; background-color: #fef2f2; padding: 12px; border-radius: 6px; border: 1px dashed #f87171;">
+                            {{ $observaciones }}
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #fee2e2; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 13px; color: #991b1b;">Rechazado por: <strong>{{ $validadoPor }}</strong></span>
+                            <span style="color: #cbd5e1;">|</span>
+                            <span style="font-size: 13px; color: #991b1b;">{{ $fecha }}</span>
+                        </div>
+                    </div>
+                </x-wizard.summary-card>
+            ', ['validadoPor' => $validadoPor, 'fecha' => $fecha, 'observaciones' => $observaciones]);
+        }
+
         // Estado: Pendiente
         if ($status === 'pending') {
             $fecha = $currentValidation?->created_at->format('d/m/Y H:i') ?? '';

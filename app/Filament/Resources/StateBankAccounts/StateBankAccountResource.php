@@ -34,7 +34,7 @@ class StateBankAccountResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return in_array(auth()->user()?->role, ['gerencia', 'coordinador_fi']);
+        return in_array(auth()->user()?->role, ['gerencia']);
     }
 
     public static function form(Schema $schema): Schema

@@ -344,17 +344,48 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
      */
     public function recalculateAllFinancials(callable $set, callable $get): void
     {
-        $valorConvenio = (float) ($get('valor_convenio') ?? 0);
+        $valorConvenio = (float) str_replace(['$', ','], '', $get('valor_convenio') ?? 0);
         
+        // Obtener y sanitizar el porcentaje de comisión por estado
+        $rawStateCommission = $get('state_commission_percentage');
+        
+        // Función helper local para sanitizar floats
+        $sanitizeFloat = function($value) {
+            if (is_string($value)) {
+                $value = str_replace(',', '.', $value);
+            }
+            return (float) $value;
+        };
+        
+        $stateCommission = $sanitizeFloat($rawStateCommission);
+        
+        // Si es 0 y hay un default configurado (ej fallback), podríamos usarlo, pero mejor confiar en el input
+        // Fallback a 9 solo si es nulo o vacío, pero si es 0 explicitamente (estado sin comision), respetar 0.
+        if ($rawStateCommission === null || $rawStateCommission === '') {
+             $stateCommission = 9.0; // Valor default historial
+        }
+
+        \Illuminate\Support\Facades\Log::info('Recalculating Financials', [
+            'valor_convenio' => $valorConvenio,
+            'state_commission_raw' => $rawStateCommission,
+            'state_commission_sanitized' => $stateCommission,
+            'multiplier_calculated' => (1 + ($stateCommission / 100)),
+        ]);
+
         if ($valorConvenio <= 0) {
             $this->clearCalculatedFields($set);
             return;
         }
 
+        // Calcular el multiplicador para Precio Promoción
+        $multiplicadorPrecioPromocion = 1 + ($stateCommission / 100);
+        $precioPromocion = $valorConvenio * $multiplicadorPrecioPromocion;
+        $set('precio_promocion', number_format($precioPromocion, 2, '.', ''));
+
         $parameters = [
             'porcentaje_comision_sin_iva' => (float) ($get('porcentaje_comision_sin_iva') ?? 6.50),
             'iva_percentage' => (float) (\App\Models\ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->value('value') ?? 16.00),
-            'precio_promocion_multiplicador' => (float) (1 + (($get('state_commission_percentage') ?? 9) / 100)),
+            'precio_promocion_multiplicador' => $multiplicadorPrecioPromocion,
             'isr' => (float) ($get('isr') ?? 0),
             'cancelacion_hipoteca' => (float) ($get('cancelacion_hipoteca') ?? 20000),
             'monto_credito' => (float) ($get('monto_credito') ?? 800000),

@@ -1101,6 +1101,16 @@ private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = 
         if ($agreement->proposal_value) {
             $props['amount'] = $agreement->proposal_value;
         }
+
+        // Mapeo de Valor CompraVenta Original -> Precio comercial supervisor
+        $wizardData = $agreement->wizard_data ?? [];
+        $precioOriginal = $wizardData['valor_compraventa'] ?? $wizardData['valor_convenio'] ?? null;
+        
+        if ($precioOriginal) {
+            // Limpiar formato de moneda si viene con $ o comas
+            $precioClean = (float) str_replace(['$', ','], '', $precioOriginal);
+            $props['precio_comercial'] = $precioClean;
+        }
     }
 
     return $props;

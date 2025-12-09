@@ -45,6 +45,8 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public ?Agreement $agreement = null;
     public array $data = [];
     public ?float $proposal_value = null;
+    public ?float $final_price_value = null;
+    public ?string $final_price_justification = null;
 
     // Propiedades para FileUpload con ->live()
     public array $holder_ine = [];
@@ -192,6 +194,16 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                     ->duration(5000)
                                     ->send();
                             }
+                            
+                            // Sincronizar datos básicos del cliente (Wizard 1) con HubSpot
+                            // Esto asegura que Nombre, Teléfono, Email, etc. se actualicen si se modificaron
+                            try {
+                                app(SyncClientToHubspotAction::class)->execute($this->agreement, $this->agreement->wizard_data ?? []);
+                                \Log::info('HubSpot sincronizado tras envío de documentos (Step 1)', ['agreement_id' => $this->agreement->id]);
+                            } catch (\Exception $e) {
+                                \Log::error('Error sincronizando HubSpot en Step 1', ['error' => $e->getMessage()]);
+                            }
+
                             $this->saveStepData(1);
                         }),
 
@@ -221,6 +233,33 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                 try {
                                     $syncAction = app(SyncClientToHubspotAction::class);
                                     $syncAction->execute($this->agreement, $this->agreement->wizard_data ?? []);
+                                    
+                                    // Sincronización Fase 2: Actualizar 'nombre_inmueble'
+                                    // Se eliminó la restricción de ID 2584 para que aplique a todos
+                                    if ($this->agreement->client && $this->agreement->client->hubspot_deal_id) {
+                                        $hubspotDealId = $this->agreement->client->hubspot_deal_id;
+                                        $xanteId = $this->agreement->client->xante_id;
+                                        
+                                        if ($hubspotDealId && $xanteId) {
+                                            // Lógica idempotente: Solo agregar XA- si no lo tiene
+                                            $nombreInmueble = str_starts_with($xanteId, 'XA-') 
+                                                ? $xanteId 
+                                                : 'XA-' . $xanteId;
+                                            
+                                            $hubspotService = app(\App\Services\HubspotSyncService::class);
+                                            
+                                            // Actualizar Deal
+                                            $hubspotService->updateHubspotDeal($hubspotDealId, [
+                                                'nombre_inmueble' => $nombreInmueble
+                                            ]);
+                                            
+                                            \Log::info('Nombre inmueble actualizado en HubSpot', [
+                                                'deal_id' => $hubspotDealId,
+                                                'nuevo_nombre' => $nombreInmueble
+                                            ]);
+                                        }
+                                    }
+
                                     \Log::info('HubSpot actualizado tras completar documentos', ['agreement_id' => $this->agreement->id]);
                                 } catch (\Exception $e) {
                                     \Log::error('Error sincronizando HubSpot al completar documentos', ['error' => $e->getMessage()]);
@@ -643,6 +682,82 @@ class ManageDocuments extends Page implements HasForms, HasActions
         } catch (\Exception $e) {
             Notification::make()
                 ->title('❌ Error al Guardar')
+                ->body('Ocurrió un error: ' . $e->getMessage())
+                ->danger()
+                ->duration(7000)
+                ->send();
+        }
+    }
+
+    public function requestFinalPriceAuthorization(): void
+    {
+        try {
+            // Validar que se haya ingresado un precio
+            if (is_null($this->final_price_value) || $this->final_price_value <= 0) {
+                Notification::make()
+                    ->title('❌ Error de Validación')
+                    ->body('Debe ingresar un precio final válido.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Validar que se haya ingresado una justificación
+            if (empty($this->final_price_justification)) {
+                Notification::make()
+                    ->title('❌ Error de Validación')
+                    ->body('Debe proporcionar una justificación para el precio final.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Verificar si ya existe una solicitud pendiente
+            $pendingAuth = $this->agreement->finalPriceAuthorizations()
+                ->where('status', 'pending')
+                ->first();
+
+            if ($pendingAuth) {
+                Notification::make()
+                    ->title('⚠️ Solicitud Pendiente')
+                    ->body('Ya existe una solicitud de autorización pendiente.')
+                    ->warning()
+                    ->send();
+                return;
+            }
+
+            // Crear la solicitud de autorización
+            $authorization = \App\Models\FinalPriceAuthorization::create([
+                'agreement_id' => $this->agreement->id,
+                'requested_by' => auth()->id(),
+                'final_price' => $this->final_price_value,
+                'justification' => $this->final_price_justification,
+                'status' => 'pending',
+            ]);
+
+            // Notificar a todos los administradores
+            $admins = \App\Models\User::where('role', 'gerencia')->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\FinalPriceAuthorizationRequestedNotification($authorization->id));
+            }
+
+            Notification::make()
+                ->title('✅ Solicitud Enviada')
+                ->body('La solicitud de autorización ha sido enviada al administrador.')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+            // Limpiar campos
+            $this->final_price_value = null;
+            $this->final_price_justification = null;
+
+            // Refrescar el agreement
+            $this->agreement->refresh();
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('❌ Error al Enviar Solicitud')
                 ->body('Ocurrió un error: ' . $e->getMessage())
                 ->danger()
                 ->duration(7000)

@@ -129,7 +129,7 @@ class ValidationService
 
         foreach ($coordinators as $coordinator) {
             try {
-                $coordinator->notify(new ValidationRequestedNotification($validation));
+                $coordinator->notify(new ValidationRequestedNotification($validation->id));
             } catch (\Exception $e) {
                 Log::error('Error al notificar coordinador', [
                     'coordinator_id' => $coordinator->id,
@@ -153,9 +153,9 @@ class ValidationService
 
         try {
             $notification = match($action) {
-                'approved' => new ValidationApprovedNotification($validation),
-                'with_observations' => new ValidationWithObservationsNotification($validation),
-                'rejected' => new ValidationRejectedNotification($validation),
+                'approved' => new ValidationApprovedNotification($validation->id),
+                'with_observations' => new ValidationWithObservationsNotification($validation->id),
+                'rejected' => new ValidationRejectedNotification($validation->id),
                 default => null,
             };
 

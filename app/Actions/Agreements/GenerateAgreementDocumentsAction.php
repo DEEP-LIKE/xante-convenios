@@ -12,19 +12,10 @@ class GenerateAgreementDocumentsAction
         protected PdfGenerationService $pdfService
     ) {}
 
-    public function execute(int $agreementId, array $wizardData, bool $confirmDataCorrect): ?string
+    public function execute(int $agreementId, array $wizardData, bool $confirmDataCorrect = true): ?string
     {
-        // VALIDACIÓN: Verificar que el checkbox de confirmación esté marcado
-        if (!$confirmDataCorrect) {
-            Notification::make()
-                ->title('⚠️ Confirmación Requerida')
-                ->body('Debe marcar el checkbox para confirmar que ha revisado toda la información antes de generar los documentos.')
-                ->warning()
-                ->duration(5000)
-                ->send();
-            return null;
-        }
-
+        // Ya no se requiere confirmación de checkbox - el ejecutivo ya pasó validación del coordinador
+        
         $agreement = Agreement::find($agreementId);
 
         if (!$agreement) {

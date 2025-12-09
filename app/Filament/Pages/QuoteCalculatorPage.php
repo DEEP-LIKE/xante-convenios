@@ -251,13 +251,6 @@ class QuoteCalculatorPage extends Page implements HasForms
                 ->schema([
                     Grid::make(2)
                         ->schema([
-                            TextInput::make('precio_promocion')
-                                ->label('Precio Promoción')
-                                ->prefix('$')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
-                                ->helperText('Valor Convenio × % Multiplicador por estado'),
                             TextInput::make('valor_compraventa')
                                 ->label('Valor CompraVenta')
                                 ->prefix('$')
@@ -265,6 +258,13 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
                                 ->helperText('Espejo del Valor Convenio'),
+                            TextInput::make('precio_promocion')
+                                ->label('Precio Promoción')
+                                ->prefix('$')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
+                                ->helperText('Valor Convenio × % Multiplicador por estado'),
                             TextInput::make('monto_comision_sin_iva')
                                 ->label('Monto Comisión (Sin IVA)')
                                 ->prefix('$')
@@ -342,15 +342,30 @@ class QuoteCalculatorPage extends Page implements HasForms
      */
     protected function recalculateAllFinancials(): void
     {
-        $valorConvenio = (float) ($this->data['valor_convenio'] ?? 0);
+        // Helper para sanitizar valores numéricos (convertir strings formateados a float)
+        $sanitizeFloat = function($value) {
+            if (is_string($value)) {
+                return (float) str_replace([',', '$', ' '], '', str_replace(',', '.', $value));
+            }
+            return (float) ($value ?? 0);
+        };
         
+        $valorConvenio = $sanitizeFloat($this->data['valor_convenio'] ?? 0);
+
         if ($valorConvenio <= 0) {
             $this->clearCalculatedFields();
             return;
         }
 
         // Preparar parámetros con el multiplicador calculado desde el porcentaje de estado
-        $statePercentage = (float) ($this->data['state_commission_percentage'] ?? 9);
+        $rawStatePercentage = $this->data['state_commission_percentage'] ?? 9;
+        $statePercentage = $sanitizeFloat($rawStatePercentage);
+        
+        // Fallback si es nulo o vacío
+        if ($rawStatePercentage === null || $rawStatePercentage === '') {
+            $statePercentage = 9.0;
+        }
+        
         $dataWithMultiplier = $this->data;
         $dataWithMultiplier['precio_promocion_multiplicador'] = 1 + ($statePercentage / 100);
         $dataWithMultiplier['iva_percentage'] = (float) (ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->value('value') ?? 16.00);

@@ -274,7 +274,7 @@
                 </tr>
                 <tr>
                     <td class="data-label">Fecha de Nacimiento</td>
-                    <td class="data-value">{{ $holder_birthdate ?? '' }}</td>
+                    <td class="data-value">{{ $holder_birthdate ? (strlen($holder_birthdate) > 10 ? substr($holder_birthdate, 0, 10) : $holder_birthdate) : '' }}</td>
                     <td class="data-label">Estado civil</td>
                     <td class="data-value">{{ ucfirst(str_replace('_', ' ', $holder_civil_status ?? '')) }}</td>
                 </tr>
@@ -328,7 +328,8 @@
             </table>
         </div>
 
-        {{-- SECCIÓN: DATOS PERSONALES COACREDITADO/CÓNYUGE --}}
+        {{-- SECCIÓN: DATOS PERSONALES COACREDITADO/CÓNYUGE (Solo si fue seleccionado) --}}
+        @if(!empty($wizardData['has_co_borrower']) && $wizardData['has_co_borrower'])
         <div class="section">
             <div class="section-title">DATOS PERSONALES COACREDITADO / CÓNYUGE:</div>
             
@@ -343,7 +344,7 @@
                 </tr>
                 <tr>
                     <td class="data-label">Fecha de Nacimiento</td>
-                    <td class="data-value">{{ $spouse_birthdate ?? '' }}</td>
+                    <td class="data-value">{{ $spouse_birthdate ? (strlen($spouse_birthdate) > 10 ? substr($spouse_birthdate, 0, 10) : $spouse_birthdate) : '' }}</td>
                     <td class="data-label">Estado civil</td>
                     <td class="data-value">{{ ucfirst(str_replace('_', ' ', $spouse_civil_status ?? '')) }}</td>
                 </tr>
@@ -396,6 +397,7 @@
                 </tr>
             </table>
         </div>
+        @endif
 
         {{-- SECCIÓN: CONTACTO AC Y/O PRESIDENTE DE PRIVADA --}}
         <div class="contact-section">

@@ -131,26 +131,33 @@ class QuoteValidation extends Model
         if ($saved) {
             // Obtener snapshot con los valores finales validados
             $snapshot = $this->calculator_snapshot;
-
-            // Actualizar el agreement con los nuevos valores financieros y el estado
-            $this->agreement->update([
-                'validation_status' => 'approved',
-                'can_generate_documents' => true,
-                
-                // Actualizar valores financieros principales
+            
+            // Sincronizar wizard_data con los valores validados
+            $currentWizardData = $this->agreement->wizard_data ?? [];
+            
+            // Mapear snapshot a las claves usadas en wizard_data
+            $updates = [
                 'valor_convenio' => (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0),
+                'valor_compraventa' => (float) str_replace([',', '$'], '', $snapshot['valor_compraventa'] ?? 0),
                 'porcentaje_comision_sin_iva' => (float) str_replace([',', '$'], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0),
                 'precio_promocion' => (float) str_replace([',', '$'], '', $snapshot['precio_promocion'] ?? 0),
                 'monto_credito' => (float) str_replace([',', '$'], '', $snapshot['monto_credito'] ?? 0),
                 'tipo_credito' => $snapshot['tipo_credito'] ?? 'ninguno',
                 'isr' => (float) str_replace([',', '$'], '', $snapshot['isr'] ?? 0),
                 'cancelacion_hipoteca' => (float) str_replace([',', '$'], '', $snapshot['cancelacion_hipoteca'] ?? 0),
-                
-                // Actualizar calculados
-                'monto_comision' => (float) str_replace([',', '$'], '', $snapshot['monto_comision_sin_iva'] ?? 0),
-                'comision_total' => (float) str_replace([',', '$'], '', $snapshot['comision_total_pagar'] ?? 0),
+                'monto_comision_sin_iva' => (float) str_replace([',', '$'], '', $snapshot['monto_comision_sin_iva'] ?? 0),
+                'comision_total_pagar' => (float) str_replace([',', '$'], '', $snapshot['comision_total_pagar'] ?? 0),
                 'ganancia_final' => (float) str_replace([',', '$'], '', $snapshot['ganancia_final'] ?? 0),
-                'total_gastos_fi' => (float) str_replace([',', '$'], '', $snapshot['total_gastos_fi_venta'] ?? 0),
+                'total_gastos_fi_venta' => (float) str_replace([',', '$'], '', $snapshot['total_gastos_fi_venta'] ?? 0),
+                'state_commission_percentage' => (float) ($snapshot['multiplicador_estado'] ?? 0),
+                'indicador_ganancia' => $snapshot['indicador_ganancia'] ?? 'N/A',
+            ];
+            
+            // Actualizar el agreement con el estado de validación y wizard_data
+            $this->agreement->update([
+                'validation_status' => 'approved',
+                'can_generate_documents' => true,
+                'wizard_data' => array_merge($currentWizardData, $updates)
             ]);
         }
         
@@ -303,9 +310,12 @@ class QuoteValidation extends Model
     public function hasValueChanges(float $currentPrice, float $currentCommission): bool
     {
         $snapshot = $this->calculator_snapshot;
-        $originalPrice = (float) ($snapshot['valor_convenio'] ?? 0);
-        $originalCommission = (float) ($snapshot['porcentaje_comision_sin_iva'] ?? 0);
+        
+        // Sanitizar valores del snapshot (pueden venir con formato de miles/moneda)
+        $originalPrice = (float) str_replace([',', '$', ' '], '', $snapshot['valor_convenio'] ?? 0);
+        $originalCommission = (float) str_replace([',', '$', ' '], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);
 
+        // Comparar con tolerancia de 0.01 para evitar problemas de precisión de punto flotante
         $priceChanged = abs($currentPrice - $originalPrice) > 0.01;
         $commissionChanged = abs($currentCommission - $originalCommission) > 0.01;
 

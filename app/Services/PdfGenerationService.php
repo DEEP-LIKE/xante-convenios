@@ -523,7 +523,12 @@ class PdfGenerationService
         try {
             if (class_exists('\NumberFormatter')) {
                 $formatter = new \NumberFormatter('es', \NumberFormatter::SPELLOUT);
-                return $formatter->format($number);
+                $words = $formatter->format($number);
+                
+                // Reemplazar "coma" por "punto" para decimales (6.5 = "seis punto cinco" no "seis coma cinco")
+                $words = str_replace(' coma ', ' punto ', $words);
+                
+                return $words;
             }
         } catch (\Exception $e) {
             Log::warning("NumberFormatter no disponible: " . $e->getMessage());
@@ -532,13 +537,16 @@ class PdfGenerationService
         // Fallback: implementación básica para números comunes
         $number = round($number, 1);
         
-        if ($number == 6.5) return 'seis punto cinco por ciento';
-        if ($number == 7.0) return 'siete por ciento';
-        if ($number == 7.5) return 'siete punto cinco por ciento';
-        if ($number == 8.0) return 'ocho por ciento';
+        if ($number == 6.5) return 'seis punto cinco';
+        if ($number == 7.0) return 'siete';
+        if ($number == 7.5) return 'siete punto cinco';
+        if ($number == 8.0) return 'ocho';
+        if ($number == 8.5) return 'ocho punto cinco';
+        if ($number == 9.0) return 'nueve';
+        if ($number == 9.5) return 'nueve punto cinco';
         
         // Para otros números, usar formato simple
-        return number_format($number, 1) . ' por ciento';
+        return str_replace('.', ' punto ', number_format($number, 1, '.', ''));
     }
 
     /**

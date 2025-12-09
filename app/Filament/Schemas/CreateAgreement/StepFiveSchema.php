@@ -14,9 +14,7 @@ class StepFiveSchema
         return Step::make('Validación')
             ->description('Validación del Coordinador FI')
             ->icon('heroicon-o-shield-check')
-            ->afterValidation(function () use ($page) {
-                $page->saveStepData(5);
-            })
+            ->completedIcon('heroicon-o-check-circle')
             ->schema([
                 // 1. ESTADO DE VALIDACIÓN (Lo más importante - se muestra primero)
                 Placeholder::make('validation_status_display')

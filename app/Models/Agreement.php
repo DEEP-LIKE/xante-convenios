@@ -107,6 +107,9 @@ class Agreement extends Model
         'validation_status',
         'current_validation_id',
         'can_generate_documents',
+        // Campos de autorización de precio final
+        'final_price_authorization_id',
+        'final_offer_price',
     ];
 
     protected function casts(): array
@@ -132,6 +135,7 @@ class Agreement extends Model
             'proposal_value' => 'decimal:2',
             'proposal_saved_at' => 'datetime',
             'has_co_borrower' => 'boolean',
+            'final_offer_price' => 'decimal:2',
         ];
     }
 
@@ -202,6 +206,18 @@ class Agreement extends Model
     {
         return $this->belongsTo(QuoteValidation::class, 'current_validation_id');
     }
+
+    // Relaciones de autorización de precio final
+    public function finalPriceAuthorizations(): HasMany
+    {
+        return $this->hasMany(FinalPriceAuthorization::class);
+    }
+
+    public function finalPriceAuthorization(): BelongsTo
+    {
+        return $this->belongsTo(FinalPriceAuthorization::class);
+    }
+
 
     public function getStatusLabelAttribute(): string
     {
@@ -389,23 +405,57 @@ class Agreement extends Model
         // Crear snapshot de la calculadora desde wizard_data
         $wizardData = $this->wizard_data ?? [];
         
+        // Helper para sanitizar valores numéricos (convertir strings formateados a float)
+        $toFloat = function($value) {
+            if (is_string($value)) {
+                return (float) str_replace([',', '$', ' '], '', $value);
+            }
+            return (float) ($value ?? 0);
+        };
+        
+        // Sanitizar todos los valores numéricos del wizard_data
+        $valorConvenio = $toFloat($wizardData['valor_convenio'] ?? $this->valor_convenio ?? 0);
+        $precioPromocion = $toFloat($wizardData['precio_promocion'] ?? $this->precio_promocion ?? 0);
+        $porcentajeComision = $toFloat($wizardData['porcentaje_comision_sin_iva'] ?? $this->porcentaje_comision_sin_iva ?? 0);
+        $stateCommission = $toFloat($wizardData['state_commission_percentage'] ?? 0);
+        $montoCredito = $toFloat($wizardData['monto_credito'] ?? $this->monto_credito ?? 0);
+        $isr = $toFloat($wizardData['isr'] ?? $this->isr ?? 0);
+        $cancelacionHipoteca = $toFloat($wizardData['cancelacion_hipoteca'] ?? $this->cancelacion_hipoteca ?? 0);
+        $montoComisionSinIva = $toFloat($wizardData['monto_comision_sin_iva'] ?? 0);
+        $comisionTotal = $toFloat($wizardData['comision_total_pagar'] ?? 0);
+        $gananciaFinal = $toFloat($wizardData['ganancia_final'] ?? $this->ganancia_final ?? 0);
+        
+        // Calcular valores derivados si no existen
+        if ($montoComisionSinIva == 0 && $valorConvenio > 0) {
+            $montoComisionSinIva = $valorConvenio * ($porcentajeComision / 100);
+        }
+        
+        if ($comisionTotal == 0 && $montoComisionSinIva > 0) {
+            $comisionTotal = $montoComisionSinIva * 1.16;
+        }
+        
+        if ($gananciaFinal == 0 && $valorConvenio > 0) {
+            $gananciaFinal = $valorConvenio - $isr - $cancelacionHipoteca - $comisionTotal - $montoCredito;
+        }
+        
         $snapshot = [
-            'precio_promocion' => $wizardData['precio_promocion'] ?? $this->precio_promocion ?? 0,
-            'precio_promocion' => $wizardData['precio_promocion'] ?? $this->precio_promocion ?? 0,
-            'valor_convenio' => $wizardData['valor_convenio'] ?? $this->valor_convenio ?? 0,
-            'valor_compraventa' => $wizardData['valor_compraventa'] ?? $wizardData['valor_convenio'] ?? $this->valor_convenio ?? 0, 
-            'porcentaje_comision_sin_iva' => $wizardData['porcentaje_comision_sin_iva'] ?? $this->porcentaje_comision_sin_iva ?? 0,
-            'multiplicador_estado' => $wizardData['state_commission_percentage'] ?? (($wizardData['valor_convenio'] ?? 0) > 0 ? ((($wizardData['precio_promocion'] ?? 0) / ($wizardData['valor_convenio'] ?? 1)) - 1) * 100 : 0), 
-            'comision_iva_incluido' => ($wizardData['porcentaje_comision_sin_iva'] ?? 0) * 1.16, 
-            'estado_propiedad' => $wizardData['holder_state'] ?? 'Desconocido',
-            'monto_credito' => $wizardData['monto_credito'] ?? $this->monto_credito ?? 0,
+            'precio_promocion' => $precioPromocion,
+            'valor_convenio' => $valorConvenio,
+            'valor_compraventa' => $valorConvenio, 
+            'porcentaje_comision_sin_iva' => $porcentajeComision,
+            'multiplicador_estado' => $stateCommission > 0 ? $stateCommission : ($valorConvenio > 0 && $precioPromocion > 0 ? (($precioPromocion / $valorConvenio) - 1) * 100 : 0), 
+            'comision_iva_incluido' => $porcentajeComision * 1.16, 
+            'estado_propiedad' => $wizardData['estado_propiedad'] ?? $wizardData['holder_state'] ?? 'Desconocido',
+            'monto_credito' => $montoCredito,
             'tipo_credito' => $wizardData['tipo_credito'] ?? 'No seleccionado',
-            'monto_comision_sin_iva' => ($wizardData['monto_comision_sin_iva'] ?? (($wizardData['valor_convenio'] ?? 0) * (($wizardData['porcentaje_comision_sin_iva'] ?? 0) / 100))),
-            'comision_total' => ($wizardData['comision_total'] ?? ((($wizardData['valor_convenio'] ?? 0) * (($wizardData['porcentaje_comision_sin_iva'] ?? 0) / 100)) * 1.16)),
-            'isr' => $wizardData['isr'] ?? $this->isr ?? 0,
-            'cancelacion_hipoteca' => $wizardData['cancelacion_hipoteca'] ?? $this->cancelacion_hipoteca ?? 0,
-            'total_gastos_fi' => ($wizardData['isr'] ?? 0) + ($wizardData['cancelacion_hipoteca'] ?? 0),
-            'ganancia_final' => $wizardData['ganancia_final'] ?? $this->ganancia_final ?? (($wizardData['valor_convenio'] ?? 0) - (($wizardData['isr'] ?? 0) + ($wizardData['cancelacion_hipoteca'] ?? 0)) - ((($wizardData['valor_convenio'] ?? 0) * (($wizardData['porcentaje_comision_sin_iva'] ?? 0) / 100)) * 1.16) - ($wizardData['monto_credito'] ?? 0)),
+            'monto_comision_sin_iva' => $montoComisionSinIva,
+            'comision_total' => $comisionTotal,
+            'comision_total_pagar' => $comisionTotal,
+            'isr' => $isr,
+            'cancelacion_hipoteca' => $cancelacionHipoteca,
+            'total_gastos_fi' => $isr + $cancelacionHipoteca,
+            'total_gastos_fi_venta' => $isr + $cancelacionHipoteca,
+            'ganancia_final' => $gananciaFinal,
             'indicador_ganancia' => $wizardData['indicador_ganancia'] ?? $this->indicador_ganancia ?? 'N/A',
         ];
 

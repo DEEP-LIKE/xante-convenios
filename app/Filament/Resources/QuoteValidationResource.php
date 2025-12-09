@@ -27,7 +27,7 @@ class QuoteValidationResource extends Resource
     
     protected static \UnitEnum|string|null $navigationGroup = 'Cotizaciones';
     
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     public static function getNavigationBadge(): ?string
     {
