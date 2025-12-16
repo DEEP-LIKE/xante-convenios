@@ -74,25 +74,48 @@ class QuoteAuthorizationResource extends Resource
                         \Filament\Forms\Components\Textarea::make('discount_reason')
                             ->label('Motivo del Descuento')
                             ->rows(3),
-                    ]),
-                
-                \Filament\Schemas\Components\Section::make('Estado')
-                    ->schema([
-                        \Filament\Forms\Components\Select::make('status')
-                            ->label('Estado')
-                            ->options([
-                                'pending' => 'Pendiente',
-                                'approved' => 'Aprobada',
-                                'rejected' => 'Rechazada',
-                            ])
-                            ->disabled(),
-                        
-                        \Filament\Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Motivo de Rechazo')
-                            ->rows(3)
-                            ->visible(fn ($record) => $record?->status === 'rejected'),
                     ])
-                    ->visible(fn ($record) => $record !== null),
+                    ->columnSpanFull(),
+
+                \Filament\Schemas\Components\Group::make()
+                    ->schema([
+                        \Filament\Forms\Components\Placeholder::make('agreement_summary')
+                            ->hiddenLabel()
+                            ->content(function ($record) {
+                                if (!$record || !$record->quoteValidation || !$record->quoteValidation->agreement) {
+                                    return '';
+                                }
+                                
+                                $data = $record->quoteValidation->agreement->wizard_data;
+                                $renderer = app(\App\Services\WizardSummaryRenderer::class);
+                                
+                                return new \Illuminate\Support\HtmlString(
+                                    $renderer->renderPropertySummary($data) . 
+                                    '<div class="mt-4"></div>' .
+                                    $renderer->renderHolderSummary($data)
+                                );
+                            })
+                            ->columnSpanFull(),
+                    ])
+                    ->columnSpanFull(),
+                
+                // \Filament\Schemas\Components\Section::make('Estado')
+                //     ->schema([
+                //         \Filament\Forms\Components\Select::make('status')
+                //             ->label('Estado')
+                //             ->options([
+                //                 'pending' => 'Pendiente',
+                //                 'approved' => 'Aprobada',
+                //                 'rejected' => 'Rechazada',
+                //             ])
+                //             ->disabled(),
+                        
+                //         \Filament\Forms\Components\Textarea::make('rejection_reason')
+                //             ->label('Motivo de Rechazo')
+                //             ->rows(3)
+                //             ->visible(fn ($record) => $record?->status === 'rejected'),
+                //     ])
+                //     ->visible(fn ($record) => $record !== null),
             ]);
     }
 

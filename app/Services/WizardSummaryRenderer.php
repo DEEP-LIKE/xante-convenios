@@ -18,38 +18,96 @@ class WizardSummaryRenderer
             return $this->renderEmptyState('No se capturó información del titular');
         }
 
-        return Blade::render('
-            <x-wizard.summary-card title="Datos del Titular" icon="heroicon-o-user" color="primary">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                    <x-wizard.infolist-entry label="Nombre Completo" :value="$data[\'holder_name\'] ?? null" />
-                    <x-wizard.infolist-entry label="Email" :value="$data[\'holder_email\'] ?? null" />
-                    <x-wizard.infolist-entry label="Teléfono Móvil" :value="$data[\'holder_phone\'] ?? null" />
-                    <x-wizard.infolist-entry label="Tel. Oficina" :value="$data[\'holder_office_phone\'] ?? null" />
-                    <x-wizard.infolist-entry label="CURP" :value="$data[\'holder_curp\'] ?? null" />
-                    <x-wizard.infolist-entry label="RFC" :value="$data[\'holder_rfc\'] ?? null" />
-                    <x-wizard.infolist-entry label="Estado Civil" :value="$data[\'holder_civil_status\'] ?? null" />
-                    <x-wizard.infolist-entry label="Ocupación" :value="$data[\'holder_occupation\'] ?? null" />
-                </div>
+        return Blade::render("
+            <div style='border-radius: 0.75rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); border-left: 4px solid #4f46e5; background-color: #fff; overflow: hidden; margin-bottom: 1.5rem;'>
+                <div style='padding: 1rem;'>
+                    <!-- Header -->
+                    <div style='display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(0, 0, 0, 0.05); padding-bottom: 0.5rem;'>
+                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='height: 1.25rem; width: 1.25rem; color: #4f46e5;'>
+                            <path stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z' />
+                        </svg>
+                        <h3 style='font-weight: 700; font-size: 1.125rem; color: #4f46e5; margin: 0;'>Datos del Titular</h3>
+                    </div>
 
-                @if(!empty($data[\'current_address\']))
-                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-                        <h4 style="font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">Domicilio Actual</h4>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                            <x-wizard.infolist-entry 
-                                label="Calle y Número" 
-                                :value="($data[\'current_address\'] ?? \'\') . \' \' . (!empty($data[\'holder_house_number\']) ? \'#\' . $data[\'holder_house_number\'] : \'\')" 
-                            />
-                            <x-wizard.infolist-entry label="Colonia" :value="$data[\'neighborhood\'] ?? null" />
-                            <x-wizard.infolist-entry label="Código Postal" :value="$data[\'postal_code\'] ?? null" />
-                            <x-wizard.infolist-entry 
-                                label="Municipio / Estado" 
-                                :value="collect([$data[\'municipality\'] ?? null, $data[\'state\'] ?? null])->filter()->join(\', \')" 
-                            />
+                    <!-- Main Data Grid -->
+                    <div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;'>
+                        <!-- Nombre Completo -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Nombre Completo</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_name'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- Email -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Email</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_email'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- Teléfono Móvil -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Teléfono Móvil</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_phone'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- Tel. Oficina -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Tel. Oficina</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_office_phone'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- CURP -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>CURP</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_curp'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- RFC -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>RFC</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_rfc'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- Estado Civil -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Estado Civil</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_civil_status'] ?? 'N/A' }}</div>
+                        </div>
+                        <!-- Ocupación -->
+                        <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                            <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Ocupación</div>
+                            <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['holder_occupation'] ?? 'N/A' }}</div>
                         </div>
                     </div>
-                @endif
-            </x-wizard.summary-card>
-        ', ['data' => $data]);
+
+                    @if(!empty(\$data['current_address']))
+                    <!-- Domicilio Actual Section -->
+                    <div style='margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;'>
+                        <h4 style='font-size: 0.875rem; font-weight: 600; color: #111827; margin-bottom: 1rem;'>Domicilio Actual</h4>
+                        <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;'>
+                            <!-- Calle y Número -->
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Calle y Número</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>
+                                    {{ (\$data['current_address'] ?? '') . ' ' . (!empty(\$data['holder_house_number']) ? '#' . \$data['holder_house_number'] : '') }}
+                                </div>
+                            </div>
+                            <!-- Colonia -->
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Colonia</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['neighborhood'] ?? 'N/A' }}</div>
+                            </div>
+                            <!-- Código Postal -->
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Código Postal</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['postal_code'] ?? 'N/A' }}</div>
+                            </div>
+                            <!-- Municipio / Estado -->
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Municipio / Estado</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>
+                                    {{ collect([\$data['municipality'] ?? null, \$data['state'] ?? null])->filter()->join(', ') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        ", ['data' => $data]);
     }
 
     /**
@@ -96,21 +154,59 @@ class WizardSummaryRenderer
      */
     public function renderPropertySummary(array $data): string
     {
-        return Blade::render('
-            <x-wizard.summary-card title="Propiedad del Convenio" icon="heroicon-o-home-modern" color="info">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                    <x-wizard.infolist-entry label="Domicilio Vivienda" :value="$data[\'domicilio_convenio\'] ?? null" />
-                    <x-wizard.infolist-entry label="Comunidad" :value="$data[\'comunidad\'] ?? null" />
-                    <x-wizard.infolist-entry label="Tipo Vivienda" :value="$data[\'tipo_vivienda\'] ?? null" />
-                    <x-wizard.infolist-entry label="Prototipo" :value="$data[\'prototipo\'] ?? null" />
-                    <x-wizard.infolist-entry label="Lote" :value="$data[\'lote\'] ?? null" />
-                    <x-wizard.infolist-entry label="Manzana" :value="$data[\'manzana\'] ?? null" />
-                    <x-wizard.infolist-entry label="Etapa" :value="$data[\'etapa\'] ?? null" />
-                    <x-wizard.infolist-entry label="Municipio" :value="$data[\'municipio_propiedad\'] ?? null" />
-                    <x-wizard.infolist-entry label="Estado" :value="$data[\'estado_propiedad\'] ?? null" />
+        return Blade::render("
+            <div style='border-radius: 0.75rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); border-left: 4px solid #7C4794; background-color: #fff; overflow: hidden; margin-bottom: 1.5rem;'>
+                <div style='padding: 1rem;'>
+                    <div style='display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(0, 0, 0, 0.05); padding-bottom: 0.5rem;'>
+                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='height: 1.25rem; width: 1.25rem; color: #7C4794;'>
+                          <path stroke-linecap='round' stroke-linejoin='round' d='M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819' />
+                        </svg>
+                        <h3 style='font-weight: 700; font-size: 1.125rem; color: #7C4794; margin: 0;'>Propiedad del Convenio</h3>
+                    </div>
+
+                    <div style='display: flex; flex-direction: column; gap: 0.75rem;'>
+                        <div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;'>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Domicilio Vivienda</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['domicilio_convenio'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Comunidad</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['comunidad'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Tipo Vivienda</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['tipo_vivienda'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Prototipo</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['prototipo'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Lote</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['lote'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Manzana</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['manzana'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Etapa</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['etapa'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Municipio</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['municipio_propiedad'] ?? 'N/A' }}</div>
+                            </div>
+                            <div style='display: flex; flex-direction: column; gap: 0.25rem;'>
+                                <div style='font-size: 0.875rem; font-weight: 500; color: #6b7280; margin: 0;'>Estado</div>
+                                <div style='font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0;'>{{ \$data['estado_propiedad'] ?? 'N/A' }}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </x-wizard.summary-card>
-        ', ['data' => $data]);
+            </div>
+        ", ['data' => $data]);
     }
 
     /**
@@ -135,12 +231,20 @@ class WizardSummaryRenderer
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
                     <x-wizard.infolist-entry 
                         label="Valor Convenio" 
-                        :value="\' $\' . number_format($valorConvenio, 2)" 
+                        :value="\'$\' . number_format($valorConvenio, 2)" 
                     />
                     <x-wizard.infolist-entry 
                         label="Precio Promoción" 
                         :value="\'$\' . number_format($precioPromocion, 2)" 
-                    </div>
+                    />
+                    <x-wizard.infolist-entry 
+                        label="Comisión Total" 
+                        :value="\'$\' . number_format($comisionTotal, 2)" 
+                    />
+                    <x-wizard.infolist-entry 
+                        label="Ganancia Final" 
+                        :value="\'$\' . number_format($gananciaFinal, 2)" 
+                    />
                 </div>
             </x-wizard.summary-card>
         ', $viewData);

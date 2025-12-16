@@ -90,6 +90,18 @@ class QuoteValidationResource extends Resource
                     ->visible(fn ($record) => $record?->status === 'awaiting_management_authorization')
                     ->columnSpanFull(),
 
+                \Filament\Forms\Components\Placeholder::make('property_summary')
+                    ->hiddenLabel()
+                    ->content(function ($record) {
+                        if (!$record || !$record->agreement) return null;
+                        $renderer = app(\App\Services\WizardSummaryRenderer::class);
+                        return new \Illuminate\Support\HtmlString(
+                            $renderer->renderPropertySummary($record->agreement->wizard_data ?? [])
+                        );
+                    })
+                    ->visible(fn ($record) => $record?->agreement?->wizard_data !== null)
+                    ->columnSpanFull(),
+
                 \Filament\Schemas\Components\Section::make('Información de la Validación')
                     ->schema([
                         \Filament\Forms\Components\TextInput::make('agreement_id')
