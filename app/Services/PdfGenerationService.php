@@ -383,9 +383,152 @@ class PdfGenerationService
             'image_6_path' => $this->getImageBase64('6.png'),
             'image_7_path' => $this->getImageBase64('7.png'),
             'image_8_path' => $this->getImageBase64('8.png'),
+
+            // Nuevas variables estructuradas para 3 secciones
+            'participants' => $this->getParticipants($agreement, $wizardData),
+            'signers' => $this->getSigners($agreement, $wizardData),
         ];
     }
-    
+
+    /**
+     * Determina la lista de participantes para mostrar en Datos Generales
+     */
+    private function getParticipants(Agreement $agreement, array $data): array
+    {
+        $participants = [];
+
+        // 1. Titular (Siempre)
+        $participants[] = [
+            'role' => 'TITULAR',
+            'title' => 'DATOS PERSONALES TITULAR:',
+            'name' => $data['holder_name'] ?? '',
+            'delivery_file' => $data['holder_delivery_file'] ?? '',
+            'birthdate' => $data['holder_birthdate'] ?? '',
+            'civil_status' => $data['holder_civil_status'] ?? '',
+            'curp' => $data['holder_curp'] ?? '',
+            'rfc' => $data['holder_rfc'] ?? '',
+            'regime_type' => $data['holder_regime_type'] ?? '',
+            'occupation' => $data['holder_occupation'] ?? '',
+            'email' => $data['holder_email'] ?? '',
+            'phone' => $data['holder_phone'] ?? '',
+            'office_phone' => $data['holder_office_phone'] ?? '',
+            'additional_contact_phone' => $data['holder_additional_contact_phone'] ?? '',
+            'address' => $data['current_address'] ?? $data['holder_current_address'] ?? '',
+            'neighborhood' => $data['neighborhood'] ?? $data['holder_neighborhood'] ?? '',
+            'postal_code' => $data['postal_code'] ?? $data['holder_postal_code'] ?? '',
+            'municipality' => $data['municipality'] ?? $data['holder_municipality'] ?? '',
+            'state' => $data['state'] ?? $data['holder_state'] ?? '',
+        ];
+
+        // 2. Cónyuge (Si casado)
+        if (($data['holder_civil_status'] ?? '') === 'casado') {
+            $participants[] = [
+                'role' => 'CÓNYUGE',
+                'title' => 'DATOS DEL CÓNYUGE:',
+                'name' => $data['spouse_name'] ?? '',
+                'delivery_file' => $data['spouse_delivery_file'] ?? '',
+                'birthdate' => $data['spouse_birthdate'] ?? '',
+                'civil_status' => $data['spouse_civil_status'] ?? 'Casado(a)', // Asumido
+                'curp' => $data['spouse_curp'] ?? '',
+                'rfc' => $data['spouse_rfc'] ?? '',
+                'regime_type' => $data['spouse_regime_type'] ?? '',
+                'occupation' => $data['spouse_occupation'] ?? '',
+                'email' => $data['spouse_email'] ?? '',
+                'phone' => $data['spouse_phone'] ?? '',
+                'office_phone' => $data['spouse_office_phone'] ?? '',
+                'additional_contact_phone' => $data['spouse_additional_contact_phone'] ?? '',
+                'address' => $data['spouse_current_address'] ?? '',
+                'neighborhood' => $data['spouse_neighborhood'] ?? '',
+                'postal_code' => $data['spouse_postal_code'] ?? '',
+                'municipality' => $data['spouse_municipality'] ?? '',
+                'state' => $data['spouse_state'] ?? '',
+            ];
+        }
+
+        // 3. Coacreditado (Si existe y es TERCERO)
+        // Nota: Si es Cónyuge, ya está arriba.
+        if (!empty($data['has_co_borrower']) && ($data['co_borrower_relationship'] ?? '') === 'coacreditado') {
+            $participants[] = [
+                'role' => 'COACREDITADO',
+                'title' => 'DATOS DEL COACREDITADO (TERCERO):',
+                'name' => $data['co_borrower_name'] ?? '',
+                'delivery_file' => '', // No capturado para tercero en wizard actual
+                'birthdate' => $data['co_borrower_birthdate'] ?? '',
+                'civil_status' => $data['co_borrower_civil_status'] ?? '',
+                'curp' => $data['co_borrower_curp'] ?? '',
+                'rfc' => $data['co_borrower_rfc'] ?? '',
+                'regime_type' => '', // No capturado explícitamente como regimen fiscal, tal vez?
+                'occupation' => $data['co_borrower_occupation'] ?? '',
+                'email' => $data['co_borrower_email'] ?? '',
+                'phone' => $data['co_borrower_phone'] ?? '',
+                'office_phone' => '',
+                'additional_contact_phone' => '',
+                'address' => $data['co_borrower_current_address'] ?? '',
+                'neighborhood' => '', // Simplificado en wizard
+                'postal_code' => '',
+                'municipality' => '',
+                'state' => '',
+            ];
+        }
+
+        return $participants;
+    }
+
+    /**
+     * Determina quiénes deben firmar
+     */
+    private function getSigners(Agreement $agreement, array $data): array
+    {
+        $signers = [];
+
+        // 1. Titular (Siempre)
+        $signers[] = [
+            'name' => strtoupper($data['holder_name'] ?? ''),
+            'label' => 'EL VENDEDOR (TITULAR)',
+        ];
+
+        // Flag para saber si el cónyuge ya fue agregado
+        $spouseAdded = false;
+
+        // 2. Cónyuge (Solo si Bienes Mancomunados)
+        if (($data['holder_civil_status'] ?? '') === 'casado' && 
+            ($data['holder_marital_regime'] ?? '') === 'bienes_mancomunados') {
+            $signers[] = [
+                'name' => strtoupper($data['spouse_name'] ?? ''),
+                'label' => 'EL CÓNYUGE',
+            ];
+            $spouseAdded = true;
+        }
+
+        // 3. Coacreditado (Si existe)
+        if (!empty($data['has_co_borrower'])) {
+            $type = $data['co_borrower_relationship'] ?? '';
+
+            if ($type === 'cónyuge') {
+                // Si el cónyuge es coacreditado y NO ha sido agregado (ej. Bienes Separados)
+                if (!$spouseAdded) {
+                    $signers[] = [
+                        'name' => strtoupper($data['spouse_name'] ?? ''),
+                        'label' => 'COACREDITADO (CÓNYUGE)',
+                    ];
+                } else {
+                    // Si ya estaba (Mancomunados), actualizamos la etiqueta
+                    // Buscar el índice del cónyuge (debería ser el último agregado)
+                    $lastIndex = count($signers) - 1;
+                    $signers[$lastIndex]['label'] = 'CÓNYUGE Y COACREDITADO';
+                }
+            } elseif ($type === 'coacreditado') {
+                // Tercero: Siempre se agrega
+                $signers[] = [
+                    'name' => strtoupper($data['co_borrower_name'] ?? ''),
+                    'label' => 'COACREDITADO (TERCERO)',
+                ];
+            }
+        }
+
+        return $signers;
+    }
+
     /**
      * Convierte una imagen a formato base64 para usar en PDFs, con fallbacks.
      */

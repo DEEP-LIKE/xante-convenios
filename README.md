@@ -83,6 +83,12 @@ DB_PASSWORD=
 # Ejecutar migraciones y seeders
 php artisan migrate --seed
 
+# iniciar servidor
+composer run dev
+
+# iniciar worker
+php artisan queue:work
+
 # Compilar assets
 npm run build
 ```

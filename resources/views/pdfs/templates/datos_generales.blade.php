@@ -259,145 +259,78 @@
             DATOS GENERALES - "FASE I"
         </div>
 
-        {{-- SECCIÓN: DATOS PERSONALES TITULAR --}}
+        {{-- SECCIÓN: PARTICIPANTES (Dinámico) --}}
+        @foreach($participants ?? [] as $participant)
         <div class="section">
-            <div class="section-title">DATOS PERSONALES TITULAR:</div>
+            <div class="section-title">{{ $participant['title'] }}</div>
             
             <table class="data-table">
                 <tr>
                     <td class="data-label">Nombre Cliente</td>
-                    <td class="data-value {{ strlen($holder_name ?? '') > 40 ? 'data-value-long' : '' }}">
-                        {{ $holder_name ?? '' }}
+                    <td class="data-value {{ strlen($participant['name']) > 40 ? 'data-value-long' : '' }}">
+                        {{ $participant['name'] }}
                     </td>
                     <td class="data-label">Entrega expediente</td>
-                    <td class="data-value">{{ $holder_delivery_file ?? '' }}</td>
+                    <td class="data-value">{{ $participant['delivery_file'] }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">Fecha de Nacimiento</td>
-                    <td class="data-value">{{ $holder_birthdate ? (strlen($holder_birthdate) > 10 ? substr($holder_birthdate, 0, 10) : $holder_birthdate) : '' }}</td>
+                    <td class="data-value">{{ $participant['birthdate'] ? (strlen($participant['birthdate']) > 10 ? substr($participant['birthdate'], 0, 10) : $participant['birthdate']) : '' }}</td>
                     <td class="data-label">Estado civil</td>
-                    <td class="data-value">{{ ucfirst(str_replace('_', ' ', $holder_civil_status ?? '')) }}</td>
+                    <td class="data-value">{{ ucfirst(str_replace('_', ' ', $participant['civil_status'])) }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">CURP</td>
-                    <td class="data-value">{{ $holder_curp ?? '' }}</td>
+                    <td class="data-value">{{ $participant['curp'] }}</td>
                     <td class="data-label">Régimen Fiscal</td>
-                    <td class="data-value">{{ $holder_regime_type ?? '' }}</td>
+                    <td class="data-value">{{ $participant['regime_type'] }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">RFC</td>
-                    <td class="data-value">{{ $holder_rfc ?? '' }}</td>
+                    <td class="data-value">{{ $participant['rfc'] }}</td>
                     <td class="data-label">Ocupación</td>
-                    <td class="data-value">{{ $holder_occupation ?? '' }}</td>
+                    <td class="data-value">{{ $participant['occupation'] }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">Correo electrónico</td>
-                    <td class="data-value {{ strlen($holder_email ?? '') > 35 ? 'data-value-long' : '' }}">
-                        {{ $holder_email ?? '' }}
+                    <td class="data-value {{ strlen($participant['email']) > 35 ? 'data-value-long' : '' }}">
+                        {{ $participant['email'] }}
                     </td>
                     <td class="data-label">Tel. oficina</td>
-                    <td class="data-value">{{ $holder_office_phone ?? '' }}</td>
+                    <td class="data-value">{{ $participant['office_phone'] }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">Núm. Celular</td>
-                    <td class="data-value">{{ $holder_phone ?? '' }}</td>
+                    <td class="data-value">{{ $participant['phone'] }}</td>
                     <td class="data-label">Tel. Contacto Adic.</td>
-                    <td class="data-value">{{ $holder_additional_contact_phone ?? '' }}</td>
+                    <td class="data-value">{{ $participant['additional_contact_phone'] }}</td>
                 </tr>
             </table>
 
+            @if(!empty($participant['address']))
             <table class="data-table">
                 <tr>
                     <td class="data-label" style="width: 14%;">Domicilio Actual</td>
-                    <td class="data-value {{ strlen($holder_current_address ?? '') > 60 ? 'data-value-long' : '' }}" style="width: 86%;" colspan="3">
-                        {{ $holder_current_address ?? '' }}
+                    <td class="data-value {{ strlen($participant['address']) > 60 ? 'data-value-long' : '' }}" style="width: 86%;" colspan="3">
+                        {{ $participant['address'] }}
                     </td>
                 </tr>
                 <tr>
                     <td class="data-label">Colonia</td>
-                    <td class="data-value">{{ $holder_neighborhood ?? '' }}</td>
+                    <td class="data-value">{{ $participant['neighborhood'] }}</td>
                     <td class="data-label">C.P.</td>
-                    <td class="data-value">{{ $holder_postal_code ?? '' }}</td>
+                    <td class="data-value">{{ $participant['postal_code'] }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">Municipio - Alcaldía</td>
-                    <td class="data-value">{{ $holder_municipality ?? '' }}</td>
+                    <td class="data-value">{{ $participant['municipality'] }}</td>
                     <td class="data-label">Estado</td>
-                    <td class="data-value">{{ $holder_state ?? '' }}</td>
+                    <td class="data-value">{{ $participant['state'] }}</td>
                 </tr>
             </table>
+            @endif
         </div>
-
-        {{-- SECCIÓN: DATOS PERSONALES COACREDITADO/CÓNYUGE (Solo si fue seleccionado) --}}
-        @if(!empty($wizardData['has_co_borrower']) && $wizardData['has_co_borrower'])
-        <div class="section">
-            <div class="section-title">DATOS PERSONALES COACREDITADO / CÓNYUGE:</div>
-            
-            <table class="data-table">
-                <tr>
-                    <td class="data-label">Nombre Cliente</td>
-                    <td class="data-value {{ strlen($spouse_name ?? '') > 40 ? 'data-value-long' : '' }}">
-                        {{ $spouse_name ?? '' }}
-                    </td>
-                    <td class="data-label">Entrega expediente</td>
-                    <td class="data-value">{{ $spouse_delivery_file ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td class="data-label">Fecha de Nacimiento</td>
-                    <td class="data-value">{{ $spouse_birthdate ? (strlen($spouse_birthdate) > 10 ? substr($spouse_birthdate, 0, 10) : $spouse_birthdate) : '' }}</td>
-                    <td class="data-label">Estado civil</td>
-                    <td class="data-value">{{ ucfirst(str_replace('_', ' ', $spouse_civil_status ?? '')) }}</td>
-                </tr>
-                <tr>
-                    <td class="data-label">CURP</td>
-                    <td class="data-value">{{ $spouse_curp ?? '' }}</td>
-                    <td class="data-label">Régimen Fiscal</td>
-                    <td class="data-value">{{ $spouse_regime_type ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td class="data-label">RFC</td>
-                    <td class="data-value">{{ $spouse_rfc ?? '' }}</td>
-                    <td class="data-label">Ocupación</td>
-                    <td class="data-value">{{ $spouse_occupation ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td class="data-label">Correo electrónico</td>
-                    <td class="data-value {{ strlen($spouse_email ?? '') > 35 ? 'data-value-long' : '' }}">
-                        {{ $spouse_email ?? '' }}
-                    </td>
-                    <td class="data-label">Tel. oficina</td>
-                    <td class="data-value">{{ $spouse_office_phone ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td class="data-label">Núm. Celular</td>
-                    <td class="data-value">{{ $spouse_phone ?? '' }}</td>
-                    <td class="data-label">Tel. Contacto Adic.</td>
-                    <td class="data-value">{{ $spouse_additional_contact_phone ?? '' }}</td>
-                </tr>
-            </table>
-
-            <table class="data-table">
-                <tr>
-                    <td class="data-label" style="width: 14%;">Domicilio Actual</td>
-                    <td class="data-value {{ strlen($spouse_current_address ?? '') > 60 ? 'data-value-long' : '' }}" style="width: 86%;" colspan="3">
-                        {{ $spouse_current_address ?? '' }}
-                    </td>
-                </tr>
-                <tr>
-                    <td class="data-label">Colonia</td>
-                    <td class="data-value">{{ $spouse_neighborhood ?? '' }}</td>
-                    <td class="data-label">C.P.</td>
-                    <td class="data-value">{{ $spouse_postal_code ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td class="data-label">Municipio - Alcaldía</td>
-                    <td class="data-value">{{ $spouse_municipality ?? '' }}</td>
-                    <td class="data-label">Estado</td>
-                    <td class="data-value">{{ $spouse_state ?? '' }}</td>
-                </tr>
-            </table>
-        </div>
-        @endif
+        @endforeach
 
         {{-- SECCIÓN: CONTACTO AC Y/O PRESIDENTE DE PRIVADA --}}
         <div class="contact-section">
@@ -449,7 +382,8 @@
             <div class="signature-line"></div>
             <div class="signature-label">
                 Nombre y firma de conformidad y enterado<br>
-                Vendedor
+                EL VENDEDOR (TITULAR)<br>
+                {{ strtoupper($holder_name ?? '') }}
             </div>
         </div>
 

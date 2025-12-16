@@ -35,6 +35,7 @@ class Agreement extends Model
         'holder_civil_status',
         'holder_regime_type',
         'holder_occupation',
+        'holder_marital_regime',
         'holder_office_phone',
         'holder_additional_contact_phone',
         'current_address',
@@ -109,7 +110,9 @@ class Agreement extends Model
         'can_generate_documents',
         // Campos de autorización de precio final
         'final_price_authorization_id',
+        'final_price_authorization_id',
         'final_offer_price',
+        'co_borrower_id',
     ];
 
     protected function casts(): array
@@ -147,6 +150,11 @@ class Agreement extends Model
     public function spouse(): BelongsTo
     {
         return $this->belongsTo(Spouse::class);
+    }
+
+    public function coBorrower(): BelongsTo
+    {
+        return $this->belongsTo(CoBorrower::class);
     }
 
     public function proposal(): BelongsTo

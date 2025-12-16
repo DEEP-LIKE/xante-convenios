@@ -5,13 +5,18 @@ namespace App\Filament\Schemas\CreateAgreement;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\Placeholder;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 class StepTwoSchema
 {
@@ -46,23 +51,6 @@ class StepTwoSchema
 
                 // DATOS PERSONALES TITULAR
                 Section::make('DATOS PERSONALES TITULAR:')
-                    ->headerActions([
-                        Action::make('toggle_co_borrower')
-                            ->label(fn (callable $get) => $get('has_co_borrower') ? '✓ Tiene coacreditado o cónyuge' : '¿Tiene coacreditado o cónyuge?')
-                            ->icon(fn (callable $get) => $get('has_co_borrower') ? 'heroicon-o-check-circle' : 'heroicon-o-user-plus')
-                            ->color(fn (callable $get) => $get('has_co_borrower') ? 'success' : 'primary')
-                            ->size('sm')
-                            ->action(function (callable $get, callable $set) {
-                                $currentState = $get('has_co_borrower');
-                                $set('has_co_borrower', !$currentState);
-                                
-                                if ($currentState) {
-                                    // Si se está desactivando, limpiar el tipo de relación
-                                    $set('co_borrower_relationship', null);
-                                }
-                            })
-                            ->tooltip('Habilitar/deshabilitar sección de coacreditado o cónyuge'),
-                    ])
                     ->schema([
                         Grid::make(2)
                             ->schema([
@@ -86,6 +74,7 @@ class StepTwoSchema
                                     ->suffixIcon(Heroicon::Calendar),
                                 Select::make('holder_civil_status')
                                     ->label('Estado civil')
+                                    ->live()
                                     ->options([
                                         'soltero' => 'Soltero(a)',
                                         'casado' => 'Casado(a)',
@@ -93,6 +82,15 @@ class StepTwoSchema
                                         'viudo' => 'Viudo(a)',
                                         'union_libre' => 'Unión Libre',
                                     ]),
+                                Select::make('holder_marital_regime')
+                                    ->label('Régimen Matrimonial')
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('holder_civil_status') === 'casado')
+                                    ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('holder_civil_status') === 'casado')
+                                    ->options([
+                                        'bienes_mancomunados' => 'Bienes Mancomunados',
+                                        'bienes_separados' => 'Bienes Separados',
+                                    ])
+                                    ->live(),
                                 TextInput::make('holder_curp')
                                     ->label('CURP')
                                     ->maxLength(18)
@@ -151,16 +149,25 @@ class StepTwoSchema
                                     ->label('Estado')
                                     ->maxLength(100),
                             ]),
+                        Toggle::make('has_co_borrower')
+                            ->label('¿Existe una segunda persona que participará en el crédito como Coacreditado?')
+                            ->inline(false)
+                            ->live(),
                     ])
                     ->collapsible(),
 
-                // DATOS PERSONALES COACREDITADO / CÓNYUGE
-                Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE:')
-                    ->description('Información del cónyuge o coacreditado')
-                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('has_co_borrower'))
+                // DATOS DEL CÓNYUGE (Bloque Legal)
+                Section::make('DATOS DEL CÓNYUGE')
+                    ->description('Información requerida por el estado civil Casado')
+                    ->icon('heroicon-o-heart')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => 
+                        $get('holder_civil_status') === 'casado' && 
+                        ($get('holder_marital_regime') === 'bienes_mancomunados' || 
+                        ($get('has_co_borrower') && $get('co_borrower_relationship') === 'cónyuge'))
+                    )
                     ->headerActions([
-                        Action::make('copy_from_holder')
-                            ->label('Copiar datos del titular')
+                        Action::make('copy_from_holder_spouse')
+                            ->label('Copiar del titular')
                             ->icon('heroicon-o-document-duplicate')
                             ->color('gray')
                             ->size('sm')
@@ -179,58 +186,125 @@ class StepTwoSchema
                                 $set('spouse_additional_contact_phone', $get('holder_additional_contact_phone'));
 
                                 Notification::make()
-                                    ->title('Datos copiados exitosamente')
-                                    ->body('Los datos de domicilio y teléfono del titular han sido copiados al cónyuge.')
+                                    ->title('Datos copiados')
                                     ->success()
-                                    ->duration(5000)
                                     ->send();
                             })
-                            ->tooltip('Copiar domicilios y teléfonos del titular'),
+                            ->tooltip('Copiar domicilio del titular'),
                     ])
                     ->schema([
-                        \Filament\Forms\Components\ToggleButtons::make('co_borrower_relationship')
-                            ->label('Tipo de Relación')
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('spouse_name')
+                                    ->label('Nombre Completo')
+                                    ->required()
+                                    ->maxLength(255),
+                                TextInput::make('spouse_delivery_file')
+                                    ->label('Entrega expediente')
+                                    ->maxLength(100),
+                                DatePicker::make('spouse_birthdate')
+                                    ->native(false)
+                                    ->label('Fecha de Nacimiento')
+                                    ->displayFormat('d/m/Y')
+                                    ->suffixIcon(Heroicon::Calendar),
+                                TextInput::make('spouse_curp')
+                                    ->label('CURP')
+                                    ->maxLength(18)
+                                    ->minLength(18),
+                                TextInput::make('spouse_regime_type')
+                                    ->label('Régimen Fiscal')
+                                    ->maxLength(100),
+                                TextInput::make('spouse_rfc')
+                                    ->label('RFC')
+                                    ->maxLength(13),
+                                TextInput::make('spouse_occupation')
+                                    ->label('Ocupación')
+                                    ->maxLength(100),
+                                TextInput::make('spouse_email')
+                                    ->label('Correo electrónico')
+                                    ->email(),
+                                TextInput::make('spouse_office_phone')
+                                    ->label('Tel. oficina')
+                                    ->tel(),
+                                TextInput::make('spouse_phone')
+                                    ->label('Núm. Celular')
+                                    ->tel(),
+                            ]),
+                        Grid::make(1)
+                            ->schema([
+                                TextInput::make('spouse_current_address')
+                                    ->label('Calle y Domicilio'),
+                            ]),
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('spouse_neighborhood')
+                                    ->label('Colonia'),
+                                TextInput::make('spouse_postal_code')
+                                    ->label('C.P.'),
+                                TextInput::make('spouse_municipality')
+                                    ->label('Municipio'),
+                                TextInput::make('spouse_state')
+                                    ->label('Estado'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                // DATOS DEL COACREDITADO (Bloque Financiero)
+                Section::make('DATOS DEL COACREDITADO')
+                    ->description('Persona que participará financieramente en el crédito')
+                    ->icon('heroicon-o-users')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('has_co_borrower'))
+                    ->schema([
+                        ToggleButtons::make('co_borrower_relationship')
+                            ->label('¿Quién es el Coacreditado?')
                             ->options([
-                                'coacreditado' => 'Coacreditado',
-                                'bienes_separados' => 'Casado por bienes separados',
-                                'bienes_mancomunados' => 'Casado con bienes mancomunados',
+                                'cónyuge' => 'El Cónyuge',
+                                'coacreditado' => 'Un Tercero',
                             ])
+                            ->default('cónyuge')
                             ->colors([
+                                'cónyuge' => 'success',
                                 'coacreditado' => 'info',
-                                'bienes_separados' => 'warning',
-                                'bienes_mancomunados' => 'success',
                             ])
                             ->icons([
-                                'coacreditado' => 'heroicon-o-users',
-                                'bienes_separados' => 'heroicon-o-minus-circle',
-                                'bienes_mancomunados' => 'heroicon-o-heart',
+                                'cónyuge' => 'heroicon-o-heart',
+                                'coacreditado' => 'heroicon-o-user-plus',
                             ])
+                            ->disableOptionWhen(fn (string $value, \Filament\Schemas\Components\Utilities\Get $get) => 
+                                $value === 'cónyuge' && $get('holder_civil_status') !== 'casado'
+                            )
                             ->inline()
                             ->required()
                             ->live(),
 
+                        // Mensaje si es Cónyuge
+                        Placeholder::make('co_borrower_spouse_info')
+                            ->hiddenLabel()
+                            ->content(new HtmlString('
+                                <div class="text-sm text-blue-600 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                    <span class="font-bold">Info:</span> 
+                                    Se utilizarán los datos capturados en la sección "DATOS DEL CÓNYUGE".
+                                </div>
+                            '))
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('co_borrower_relationship') === 'cónyuge'),
+
+                        // Campos para Tercero (Nuevos campos co_borrower_*)
                         Grid::make(1)
-                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => in_array($get('co_borrower_relationship'), ['coacreditado', 'bienes_mancomunados']))
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('co_borrower_relationship') === 'coacreditado')
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
-                                        TextInput::make('spouse_name')
-                                            ->label('Nombre Cliente')
+                                        TextInput::make('co_borrower_name')
+                                            ->label('Nombre Completo (Tercero)')
+                                            ->required()
                                             ->maxLength(255),
-                                        TextInput::make('spouse_delivery_file')
-                                            ->label('Entrega expediente')
-                                            ->maxLength(100),
-                                        DatePicker::make('spouse_birthdate')
+                                        DatePicker::make('co_borrower_birthdate')
                                             ->native(false)
-                                            ->label('Fecha de Nacimiento (min 18 años)')
+                                            ->label('Fecha de Nacimiento')
                                             ->displayFormat('d/m/Y')
-                                            ->maxDate(Carbon::today()->subYears(18))
-                                            ->validationMessages([
-                                                'max' => 'El titular debe ser mayor de 18 años.',
-                                            ])
                                             ->suffixIcon(Heroicon::Calendar),
-                                        Select::make('spouse_civil_status')
-                                            ->label('Estado civil')
+                                        Select::make('co_borrower_civil_status')
+                                            ->label('Estado Civil')
                                             ->options([
                                                 'soltero' => 'Soltero(a)',
                                                 'casado' => 'Casado(a)',
@@ -238,56 +312,25 @@ class StepTwoSchema
                                                 'viudo' => 'Viudo(a)',
                                                 'union_libre' => 'Unión Libre',
                                             ]),
-                                        TextInput::make('spouse_curp')
+                                        TextInput::make('co_borrower_curp')
                                             ->label('CURP')
-                                            ->maxLength(18)
-                                            ->minLength(18),
-                                        TextInput::make('spouse_regime_type')
-                                            ->label('Régimen Fiscal')
-                                            ->maxLength(100),
-                                        TextInput::make('spouse_rfc')
+                                            ->maxLength(18),
+                                        TextInput::make('co_borrower_rfc')
                                             ->label('RFC')
                                             ->maxLength(13),
-                                        TextInput::make('spouse_occupation')
-                                            ->label('Ocupación')
-                                            ->maxLength(100),
-                                        TextInput::make('spouse_email')
-                                            ->label('Correo electrónico')
+                                        TextInput::make('co_borrower_occupation')
+                                            ->label('Ocupación'),
+                                        TextInput::make('co_borrower_email')
+                                            ->label('Email')
                                             ->email(),
-                                        TextInput::make('spouse_office_phone')
-                                            ->label('Tel. oficina')
-                                            ->tel()
-                                            ->maxLength(20),
-                                        TextInput::make('spouse_phone')
-                                            ->label('Núm. Celular')
-                                            ->tel()
-                                            ->maxLength(20),
-                                        TextInput::make('spouse_additional_contact_phone')
-                                            ->label('Tel. Contacto Adic.')
-                                            ->tel()
-                                            ->maxLength(20),
+                                        TextInput::make('co_borrower_phone')
+                                            ->label('Teléfono')
+                                            ->tel(),
                                     ]),
-                                Grid::make(2)
+                                Grid::make(1)
                                     ->schema([
-                                        TextInput::make('spouse_current_address')
-                                            ->label('Calle y Domicilio')
-                                            ->maxLength(400)
-                                            ->columnSpan(1),
-                                    ]),
-                                Grid::make(3)
-                                    ->schema([
-                                        TextInput::make('spouse_neighborhood')
-                                            ->label('Colonia')
-                                            ->maxLength(100),
-                                        TextInput::make('spouse_postal_code')
-                                            ->label('C.P.')
-                                            ->maxLength(10),
-                                        TextInput::make('spouse_municipality')
-                                            ->label('Municipio - Alcaldía')
-                                            ->maxLength(100),
-                                        TextInput::make('spouse_state')
-                                            ->label('Estado')
-                                            ->maxLength(100),
+                                        TextInput::make('co_borrower_current_address')
+                                            ->label('Direction Actual'),
                                     ]),
                             ]),
                     ])

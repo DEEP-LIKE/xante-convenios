@@ -156,17 +156,18 @@
         
         /* FIRMAS */
         .signatures-section {
-            margin-top: 30px;
+            margin-top: 0px;
             page-break-inside: avoid;
         }
         
         .signature-block {
             margin: 40px 0;
+            margin-top: 80px;
         }
         
         .signature-label {
             font-weight: bold;
-            margin-bottom: 50px;
+            margin-bottom: 30px;
         }
         
         .signature-line {
@@ -182,7 +183,7 @@
         
         /* AVISO DE PRIVACIDAD */
         .privacy-notice {
-            margin-top: 30px;
+            /* margin-top: 15px; */
             font-size: 9pt;
             text-align: center;
             line-height: 1.4;
@@ -215,7 +216,7 @@
 <body>
     {{-- PÁGINA 1 --}}
     <div class="page-container">
-        <div class="page-number">1</div>
+        <!-- <div class="page-number">1</div> -->
         
         <div class="page-header">
             <div class="header-content">
@@ -223,7 +224,7 @@
                     <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
                 </div>
                 <div class="title-container">
-                    <div class="website">www.xante.mx</div>
+                    <!-- <div class="website">www.xante.mx</div> -->
                     <div class="main-title">
                         ACUERDO DE PROMOCIÓN Y COMERCIALIZACIÓN DEL<br>
                         INMUEBLE
@@ -303,7 +304,7 @@
     {{-- PÁGINA 2 --}}
     <div class="page-break"></div>
     <div class="page-container">
-        <div class="page-number">2</div>
+        <!-- <div class="page-number">2</div> -->
         
         <div class="page-header">
             <div class="header-content">
@@ -311,7 +312,7 @@
                     <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
                 </div>
                 <div class="title-container">
-                    <div class="website">www.xante.mx</div>
+                    <!-- <div class="website">www.xante.mx</div> -->
                     <div class="main-title">
                         ACUERDO DE PROMOCIÓN Y COMERCIALIZACIÓN DEL<br>
                         INMUEBLE
@@ -384,7 +385,7 @@
     {{-- PÁGINA 3 --}}
     <div class="page-break"></div>
     <div class="page-container">
-        <div class="page-number">3</div>
+        <!-- <div class="page-number">3</div> -->
         
         <div class="page-header">
             <div class="header-content">
@@ -392,7 +393,7 @@
                     <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
                 </div>
                 <div class="title-container">
-                    <div class="website">www.xante.mx</div>
+                    <!-- <div class="website">www.xante.mx</div> -->
                     <div class="main-title">
                         ACUERDO DE PROMOCIÓN Y COMERCIALIZACIÓN DEL<br>
                         INMUEBLE
@@ -440,45 +441,25 @@
         {{-- FIRMAS --}}
         <div class="signatures-section">
             <div class="signature-block">
-                <div class="signature-label">EL VENDEDOR(ES)</div>
-                
-                @php
-                    $showDoubleSignature = false;
-                    if (!empty($wizardData['has_co_borrower']) && $wizardData['has_co_borrower']) {
-                        $relationship = $wizardData['co_borrower_relationship'] ?? '';
-                        // Mostrar doble firma solo si es Coacreditado o Bienes Mancomunados
-                        if (in_array($relationship, ['coacreditado', 'bienes_mancomunados'])) {
-                            $showDoubleSignature = true;
-                        }
-                    }
-                @endphp
-
-                @if($showDoubleSignature)
-                    {{-- FIRMAS MANCOMUNADAS (LADO A LADO) --}}
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="width: 48%; text-align: center; vertical-align: top;">
-                                <div class="signature-line" style="width: 90%; margin: 0 auto 8px auto;"></div>
-                                <div class="signature-name">{{ strtoupper($holder_name ?? 'NOMBRE Y FIRMA VENDEDOR') }}</div>
-                            </td>
-                            <td style="width: 4%;">&nbsp;</td>
-                            <td style="width: 48%; text-align: center; vertical-align: top;">
-                                <div class="signature-line" style="width: 90%; margin: 0 auto 8px auto;"></div>
-                                <div class="signature-name">{{ strtoupper($spouse_name ?? 'NOMBRE Y FIRMA COACREDITADO / CÓNYUGE') }}</div>
-                            </td>
-                        </tr>
-                    </table>
-                @else
-                    {{-- FIRMA INDIVIDUAL (CENTRADA) --}}
-                    <div class="signature-line"></div>
-                    <div class="signature-name">{{ strtoupper($holder_name ?? 'NOMBRE Y FIRMA VENDEDOR') }}</div>
-                @endif
+                {{-- FIRMAS DINÁMICAS --}}
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        @foreach($signers ?? [['name' => '', 'label' => 'EL VENDEDOR']] as $signer)
+                        <td style="width: {{ 100 / count($signers ?? [1]) }}%; text-align: center; vertical-align: top; padding: 0 5px;">
+                            <div class="signature-line" style="width: 90%; margin: 0 auto 8px auto;"></div>
+                            <div class="signature-name">{{ strtoupper($signer['name']) }}</div>
+                            <div class="signature-label" style="margin-top: 5px; margin-bottom: 10px; font-weight: normal; font-size: 8pt;">{{ $signer['label'] }}</div>
+                        </td>
+                        @endforeach
+                    </tr>
+                </table>
+                <div class="signature-label" style="text-align: center;">EL(LOS) VENDEDOR(ES)</div>
             </div>
 
-            <div class="signature-block" style="margin-top: 50px;">
-                <div class="signature-label">XANTE & VI, S.A.P.I. DE C.V.</div>
+            <div class="signature-block">
                 <div class="signature-line"></div>
                 <div class="signature-name">C.P. CÉSAR RODRÍGUEZ REYES</div>
+                <div class="signature-label" style="text-align: center;">XANTE & VI, S.A.P.I. DE C.V.</div>
             </div>
         </div>
 

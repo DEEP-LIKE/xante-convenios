@@ -169,7 +169,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                         $this->recalculateAllFinancials();
                                     }
                                 })
-                                ->helperText('Seleccione el estado para cargar el % de comisión'),
+                                ->helperText('Seleccione el estado para cargar el % de GE'),
                             TextInput::make('porcentaje_comision_sin_iva')
                                 ->label('% Comisión (Sin IVA)')
                                 ->numeric()
