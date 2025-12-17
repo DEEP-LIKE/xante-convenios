@@ -12,26 +12,27 @@ RUN a2enmod rewrite
 # ----------------------------------------------------------------------
 # 2. INSTALACIÓN DE HERRAMIENTAS Y LIBRERÍAS DE DESARROLLO
 # ----------------------------------------------------------------------
-# Actualizar el gestor de paquetes (apt), instalar herramientas y librerías de desarrollo
+# Este paso corrige: "composer: not found", "libcurl not found", y Node.js
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     unzip \
     wget \
     curl \
+    # Librerías de desarrollo requeridas para compilar extensiones de PHP:
     libcurl4-openssl-dev \
     libzip-dev \
     libicu-dev \
     libpng-dev \
     libonig-dev \
     libfreetype6-dev \
-    # Instalar Node.js y npm
+    # Instalar Node.js y npm (se usa la versión disponible en los repos de Debian)
     nodejs \
     npm \
     # Limpiar caché
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ----------------------------------------------------------------------
-# 3. INSTALACIÓN DE COMPOSER (Soluciona "composer: not found")
+# 3. INSTALACIÓN DE COMPOSER
 # ----------------------------------------------------------------------
 # Descargar e instalar Composer de forma global
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -50,20 +51,18 @@ RUN docker-php-ext-configure gd --with-freetype \
         bcmath \
         curl \
         exif \
-        # Extensión que faltaba en el buildpack para el token de HubSpot
         iconv \
     && rm -rf /tmp/*
 
 # ----------------------------------------------------------------------
-# 5. COPIAR CÓDIGO Y DEPENDENCIAS
+# 5. COPIAR CÓDIGO Y DEPENDENCIAS (¡CORRECCIÓN CRÍTICA!)
 # ----------------------------------------------------------------------
-# Copiar archivos de Composer para aprovechar el cacheo de capas
-COPY composer.json composer.lock ./
+# COPIAR EL CÓDIGO FUENTE COMPLETO ANTES DE COMPOSER
+# Esto asegura que el archivo 'artisan' esté presente cuando Composer lo necesite.
+COPY . .
+
 # Ejecutar la instalación de dependencias de PHP
 RUN composer install --no-dev --optimize-autoloader
-
-# Copiar todo el código fuente del proyecto
-COPY . .
 
 # ----------------------------------------------------------------------
 # 6. COMPILACIÓN DE ASSETS Y OPTIMIZACIÓN DE LARAVEL
@@ -72,7 +71,7 @@ COPY . .
 RUN npm install \
     && npm run build
 
-# Optimización de Laravel (debe hacerse después de copiar el código)
+# Optimización de Laravel
 RUN php artisan config:cache \
     && php artisan route:cache
 
