@@ -60,7 +60,7 @@ COPY composer.json composer.lock ./
 COPY package.json package-lock.json ./
 
 # Instalar dependencias de PHP (sin autoloader todavía)
-RUN composer install --no-dev --no-autoload --no-scripts
+RUN composer install --no-dev --no-autoloader --no-scripts
 
 # Instalar dependencias de Node.js
 RUN npm ci
