@@ -1,6 +1,13 @@
 php:
   version: 8.3.*
   extensions:
+    - gd
+    - intl
+    - zip
     - curl
     - fileinfo
-    - zip
+    - bcmath
+    - pdo-mysql
+
+nodejs:
+  version: 20.*
