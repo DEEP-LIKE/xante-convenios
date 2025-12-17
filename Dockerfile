@@ -18,13 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     wget \
     curl \
-    # Librerías para Extensiones de PHP
+    libcurl4-openssl-dev \
     libzip-dev \
     libicu-dev \
     libpng-dev \
     libonig-dev \
     libfreetype6-dev \
-    # Instalar Node.js y npm (se usa la versión disponible en los repos de Debian)
+    # Instalar Node.js y npm
     nodejs \
     npm \
     # Limpiar caché
