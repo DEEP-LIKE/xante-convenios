@@ -235,7 +235,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                     $syncAction->execute($this->agreement, $this->agreement->wizard_data ?? []);
                                     
                                     // Sincronización Fase 2: Actualizar 'nombre_inmueble'
-                                    // Se eliminó la restricción de ID 2584 para que aplique a todos
                                     if ($this->agreement->client && $this->agreement->client->hubspot_deal_id) {
                                         $hubspotDealId = $this->agreement->client->hubspot_deal_id;
                                         $xanteId = $this->agreement->client->xante_id;
@@ -244,7 +243,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             // Lógica idempotente: Solo agregar XA- si no lo tiene
                                             $nombreInmueble = str_starts_with($xanteId, 'XA-') 
                                                 ? $xanteId 
-                                                : 'XA-' . $xanteId;
+                                                : $xanteId;
                                             
                                             $hubspotService = app(\App\Services\HubspotSyncService::class);
                                             
@@ -255,7 +254,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                             
                                             \Log::info('Nombre inmueble actualizado en HubSpot', [
                                                 'deal_id' => $hubspotDealId,
-                                                'nuevo_nombre' => $nombreInmueble
+                                                'nombre_inmueble' => $nombreInmueble
                                             ]);
                                         }
                                     }
