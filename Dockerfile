@@ -10,7 +10,7 @@ WORKDIR /var/www/html
 RUN a2enmod rewrite headers
 
 # ----------------------------------------------------------------------
-# 2. INSTALACIÓN DE HERRAMIENTAS Y LIBRERÍAS
+# 2. INSTALACIÓN DE HERRAMIENTAS Y LIBRERÍAS (+ SUPERVISOR)
 # ----------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libonig-dev \
     libfreetype6-dev \
+    supervisor \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ----------------------------------------------------------------------
@@ -51,6 +52,7 @@ RUN docker-php-ext-configure gd --with-freetype \
         curl \
         exif \
         iconv \
+        pcntl \
     && rm -rf /tmp/*
 
 # ----------------------------------------------------------------------
@@ -110,14 +112,25 @@ RUN echo '<Directory /var/www/html/public>' >> /etc/apache2/sites-available/000-
 RUN echo 'SetEnvIf X-Forwarded-Proto https HTTPS=on' >> /etc/apache2/apache2.conf
 
 # ----------------------------------------------------------------------
-# 11. PERMISOS
+# 11. CONFIGURACIÓN DE SUPERVISOR PARA LARAVEL QUEUE
+# ----------------------------------------------------------------------
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# ----------------------------------------------------------------------
+# 12. PERMISOS
 # ----------------------------------------------------------------------
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
 # ----------------------------------------------------------------------
-# 12. EXPONER PUERTO Y COMANDO DE INICIO
+# 13. SCRIPT DE INICIO
+# ----------------------------------------------------------------------
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# ----------------------------------------------------------------------
+# 14. EXPONER PUERTO Y COMANDO DE INICIO
 # ----------------------------------------------------------------------
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/start.sh"]
