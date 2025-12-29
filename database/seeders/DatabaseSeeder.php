@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
             CalculatorConfigurationSeeder::class,  // Agregado
             StateCommissionRateSeeder::class,     // Agregado
             StateBankAccountSeeder::class,        // Agregado
-            ClientSeeder::class,
+            // ClientSeeder::class,
             PropertySeeder::class,
             AgreementSeeder::class,
         ]);
