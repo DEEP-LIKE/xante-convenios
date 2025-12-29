@@ -72,11 +72,9 @@ class CalculatorConfigurationSeeder extends Seeder
             ],
             [
                 'key' => 'prototipo_default',
-                'name' => 'Prototipo Por Defecto',
                 'description' => 'Prototipo por defecto para propiedades',
                 'value' => 'BURGOS',
                 'type' => 'string',
-                'group' => 'property'
             ]
         ];
 
