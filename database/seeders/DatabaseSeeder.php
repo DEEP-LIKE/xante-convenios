@@ -13,7 +13,11 @@ class DatabaseSeeder extends Seeder
         
         $this->call([
             UserSeeder::class,
-            // ClientSeeder::class,
+            ConfigurationSeeder::class,           // Agregado
+            CalculatorConfigurationSeeder::class,  // Agregado
+            StateCommissionRateSeeder::class,     // Agregado
+            StateBankAccountSeeder::class,        // Agregado
+            ClientSeeder::class,
             PropertySeeder::class,
             AgreementSeeder::class,
         ]);
