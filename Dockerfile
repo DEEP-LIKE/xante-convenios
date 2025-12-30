@@ -132,6 +132,9 @@ RUN chmod +x /usr/local/bin/start.sh
 # ----------------------------------------------------------------------
 # 14. EXPONER PUERTO Y COMANDO DE INICIO
 # ----------------------------------------------------------------------
+# IMPORTANTE: Desactivamos que apache inicie por si solo como servicio background
+RUN update-rc.d apache2 disable
+
 EXPOSE 80
 
 CMD ["/usr/local/bin/start.sh"]
