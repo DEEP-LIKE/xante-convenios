@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libonig-dev \
     libfreetype6-dev \
     supervisor \
+    cron \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ----------------------------------------------------------------------
