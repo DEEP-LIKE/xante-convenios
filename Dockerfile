@@ -92,7 +92,7 @@ COPY --from=node-builder /app/public/build ./public/build
 # Y nos aseguramos de que no haya caches previos antes del dump
 RUN git config --global --add safe.directory /var/www/html \
     && rm -f bootstrap/cache/*.php \
-    && composer dump-autoload --optimize --classmap-authoritative \
+    && composer dump-autoload --optimize --classmap-authoritative --no-dev \
     && php artisan filament:assets --no-interaction \
     && php artisan config:cache \
     && php artisan route:cache \
