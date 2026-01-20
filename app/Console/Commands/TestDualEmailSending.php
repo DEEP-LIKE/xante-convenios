@@ -2,14 +2,15 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Agreement;
 use App\Mail\DocumentsReadyMail;
+use App\Models\Agreement;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
 class TestDualEmailSending extends Command
 {
     protected $signature = 'test:dual-email-sending {agreement_id} {--advisor-email=} {--client-email=}';
+
     protected $description = 'Test sending emails to both advisor and client';
 
     public function handle()
@@ -20,9 +21,10 @@ class TestDualEmailSending extends Command
 
         // Buscar el convenio
         $agreement = Agreement::with('generatedDocuments')->find($agreementId);
-        
-        if (!$agreement) {
+
+        if (! $agreement) {
             $this->error("❌ Convenio con ID {$agreementId} no encontrado");
+
             return 1;
         }
 
@@ -35,18 +37,19 @@ class TestDualEmailSending extends Command
         });
 
         $this->info("✅ Archivos físicos existentes: {$documentsWithFiles->count()}");
-        
+
         foreach ($documentsWithFiles as $document) {
             $size = $document->getFileSize();
             $this->line("  - {$document->formatted_type} ({$size})");
         }
 
-        $this->info("📧 Enviando correos a:");
+        $this->info('📧 Enviando correos a:');
         $this->line("  - Asesor: {$advisorEmail}");
         $this->line("  - Cliente: {$clientEmail}");
 
-        if (!$this->confirm('¿Desea enviar los correos de prueba?')) {
+        if (! $this->confirm('¿Desea enviar los correos de prueba?')) {
             $this->info('❌ Envío cancelado por el usuario');
+
             return 0;
         }
 
@@ -57,7 +60,7 @@ class TestDualEmailSending extends Command
             Mail::to($clientEmail)
                 ->cc($advisorEmail)
                 ->send(new DocumentsReadyMail($agreement));
-            
+
             $this->info("✅ Correo enviado al cliente: {$clientEmail}");
             $this->info("✅ Copia enviada al asesor: {$advisorEmail}");
 
@@ -70,7 +73,8 @@ class TestDualEmailSending extends Command
             return 0;
 
         } catch (\Exception $e) {
-            $this->error('❌ Error al enviar correos: ' . $e->getMessage());
+            $this->error('❌ Error al enviar correos: '.$e->getMessage());
+
             return 1;
         }
     }

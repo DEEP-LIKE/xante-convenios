@@ -7,7 +7,7 @@ use Filament\Notifications\Notification;
 
 /**
  * Servicio para gestionar el estado del wizard de documentos
- * 
+ *
  * Responsabilidades:
  * - Determinar el paso actual basado en el estado del convenio
  * - Decidir si marcar como completado
@@ -20,7 +20,7 @@ class DocumentStateManager
      */
     public function determineCurrentStep(Agreement $agreement): int
     {
-        return match($agreement->status) {
+        return match ($agreement->status) {
             'documents_generating', 'documents_generated' => 1,
             'documents_sent', 'awaiting_client_docs' => 2,
             'documents_complete', 'completed' => 3,
@@ -58,7 +58,7 @@ class DocumentStateManager
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Error')
-                ->body('Error al completar el convenio: ' . $e->getMessage())
+                ->body('Error al completar el convenio: '.$e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -80,8 +80,9 @@ class DocumentStateManager
             \Log::error('Error updating step data', [
                 'agreement_id' => $agreement->id,
                 'step' => $step,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -97,7 +98,7 @@ class DocumentStateManager
             'documents_sent' => 'Documentos enviados, esperando documentos del cliente',
             'awaiting_client_docs' => 'Esperando que el cliente suba sus documentos',
             'documents_complete' => 'Todos los documentos recibidos',
-            'completed' => 'Convenio completado exitosamente'
+            'completed' => 'Convenio completado exitosamente',
         ];
 
         return $statusMessages[$agreement->status] ?? null;

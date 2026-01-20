@@ -13,16 +13,16 @@ return new class extends Migration
     {
         Schema::table('agreements', function (Blueprint $table) {
             $table->enum('validation_status', [
-                'not_required', 
-                'pending', 
-                'approved', 
-                'rejected', 
-                'with_observations'
+                'not_required',
+                'pending',
+                'approved',
+                'rejected',
+                'with_observations',
             ])->default('not_required')->after('status');
-            
+
             $table->foreignId('current_validation_id')->nullable()->constrained('quote_validations')->onDelete('set null')->after('validation_status');
             $table->boolean('can_generate_documents')->default(false)->after('current_validation_id');
-            
+
             // Índice para búsquedas por estado de validación
             $table->index('validation_status');
         });

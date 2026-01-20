@@ -20,24 +20,23 @@ class EditQuoteValidation extends EditRecord
                 ->requiresConfirmation()
                 ->modalHeading('Aprobar Validación')
                 ->modalDescription('¿Está seguro de que desea aprobar esta validación?')
-                ->visible(fn (): bool => 
-                    in_array($this->record->status, ['pending', 'rejected']) && 
+                ->visible(fn (): bool => in_array($this->record->status, ['pending', 'rejected']) &&
                     auth()->user()->can('approve', $this->record) &&
-                    !$this->record->hasValueChanges(
+                    ! $this->record->hasValueChanges(
                         (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['valor_convenio'] ?? 0),
                         (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['porcentaje_comision_sin_iva'] ?? 0)
                     ))
                 ->action(function () {
                     // Guardar primero por si hubo cambios menores no detectados (aunque debería estar bloqueado)
                     $this->save();
-                    
+
                     app(\App\Services\ValidationService::class)->approveValidation($this->record, auth()->user());
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Validación Aprobada')
                         ->success()
                         ->send();
-                        
+
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
 
@@ -55,8 +54,7 @@ class EditQuoteValidation extends EditRecord
                         ->rows(4)
                         ->placeholder('Justifique por qué se están modificando los valores...'),
                 ])
-                ->visible(fn (): bool => 
-                    in_array($this->record->status, ['pending', 'rejected']) && 
+                ->visible(fn (): bool => in_array($this->record->status, ['pending', 'rejected']) &&
                     auth()->user()->role === 'coordinador_fi' &&
                     $this->record->hasValueChanges(
                         (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['valor_convenio'] ?? 0),
@@ -65,7 +63,7 @@ class EditQuoteValidation extends EditRecord
                 ->action(function (array $data) {
                     // NO guardar los cambios en el registro principal ($this->save())
                     // Los valores nuevos deben quedar SOLO en la solicitud de autorización
-                    
+
                     // 1. Valores Originales (del registro en BD sin modificar)
                     $oldSnapshot = $this->record->calculator_snapshot;
                     $oldPrice = (float) str_replace([',', '$'], '', $oldSnapshot['valor_convenio'] ?? 0);
@@ -75,25 +73,25 @@ class EditQuoteValidation extends EditRecord
                     $formSnapshot = $this->data['calculator_snapshot'] ?? [];
                     $newPrice = (float) str_replace([',', '$'], '', $formSnapshot['valor_convenio'] ?? 0);
                     $newCommission = (float) str_replace([',', '$'], '', $formSnapshot['porcentaje_comision_sin_iva'] ?? 0);
-                    
+
                     $this->record->requestAuthorization(
                         auth()->id(),
                         $newPrice,
                         $newCommission,
                         $data['justification'],
-                        $oldPrice,       
-                        $oldCommission   
+                        $oldPrice,
+                        $oldCommission
                     );
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Autorización Solicitada')
                         ->body('Se ha enviado la solicitud a gerencia.')
                         ->success()
                         ->send();
-                        
+
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
-            
+
             Actions\Action::make('request_changes')
                 ->label('Solicitar Cambios')
                 ->icon('heroicon-o-chat-bubble-left-right')
@@ -105,23 +103,22 @@ class EditQuoteValidation extends EditRecord
                         ->rows(5)
                         ->placeholder('Describe los cambios que necesitas que realice el ejecutivo...'),
                 ])
-                ->visible(fn (): bool => 
-                    in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('requestChanges', $this->record))
+                ->visible(fn (): bool => in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('requestChanges', $this->record))
                 ->action(function (array $data) {
                     app(\App\Services\ValidationService::class)->requestChanges(
-                        $this->record, 
-                        auth()->user(), 
+                        $this->record,
+                        auth()->user(),
                         $data['observations']
                     );
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Observaciones Enviadas')
                         ->success()
                         ->send();
-                        
+
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
-            
+
             Actions\Action::make('reject')
                 ->label('Rechazar')
                 ->icon('heroicon-o-x-circle')
@@ -133,20 +130,19 @@ class EditQuoteValidation extends EditRecord
                         ->required()
                         ->rows(4),
                 ])
-                ->visible(fn (): bool => 
-                    in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('reject', $this->record))
+                ->visible(fn (): bool => in_array($this->record->status, ['pending', 'rejected']) && auth()->user()->can('reject', $this->record))
                 ->action(function (array $data) {
                     app(\App\Services\ValidationService::class)->rejectValidation(
-                        $this->record, 
-                        auth()->user(), 
+                        $this->record,
+                        auth()->user(),
                         $data['reason']
                     );
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Validación Rechazada')
                         ->danger()
                         ->send();
-                        
+
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
         ];

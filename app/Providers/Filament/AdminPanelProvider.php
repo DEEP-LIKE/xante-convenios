@@ -1,28 +1,26 @@
 <?php
 
 namespace App\Providers\Filament;
-use Filament\Navigation\NavigationGroup;
+
+use App\Filament\Widgets\AgreementsChart;
+use App\Filament\Widgets\ProposalStatsWidget;
+use App\Filament\Widgets\StatsOverview;
+use App\Http\Middleware\SetSpanishLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Support\Facades\FilamentView;
-use Filament\View\PanelsRenderHook;
-use Illuminate\Support\Facades\Blade;
-use App\Filament\Widgets\StatsOverview;
-use App\Filament\Widgets\AgreementsChart;
-use App\Filament\Widgets\ProposalStatsWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Http\Middleware\SetSpanishLocale;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -40,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('5rem')
             ->sidebarCollapsibleOnDesktop()
             ->globalSearch(false)
-            
+
             // Paleta de colores corporativos de Xante
             ->colors([
                 'primary' => Color::hex('#6C2582'),      // Morado Oscuro Xante (Primary)
@@ -50,15 +48,15 @@ class AdminPanelProvider extends PanelProvider
                 'info' => Color::hex('#7C4794'),         // Morado Medio Xante
                 'gray' => Color::hex('#342970'),         // Azul Violeta Xante (Texto base)
             ])
-            
+
             // Usar fuente del sistema por ahora para evitar problemas
             // ->font('Franie')
             // ->viteTheme('resources/css/filament/admin/theme.css') // Comentado para evitar conflictos
-            
+
             // Habilitar notificaciones de base de datos (Necesario para recibir avisos de Jobs en background)
             ->databaseNotifications()
             ->databaseNotificationsPolling('15s') // Revisar cada 15 segundos
-            
+
             ->navigationGroups([
                 NavigationGroup::make('Configuraciones')->collapsed(true),
             ])

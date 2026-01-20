@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Agreement;
 use App\Mail\DocumentsReadyMail;
+use App\Models\Agreement;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
 class TestEmailSending extends Command
@@ -30,9 +30,10 @@ class TestEmailSending extends Command
         try {
             // Buscar el convenio
             $agreement = Agreement::with('generatedDocuments')->find($agreementId);
-            
-            if (!$agreement) {
+
+            if (! $agreement) {
                 $this->error("❌ Convenio con ID {$agreementId} no encontrado");
+
                 return 1;
             }
 
@@ -40,21 +41,23 @@ class TestEmailSending extends Command
 
             // Verificar documentos generados
             if ($agreement->generatedDocuments->isEmpty()) {
-                $this->error("❌ No hay documentos generados para este convenio");
+                $this->error('❌ No hay documentos generados para este convenio');
+
                 return 1;
             }
 
-            $this->info("📄 Documentos encontrados: " . $agreement->generatedDocuments->count());
+            $this->info('📄 Documentos encontrados: '.$agreement->generatedDocuments->count());
 
             // Verificar que los archivos existen
             $existingFiles = $agreement->generatedDocuments->filter(function ($document) {
                 return $document->fileExists();
             });
 
-            $this->info("✅ Archivos físicos existentes: " . $existingFiles->count());
+            $this->info('✅ Archivos físicos existentes: '.$existingFiles->count());
 
             if ($existingFiles->isEmpty()) {
-                $this->error("❌ No se encontraron archivos PDF en el servidor");
+                $this->error('❌ No se encontraron archivos PDF en el servidor');
+
                 return 1;
             }
 
@@ -71,38 +74,41 @@ class TestEmailSending extends Command
             } else {
                 $wizardData = $agreement->wizard_data ?? [];
                 $clientEmail = $wizardData['holder_email'] ?? null;
-                
-                if (!$clientEmail) {
-                    $this->error("❌ No se encontró email del cliente en wizard_data");
-                    $this->info("💡 Use --email=tu@email.com para especificar un email de prueba");
+
+                if (! $clientEmail) {
+                    $this->error('❌ No se encontró email del cliente en wizard_data');
+                    $this->info('💡 Use --email=tu@email.com para especificar un email de prueba');
+
                     return 1;
                 }
-                
+
                 $this->info("📧 Usando email del cliente: {$clientEmail}");
             }
 
             // Confirmar envío
-            if (!$this->confirm("¿Desea enviar el correo de prueba a {$clientEmail}?")) {
-                $this->info("❌ Envío cancelado por el usuario");
+            if (! $this->confirm("¿Desea enviar el correo de prueba a {$clientEmail}?")) {
+                $this->info('❌ Envío cancelado por el usuario');
+
                 return 0;
             }
 
             // Enviar correo
-            $this->info("📤 Enviando correo...");
-            
+            $this->info('📤 Enviando correo...');
+
             Mail::to($clientEmail)->send(new DocumentsReadyMail($agreement));
-            
-            $this->info("✅ Correo enviado exitosamente!");
-            $this->info("📊 Resumen del envío:");
+
+            $this->info('✅ Correo enviado exitosamente!');
+            $this->info('📊 Resumen del envío:');
             $this->line("  - Destinatario: {$clientEmail}");
             $this->line("  - Documentos adjuntos: {$existingFiles->count()}");
             $this->line("  - Convenio ID: {$agreement->id}");
-            
+
             return 0;
 
         } catch (\Exception $e) {
-            $this->error("❌ Error al enviar correo: " . $e->getMessage());
-            $this->error("🔍 Detalles técnicos: " . $e->getFile() . ':' . $e->getLine());
+            $this->error('❌ Error al enviar correo: '.$e->getMessage());
+            $this->error('🔍 Detalles técnicos: '.$e->getFile().':'.$e->getLine());
+
             return 1;
         }
     }

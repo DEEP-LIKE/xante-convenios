@@ -4,29 +4,28 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\QuoteAuthorizationResource\Pages;
 use App\Models\QuoteAuthorization;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
-use BackedEnum;
-use UnitEnum;
 
 class QuoteAuthorizationResource extends Resource
 {
     protected static ?string $model = QuoteAuthorization::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
-    
+
     protected static ?string $navigationLabel = 'Autorizaciones';
-    
+
     protected static ?string $modelLabel = 'Autorización';
-    
+
     protected static ?string $pluralModelLabel = 'Autorizaciones';
-    
+
     protected static \UnitEnum|string|null $navigationGroup = 'Cotizaciones';
-    
+
     protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
@@ -44,7 +43,7 @@ class QuoteAuthorizationResource extends Resource
                             ])
                             ->required()
                             ->disabled(fn ($record) => $record !== null),
-                        
+
                         \Filament\Schemas\Components\Grid::make(2)
                             ->schema([
                                 \Filament\Forms\Components\TextInput::make('old_commission_percentage')
@@ -57,7 +56,7 @@ class QuoteAuthorizationResource extends Resource
                                     ->numeric()
                                     ->suffix('%'),
                             ]),
-                        
+
                         \Filament\Schemas\Components\Grid::make(2)
                             ->schema([
                                 \Filament\Forms\Components\TextInput::make('old_price')
@@ -70,7 +69,7 @@ class QuoteAuthorizationResource extends Resource
                                     ->numeric()
                                     ->prefix('$'),
                             ]),
-                        
+
                         \Filament\Forms\Components\Textarea::make('discount_reason')
                             ->label('Motivo del Descuento')
                             ->rows(3),
@@ -82,23 +81,23 @@ class QuoteAuthorizationResource extends Resource
                         \Filament\Forms\Components\Placeholder::make('agreement_summary')
                             ->hiddenLabel()
                             ->content(function ($record) {
-                                if (!$record || !$record->quoteValidation || !$record->quoteValidation->agreement) {
+                                if (! $record || ! $record->quoteValidation || ! $record->quoteValidation->agreement) {
                                     return '';
                                 }
-                                
+
                                 $data = $record->quoteValidation->agreement->wizard_data;
                                 $renderer = app(\App\Services\WizardSummaryRenderer::class);
-                                
+
                                 return new \Illuminate\Support\HtmlString(
-                                    $renderer->renderPropertySummary($data) . 
-                                    '<div class="mt-4"></div>' .
+                                    $renderer->renderPropertySummary($data).
+                                    '<div class="mt-4"></div>'.
                                     $renderer->renderHolderSummary($data)
                                 );
                             })
                             ->columnSpanFull(),
                     ])
                     ->columnSpanFull(),
-                
+
                 // \Filament\Schemas\Components\Section::make('Estado')
                 //     ->schema([
                 //         \Filament\Forms\Components\Select::make('status')
@@ -109,7 +108,7 @@ class QuoteAuthorizationResource extends Resource
                 //                 'rejected' => 'Rechazada',
                 //             ])
                 //             ->disabled(),
-                        
+
                 //         \Filament\Forms\Components\Textarea::make('rejection_reason')
                 //             ->label('Motivo de Rechazo')
                 //             ->rows(3)
@@ -126,7 +125,7 @@ class QuoteAuthorizationResource extends Resource
                 \Filament\Tables\Columns\TextColumn::make('id')
                     ->label('ID')
                     ->sortable(),
-                
+
                 \Filament\Tables\Columns\TextColumn::make('quoteValidation.agreement_id')
                     ->label('Convenio')
                     ->sortable()
@@ -157,7 +156,7 @@ class QuoteAuthorizationResource extends Resource
                     ->label('Solicitado por')
                     ->searchable()
                     ->sortable(),
-                
+
                 \Filament\Tables\Columns\TextColumn::make('change_type')
                     ->label('Tipo')
                     ->badge()
@@ -173,17 +172,17 @@ class QuoteAuthorizationResource extends Resource
                         'both' => 'Ambos',
                         default => $state,
                     }),
-                
+
                 \Filament\Tables\Columns\TextColumn::make('new_commission_percentage')
                     ->label('Nueva Comisión')
                     ->suffix('%')
                     ->toggleable(),
-                
+
                 \Filament\Tables\Columns\TextColumn::make('new_price')
                     ->label('Nuevo Valor Convenio')
                     ->money('MXN')
                     ->toggleable(),
-                
+
                 \Filament\Tables\Columns\TextColumn::make('status')
                     ->label('Estado')
                     ->badge()
@@ -199,7 +198,7 @@ class QuoteAuthorizationResource extends Resource
                         'rejected' => 'Rechazada',
                         default => $state,
                     }),
-                
+
                 \Filament\Tables\Columns\TextColumn::make('created_at')
                     ->label('Fecha')
                     ->dateTime('d/m/Y H:i')
@@ -213,7 +212,7 @@ class QuoteAuthorizationResource extends Resource
                         'approved' => 'Aprobada',
                         'rejected' => 'Rechazada',
                     ]),
-                
+
                 \Filament\Tables\Filters\SelectFilter::make('change_type')
                     ->label('Tipo de Cambio')
                     ->options([
@@ -233,13 +232,13 @@ class QuoteAuthorizationResource extends Resource
                     ->visible(fn (QuoteAuthorization $record): bool => $record->isPending() && auth()->user()->can('approve', $record))
                     ->action(function (QuoteAuthorization $record) {
                         $record->approve(auth()->id());
-                        
+
                         Notification::make()
                             ->title('Solicitud Aprobada')
                             ->success()
                             ->send();
                     }),
-                
+
                 Action::make('reject')
                     ->label('Rechazar')
                     ->icon('heroicon-o-x-circle')
@@ -255,7 +254,7 @@ class QuoteAuthorizationResource extends Resource
                     ->visible(fn (QuoteAuthorization $record): bool => $record->isPending() && auth()->user()->can('reject', $record))
                     ->action(function (QuoteAuthorization $record, array $data) {
                         $record->reject(auth()->id(), $data['rejection_reason']);
-                        
+
                         Notification::make()
                             ->title('Solicitud Rechazada')
                             ->danger()
@@ -266,11 +265,11 @@ class QuoteAuthorizationResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->modifyQueryUsing(function (Builder $query) {
                 $user = auth()->user();
-                
+
                 if ($user->role === 'ejecutivo') {
                     $query->where('requested_by', $user->id);
                 }
-                
+
                 return $query;
             });
     }

@@ -2,39 +2,33 @@
 
 namespace App\Filament\Resources\Clients;
 
-use App\Filament\Resources\Clients\Pages\CreateClient;
-use App\Filament\Resources\Clients\Pages\EditClient;
+use App\Filament\Resources\Clients\Pages\ListClients;
 use App\Models\Client;
+use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
-use Illuminate\Support\Facades\Artisan;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
-use BackedEnum;
-use App\Filament\Resources\Clients\Pages\ListClients;
-use Filament\Schemas\Components\TextEntry;
-use Filament\Forms\Components\Placeholder;
-use Filament\Actions\ViewAction;
 
 class ClientResource extends Resource
 {
     protected static ?string $model = Client::class;
 
-    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-users';
-    
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
+
     protected static ?string $navigationLabel = 'Clientes';
-    
+
     protected static ?string $modelLabel = 'Cliente';
-    
+
     protected static ?string $pluralModelLabel = 'Clientes';
-    
+
     protected static ?int $navigationSort = 2;
 
     public static function table(Table $table): Table
@@ -42,7 +36,7 @@ class ClientResource extends Resource
         // Sincronización automática cada vez que se carga la tabla
         // Sincronización automática eliminada para mejorar rendimiento
         // static::syncClientAgreementRelations();
-        
+
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with('latestAgreement'))
             ->columns([
@@ -60,6 +54,7 @@ class ClientResource extends Resource
                     ->limit(30)
                     ->tooltip(function (TextColumn $column): ?string {
                         $state = $column->getState();
+
                         return strlen($state) > 30 ? $state : null;
                     }),
                 TextColumn::make('fecha_registro')
@@ -75,7 +70,7 @@ class ClientResource extends Resource
                     ->placeholder('No sincronizado')
                     ->tooltip('Última fecha de sincronización con HubSpot')
                     ->toggleable(isToggledHiddenByDefault: true), // Oculta por defecto
-                
+
                 // Monto del Convenio (HubSpot)
                 TextColumn::make('hubspot_amount')
                     ->label('Monto HubSpot')
@@ -84,7 +79,7 @@ class ClientResource extends Resource
                     ->tooltip('Monto del negocio en HubSpot (sincronizado)')
                     ->sortable()
                     ->visible(fn () => auth()->user()?->role === 'admin'), // Solo admin
-                
+
                 // Estatus del Convenio (HubSpot)
                 TextColumn::make('hubspot_status')
                     ->label('Estatus HubSpot')
@@ -98,7 +93,7 @@ class ClientResource extends Resource
                     ->placeholder('N/A')
                     ->tooltip('Estatus del convenio en HubSpot (sincronizado)')
                     ->sortable(),
-                
+
                 // Convenio Local (movido al final)
                 TextColumn::make('agreement_status')
                     ->label('Convenio')
@@ -169,7 +164,7 @@ class ClientResource extends Resource
                         'error_generating_documents' => 'Error al Generar Documentos',
                     ])
                     ->query(function ($query, array $data) {
-                        if (!empty($data['value'])) {
+                        if (! empty($data['value'])) {
                             if ($data['value'] === 'sin_convenio') {
                                 return $query->whereDoesntHave('latestAgreement');
                             } else {
@@ -178,6 +173,7 @@ class ClientResource extends Resource
                                 });
                             }
                         }
+
                         return $query;
                     }),
             ])
@@ -188,12 +184,12 @@ class ClientResource extends Resource
                     ->tooltip('Ver información completa del cliente'),
             ])
             ->bulkActions(
-                auth()->user()?->role === 'admin' 
+                auth()->user()?->role === 'admin'
                     ? [
                         BulkActionGroup::make([
                             DeleteBulkAction::make(),
                         ]),
-                    ] 
+                    ]
                     : []
             )
             ->checkIfRecordIsSelectableUsing(
@@ -233,7 +229,7 @@ class ClientResource extends Resource
                     ->schema([
                         Placeholder::make('hubspot_amount')
                             ->label('Monto del Negocio')
-                            ->content(fn ($record) => $record->hubspot_amount ? '$' . number_format($record->hubspot_amount, 2) . ' MXN' : 'N/A'),
+                            ->content(fn ($record) => $record->hubspot_amount ? '$'.number_format($record->hubspot_amount, 2).' MXN' : 'N/A'),
                         Placeholder::make('hubspot_status')
                             ->label('Estatus del Convenio')
                             ->content(fn ($record) => $record->hubspot_status ?? 'N/A'),
@@ -327,17 +323,17 @@ class ClientResource extends Resource
 
             foreach ($agreementsWithoutClient as $agreement) {
                 $wizardData = $agreement->wizard_data;
-                
-                if (!$wizardData || !isset($wizardData['xante_id'])) {
+
+                if (! $wizardData || ! isset($wizardData['xante_id'])) {
                     continue;
                 }
 
                 $xanteId = $wizardData['xante_id'];
-                
+
                 // Buscar cliente existente
                 $client = Client::where('xante_id', $xanteId)->first();
-                
-                if (!$client) {
+
+                if (! $client) {
                     // Crear cliente si no existe
                     $client = static::createClientFromWizardData($wizardData, $agreement);
                 }
@@ -355,7 +351,7 @@ class ClientResource extends Resource
 
             foreach ($orphanedAgreements as $agreement) {
                 $wizardData = $agreement->wizard_data;
-                
+
                 if ($wizardData) {
                     $client = static::createClientFromWizardData($wizardData, $agreement);
                     if ($client) {
@@ -366,7 +362,7 @@ class ClientResource extends Resource
 
         } catch (\Exception $e) {
             // Silencioso para no interrumpir la carga de la tabla
-            Log::error('Error en sincronización automática: ' . $e->getMessage());
+            Log::error('Error en sincronización automática: '.$e->getMessage());
         }
     }
 
@@ -394,19 +390,20 @@ class ClientResource extends Resource
             ];
 
             // Filtrar valores nulos
-            $clientData = array_filter($clientData, function($value) {
+            $clientData = array_filter($clientData, function ($value) {
                 return $value !== null && $value !== '';
             });
 
             // Asegurar campos requeridos
-            if (!isset($clientData['xante_id'])) {
+            if (! isset($clientData['xante_id'])) {
                 return null;
             }
 
             return Client::create($clientData);
 
         } catch (\Exception $e) {
-            Log::error('Error creando cliente: ' . $e->getMessage());
+            Log::error('Error creando cliente: '.$e->getMessage());
+
             return null;
         }
     }

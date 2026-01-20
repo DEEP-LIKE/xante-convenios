@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Agreement extends Model
 {
@@ -226,10 +226,9 @@ class Agreement extends Model
         return $this->belongsTo(FinalPriceAuthorization::class);
     }
 
-
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             // Estados originales
             'sin_convenio' => 'Sin Convenio',
             'expediente_incompleto' => 'Expediente Incompleto',
@@ -252,10 +251,10 @@ class Agreement extends Model
             default => $this->status,
         };
     }
-    
+
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             // Estados originales
             'sin_convenio' => 'gray',
             'expediente_incompleto' => 'warning',
@@ -303,6 +302,7 @@ class Agreement extends Model
     public function getCurrentStepName(): string
     {
         $steps = $this->getWizardSteps();
+
         return $steps[$this->current_step] ?? 'Paso Desconocido';
     }
 
@@ -357,17 +357,17 @@ class Agreement extends Model
     {
         $totalSteps = count($this->getWizardSteps()); // 5 pasos
         $currentStep = $this->current_step;
-        
+
         // Calcular porcentaje basado en el paso actual
         $percentage = $totalSteps > 0 ? round(($currentStep / $totalSteps) * 100) : 0;
-        
+
         $this->update(['completion_percentage' => $percentage]);
     }
 
     public function markStepAsCompleted(int $stepNumber): void
     {
         $progress = $this->wizardProgress()->where('step_number', $stepNumber)->first();
-        
+
         if ($progress) {
             $progress->markAsCompleted();
         }
@@ -384,11 +384,11 @@ class Agreement extends Model
     {
         $steps = array_keys($this->getWizardSteps());
         $currentIndex = array_search($this->current_step, $steps);
-        
+
         if ($currentIndex !== false && isset($steps[$currentIndex + 1])) {
             return $steps[$currentIndex + 1];
         }
-        
+
         return null;
     }
 
@@ -396,11 +396,11 @@ class Agreement extends Model
     {
         $steps = array_keys($this->getWizardSteps());
         $currentIndex = array_search($this->current_step, $steps);
-        
+
         if ($currentIndex !== false && $currentIndex > 0) {
             return $steps[$currentIndex - 1];
         }
-        
+
         return null;
     }
 
@@ -412,15 +412,16 @@ class Agreement extends Model
 
         // Crear snapshot de la calculadora desde wizard_data
         $wizardData = $this->wizard_data ?? [];
-        
+
         // Helper para sanitizar valores numéricos (convertir strings formateados a float)
-        $toFloat = function($value) {
+        $toFloat = function ($value) {
             if (is_string($value)) {
                 return (float) str_replace([',', '$', ' '], '', $value);
             }
+
             return (float) ($value ?? 0);
         };
-        
+
         // Sanitizar todos los valores numéricos del wizard_data
         $valorConvenio = $toFloat($wizardData['valor_convenio'] ?? $this->valor_convenio ?? 0);
         $precioPromocion = $toFloat($wizardData['precio_promocion'] ?? $this->precio_promocion ?? 0);
@@ -432,27 +433,27 @@ class Agreement extends Model
         $montoComisionSinIva = $toFloat($wizardData['monto_comision_sin_iva'] ?? 0);
         $comisionTotal = $toFloat($wizardData['comision_total_pagar'] ?? 0);
         $gananciaFinal = $toFloat($wizardData['ganancia_final'] ?? $this->ganancia_final ?? 0);
-        
+
         // Calcular valores derivados si no existen
         if ($montoComisionSinIva == 0 && $valorConvenio > 0) {
             $montoComisionSinIva = $valorConvenio * ($porcentajeComision / 100);
         }
-        
+
         if ($comisionTotal == 0 && $montoComisionSinIva > 0) {
             $comisionTotal = $montoComisionSinIva * 1.16;
         }
-        
+
         if ($gananciaFinal == 0 && $valorConvenio > 0) {
             $gananciaFinal = $valorConvenio - $isr - $cancelacionHipoteca - $comisionTotal - $montoCredito;
         }
-        
+
         $snapshot = [
             'precio_promocion' => $precioPromocion,
             'valor_convenio' => $valorConvenio,
-            'valor_compraventa' => $valorConvenio, 
+            'valor_compraventa' => $valorConvenio,
             'porcentaje_comision_sin_iva' => $porcentajeComision,
-            'multiplicador_estado' => $stateCommission > 0 ? $stateCommission : ($valorConvenio > 0 && $precioPromocion > 0 ? (($precioPromocion / $valorConvenio) - 1) * 100 : 0), 
-            'comision_iva_incluido' => $porcentajeComision * 1.16, 
+            'multiplicador_estado' => $stateCommission > 0 ? $stateCommission : ($valorConvenio > 0 && $precioPromocion > 0 ? (($precioPromocion / $valorConvenio) - 1) * 100 : 0),
+            'comision_iva_incluido' => $porcentajeComision * 1.16,
             'estado_propiedad' => $wizardData['estado_propiedad'] ?? $wizardData['holder_state'] ?? 'Desconocido',
             'monto_credito' => $montoCredito,
             'tipo_credito' => $wizardData['tipo_credito'] ?? 'No seleccionado',
@@ -478,7 +479,7 @@ class Agreement extends Model
                 'calculator_snapshot' => $snapshot,
                 'requested_by' => $userId,
             ]);
-            
+
             // Asegurar que el acuerdo apunte a esta validación
             $this->update([
                 'current_validation_id' => $pendingValidation->id,
@@ -533,7 +534,7 @@ class Agreement extends Model
 
     public function getValidationStatusLabelAttribute(): string
     {
-        return match($this->validation_status) {
+        return match ($this->validation_status) {
             'not_required' => 'No Requerida',
             'pending' => 'Pendiente de Validación',
             'approved' => 'Validación Aprobada',
@@ -545,7 +546,7 @@ class Agreement extends Model
 
     public function getValidationStatusColorAttribute(): string
     {
-        return match($this->validation_status) {
+        return match ($this->validation_status) {
             'not_required' => 'gray',
             'pending' => 'warning',
             'approved' => 'success',

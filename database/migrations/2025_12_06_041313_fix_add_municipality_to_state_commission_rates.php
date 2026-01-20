@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('state_commission_rates', function (Blueprint $table) {
-            if (!Schema::hasColumn('state_commission_rates', 'municipality')) {
+            if (! Schema::hasColumn('state_commission_rates', 'municipality')) {
                 $table->string('municipality', 100)->nullable()->after('state_name');
             }
         });

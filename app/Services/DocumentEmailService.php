@@ -4,12 +4,12 @@ namespace App\Services;
 
 use App\Models\Agreement;
 use App\Models\ClientDocument;
-use Illuminate\Support\Facades\Mail;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Servicio para gestionar envío de correos relacionados con documentos
- * 
+ *
  * Responsabilidades:
  * - Enviar confirmación de documentos recibidos
  * - Validar emails de clientes
@@ -25,7 +25,7 @@ class DocumentEmailService
         $wizardData = $agreement->wizard_data ?? [];
         $holderEmail = $wizardData['holder_email'] ?? null;
 
-        if (!$holderEmail && $agreement->client) {
+        if (! $holderEmail && $agreement->client) {
             $holderEmail = $agreement->client->email;
         }
 
@@ -40,7 +40,7 @@ class DocumentEmailService
         $wizardData = $agreement->wizard_data ?? [];
         $holderName = $wizardData['holder_name'] ?? null;
 
-        if (!$holderName && $agreement->client) {
+        if (! $holderName && $agreement->client) {
             $holderName = $agreement->client->name;
         }
 
@@ -53,7 +53,8 @@ class DocumentEmailService
     public function validateClientEmail(Agreement $agreement): bool
     {
         $clientEmail = $this->getClientEmail($agreement);
-        return $clientEmail !== 'No disponible' && !empty($clientEmail);
+
+        return $clientEmail !== 'No disponible' && ! empty($clientEmail);
     }
 
     /**
@@ -64,17 +65,18 @@ class DocumentEmailService
         try {
             \Log::info('sendDocumentsReceivedConfirmation called', [
                 'agreement_id' => $agreement->id,
-                'user_id' => auth()->id()
+                'user_id' => auth()->id(),
             ]);
 
             // Validar email del cliente
-            if (!$this->validateClientEmail($agreement)) {
+            if (! $this->validateClientEmail($agreement)) {
                 Notification::make()
                     ->title('❌ Email No Disponible')
                     ->body('El cliente no tiene un email registrado en el convenio.')
                     ->warning()
                     ->duration(5000)
                     ->send();
+
                 return;
             }
 
@@ -97,7 +99,7 @@ class DocumentEmailService
                 'agreement_id' => $agreement->id,
                 'client_email' => $clientEmail,
                 'advisor_email' => $advisorEmail,
-                'documents_count' => $clientDocuments->count()
+                'documents_count' => $clientDocuments->count(),
             ]);
 
             // Enviar correo
@@ -107,14 +109,14 @@ class DocumentEmailService
 
             \Log::info('Confirmation email sent successfully', [
                 'agreement_id' => $agreement->id,
-                'client_email' => $clientEmail
+                'client_email' => $clientEmail,
             ]);
 
         } catch (\Exception $e) {
             \Log::error('Error sending documents received confirmation', [
                 'agreement_id' => $agreement->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             Notification::make()

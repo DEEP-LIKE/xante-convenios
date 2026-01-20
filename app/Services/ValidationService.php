@@ -5,10 +5,10 @@ namespace App\Services;
 use App\Models\Agreement;
 use App\Models\QuoteValidation;
 use App\Models\User;
-use App\Notifications\ValidationRequestedNotification;
 use App\Notifications\ValidationApprovedNotification;
-use App\Notifications\ValidationWithObservationsNotification;
 use App\Notifications\ValidationRejectedNotification;
+use App\Notifications\ValidationRequestedNotification;
+use App\Notifications\ValidationWithObservationsNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -26,7 +26,7 @@ class ValidationService
             // Notificar a coordinadores solo si es una nueva validación
             if ($validation->wasRecentlyCreated) {
                 $this->notifyCoordinators($validation);
-                
+
                 Log::info('Validación solicitada', [
                     'agreement_id' => $agreement->id,
                     'validation_id' => $validation->id,
@@ -147,12 +147,12 @@ class ValidationService
     {
         $executive = $validation->requestedBy;
 
-        if (!$executive) {
+        if (! $executive) {
             return;
         }
 
         try {
-            $notification = match($action) {
+            $notification = match ($action) {
                 'approved' => new ValidationApprovedNotification($validation->id),
                 'with_observations' => new ValidationWithObservationsNotification($validation->id),
                 'rejected' => new ValidationRejectedNotification($validation->id),

@@ -8,7 +8,7 @@ use Filament\Notifications\Notification;
 
 /**
  * Servicio para detectar y precargar propuestas existentes
- * 
+ *
  * Responsabilidades:
  * - Detectar si un cliente tiene una propuesta previa enlazada
  * - Precargar datos de la propuesta en el wizard
@@ -18,27 +18,27 @@ class ProposalPreloadService
 {
     /**
      * Verifica si el cliente tiene una propuesta existente enlazada
-     * 
+     *
      * @return array|null Información de la propuesta o null si no existe
      */
     public function hasExistingProposal(int $clientId): ?array
     {
         $client = Client::find($clientId);
-        
-        if (!$client || !$client->xante_id) {
+
+        if (! $client || ! $client->xante_id) {
             return null;
         }
-        
+
         // Buscar propuesta enlazada
         $proposal = Proposal::where('idxante', $client->xante_id)
             ->where('linked', true)
             ->latest()
             ->first();
-        
-        if (!$proposal) {
+
+        if (! $proposal) {
             return null;
         }
-        
+
         // Retornar datos de la propuesta
         return [
             'exists' => true,
@@ -52,14 +52,14 @@ class ProposalPreloadService
 
     /**
      * Precarga los datos de la propuesta si existe
-     * 
+     *
      * @return array|null Datos precargados o null
      */
     public function preloadProposalData(int $clientId): ?array
     {
         $proposalInfo = $this->hasExistingProposal($clientId);
-        
-        if (!$proposalInfo || empty($proposalInfo['data'])) {
+
+        if (! $proposalInfo || empty($proposalInfo['data'])) {
             return null;
         }
 
@@ -68,7 +68,7 @@ class ProposalPreloadService
 
     /**
      * Determina si se debe precargar la propuesta automáticamente
-     * 
+     *
      * Solo precarga si los campos de calculadora están vacíos
      */
     public function shouldPreload(array $currentData): bool
@@ -78,19 +78,19 @@ class ProposalPreloadService
 
     /**
      * Precarga datos de propuesta si existe y los campos están vacíos
-     * 
+     *
      * @return array Datos mezclados (actuales + propuesta)
      */
     public function preloadIfExists(int $clientId, array $currentData): array
     {
         $proposalInfo = $this->hasExistingProposal($clientId);
-        
-        if (!$proposalInfo || empty($proposalInfo['data'])) {
+
+        if (! $proposalInfo || empty($proposalInfo['data'])) {
             return $currentData;
         }
 
         // Solo precargar si los campos calculadores están vacíos
-        if (!$this->shouldPreload($currentData)) {
+        if (! $this->shouldPreload($currentData)) {
             return $currentData;
         }
 
@@ -113,7 +113,7 @@ class ProposalPreloadService
      */
     public function getProposalDisplayInfo(?array $proposalInfo): ?array
     {
-        if (!$proposalInfo) {
+        if (! $proposalInfo) {
             return null;
         }
 

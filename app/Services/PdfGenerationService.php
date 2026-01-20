@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\Agreement;
 use App\Models\GeneratedDocument;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PdfGenerationService
 {
@@ -18,17 +18,17 @@ class PdfGenerationService
         // IMPORTANTE: Limpiar documentos existentes antes de generar nuevos
         // Solo elimina las referencias en BD, no los archivos físicos
         if ($agreement->generatedDocuments()->count() > 0) {
-            Log::info("Limpiando referencias de documentos existentes antes de regenerar", [
+            Log::info('Limpiando referencias de documentos existentes antes de regenerar', [
                 'agreement_id' => $agreement->id,
-                'documentos_existentes' => $agreement->generatedDocuments()->count()
+                'documentos_existentes' => $agreement->generatedDocuments()->count(),
             ]);
-            
+
             // Eliminar solo las referencias de la base de datos
             $agreement->generatedDocuments()->delete();
         }
-        
+
         $documents = [];
-        
+
         // Plantillas Blade que se generan dinámicamente (4 documentos)
         $templates = [
             'acuerdo_promocion' => 'Acuerdo de Promoción Inmobiliaria',
@@ -36,7 +36,7 @@ class PdfGenerationService
             'checklist_expediente' => 'Checklist de Expediente Básico',
             'condiciones_comercializacion' => 'Condiciones para Comercialización',
         ];
-        
+
         // Documentos originales que se copian tal cual (2 documentos)
         $originalDocuments = [
             'aviso_privacidad' => 'Aviso de Privacidad',
@@ -46,52 +46,52 @@ class PdfGenerationService
         // Generar documentos desde plantillas Blade
         foreach ($templates as $type => $name) {
             try {
-                Log::info("Iniciando generación de plantilla Blade", [
+                Log::info('Iniciando generación de plantilla Blade', [
                     'agreement_id' => $agreement->id,
                     'document_type' => $type,
-                    'template' => "pdfs.templates.{$type}"
+                    'template' => "pdfs.templates.{$type}",
                 ]);
-                
+
                 $document = $this->generateSingleDocument($agreement, $type, $name);
                 $documents[] = $document;
-                
-                Log::info("Documento generado exitosamente", [
+
+                Log::info('Documento generado exitosamente', [
                     'agreement_id' => $agreement->id,
                     'document_type' => $type,
-                    'file_path' => $document->file_path
+                    'file_path' => $document->file_path,
                 ]);
-                
+
             } catch (\Exception $e) {
-                Log::error("Error generando documento {$type} para Agreement #{$agreement->id}: " . $e->getMessage(), [
+                Log::error("Error generando documento {$type} para Agreement #{$agreement->id}: ".$e->getMessage(), [
                     'exception' => $e,
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 throw $e;
             }
         }
-        
+
         // Copiar documentos originales
         foreach ($originalDocuments as $type => $name) {
             try {
-                Log::info("Iniciando copia de documento original", [
+                Log::info('Iniciando copia de documento original', [
                     'agreement_id' => $agreement->id,
                     'document_type' => $type,
-                    'document_name' => $name
+                    'document_name' => $name,
                 ]);
-                
+
                 $document = $this->copyOriginalDocument($agreement, $type, $name);
                 $documents[] = $document;
-                
-                Log::info("Documento original copiado exitosamente", [
+
+                Log::info('Documento original copiado exitosamente', [
                     'agreement_id' => $agreement->id,
                     'document_type' => $type,
-                    'file_path' => $document->file_path
+                    'file_path' => $document->file_path,
                 ]);
-                
+
             } catch (\Exception $e) {
-                Log::error("Error copiando documento original {$type} para Agreement #{$agreement->id}: " . $e->getMessage(), [
+                Log::error("Error copiando documento original {$type} para Agreement #{$agreement->id}: ".$e->getMessage(), [
                     'exception' => $e,
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 throw $e;
             }
@@ -107,7 +107,7 @@ class PdfGenerationService
         ]);
 
         Log::info("Todos los documentos generados para Agreement #{$agreement->id}", [
-            'documents_count' => count($documents)
+            'documents_count' => count($documents),
         ]);
 
         return $documents;
@@ -123,37 +123,37 @@ class PdfGenerationService
             'aviso_privacidad' => 'AVISO_DE_PRIVACIDAD.pdf',
             'euc_venta_convenio' => 'EUC_VENTA_CONVENIO.pdf',
         ];
-        
-        if (!isset($originalFiles[$type])) {
+
+        if (! isset($originalFiles[$type])) {
             throw new \Exception("Archivo original no encontrado para tipo: {$type}");
         }
-        
+
         $originalFileName = $originalFiles[$type];
         $originalPath = resource_path("views/pdfs/orginal_pdf/{$originalFileName}");
-        
-        Log::info("Intentando acceder al archivo original", [
+
+        Log::info('Intentando acceder al archivo original', [
             'type' => $type,
             'original_file' => $originalFileName,
             'full_path' => $originalPath,
-            'file_exists' => file_exists($originalPath)
+            'file_exists' => file_exists($originalPath),
         ]);
-        
-        if (!file_exists($originalPath)) {
+
+        if (! file_exists($originalPath)) {
             throw new \Exception("Archivo original no existe: {$originalPath}");
         }
-        
+
         // Generar nombre y ruta del archivo de destino
         $fileName = $this->generateFileName($agreement, $type);
         $directory = "convenios/{$agreement->id}/generated";
         $filePath = "{$directory}/{$fileName}";
-        
+
         // Asegurar que el directorio existe
         Storage::disk('private')->makeDirectory($directory);
-        
+
         // Copiar archivo original
         $fileContent = file_get_contents($originalPath);
         Storage::disk('private')->put($filePath, $fileContent);
-        
+
         // Registrar en base de datos
         return GeneratedDocument::create([
             'agreement_id' => $agreement->id,
@@ -175,44 +175,44 @@ class PdfGenerationService
         try {
             // Preparar datos para la plantilla
             $data = $this->prepareTemplateData($agreement);
-            
+
             // Para el checklist, agregar variables específicas
             if ($type === 'checklist_expediente') {
                 $data['uploadedDocuments'] = []; // Lista vacía inicialmente
                 $data['isUpdated'] = false; // Paso 1: nada marcado
             }
-            
-            Log::info("Datos preparados para plantilla", [
+
+            Log::info('Datos preparados para plantilla', [
                 'agreement_id' => $agreement->id,
                 'document_type' => $type,
-                'data_keys' => array_keys($data)
+                'data_keys' => array_keys($data),
             ]);
-            
+
             // Verificar que la vista existe
             $viewPath = "pdfs.templates.{$type}";
-            if (!view()->exists($viewPath)) {
+            if (! view()->exists($viewPath)) {
                 throw new \Exception("La plantilla Blade no existe: {$viewPath}");
             }
-            
+
             // Renderizar HTML desde Blade
             $html = view($viewPath, $data)->render();
-            
-            Log::info("HTML renderizado exitosamente", [
+
+            Log::info('HTML renderizado exitosamente', [
                 'agreement_id' => $agreement->id,
                 'document_type' => $type,
-                'html_length' => strlen($html)
+                'html_length' => strlen($html),
             ]);
-            
+
         } catch (\Exception $e) {
-            Log::error("Error en preparación de datos o renderizado", [
+            Log::error('Error en preparación de datos o renderizado', [
                 'agreement_id' => $agreement->id,
                 'document_type' => $type,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
-        
+
         // Configurar PDF
         $pdf = Pdf::loadHTML($html)
             ->setPaper('letter')
@@ -221,19 +221,19 @@ class PdfGenerationService
                 'isRemoteEnabled' => true,
                 'isHtml5ParserEnabled' => true,
             ]);
-        
+
         // Generar nombre y ruta del archivo
         $fileName = $this->generateFileName($agreement, $type);
         $directory = "convenios/{$agreement->id}/generated";
         $filePath = "{$directory}/{$fileName}";
-        
+
         // Asegurar que el directorio existe
         Storage::disk('private')->makeDirectory($directory);
-        
+
         // Generar y guardar PDF
         $pdfOutput = $pdf->output();
         Storage::disk('private')->put($filePath, $pdfOutput);
-        
+
         // Registrar en base de datos
         return GeneratedDocument::create([
             'agreement_id' => $agreement->id,
@@ -253,24 +253,24 @@ class PdfGenerationService
     public function prepareTemplateData(Agreement $agreement): array
     {
         $wizardData = $agreement->wizard_data ?? [];
-        
+
         // Calcular porcentaje de comisión desde los datos financieros
         $valorConvenio = floatval(str_replace(',', '', $wizardData['valor_convenio'] ?? 0));
         $montoComisionSinIva = floatval(str_replace(',', '', $wizardData['monto_comision_sin_iva'] ?? 0));
         $porcentajeComision = $valorConvenio > 0 ? ($montoComisionSinIva / $valorConvenio) * 100 : 6.5;
-        
+
         // Nombres de meses en español
         $monthNames = [
             1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
             5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
         ];
-        
+
         return [
             'agreement' => $agreement,
             'client' => $agreement->client,
             'wizardData' => $wizardData, // Datos completos para la plantilla
-            
+
             // Datos del cliente titular
             'holder_name' => $wizardData['holder_name'] ?? '',
             'holder_email' => $wizardData['holder_email'] ?? '',
@@ -289,7 +289,7 @@ class PdfGenerationService
             'holder_additional_contact_phone' => $wizardData['holder_additional_contact_phone'] ?? '',
             'holder_neighborhood' => $wizardData['holder_neighborhood'] ?? $wizardData['neighborhood'] ?? '',
             'holder_postal_code' => $wizardData['holder_postal_code'] ?? $wizardData['postal_code'] ?? '',
-            
+
             // Datos del cónyuge/coacreditado
             'spouse_name' => $wizardData['spouse_name'] ?? '',
             'spouse_email' => $wizardData['spouse_email'] ?? '',
@@ -308,7 +308,7 @@ class PdfGenerationService
             'spouse_additional_contact_phone' => $wizardData['spouse_additional_contact_phone'] ?? '',
             'spouse_neighborhood' => $wizardData['spouse_neighborhood'] ?? '',
             'spouse_postal_code' => $wizardData['spouse_postal_code'] ?? '',
-            
+
             // Datos de contacto AC y Presidente de Privada
             'ac_name' => $wizardData['ac_name'] ?? '',
             'ac_phone' => $wizardData['ac_phone'] ?? '',
@@ -316,7 +316,7 @@ class PdfGenerationService
             'private_president_name' => $wizardData['private_president_name'] ?? '',
             'private_president_phone' => $wizardData['private_president_phone'] ?? '',
             'private_president_quota' => $wizardData['private_president_quota'] ?? '',
-            
+
             // Datos de la propiedad
             'domicilio_convenio' => $wizardData['domicilio_convenio'] ?? $wizardData['property_address'] ?? '',
             'comunidad' => $wizardData['comunidad'] ?? $wizardData['community'] ?? '',
@@ -334,11 +334,11 @@ class PdfGenerationService
             'property_lot' => $wizardData['lote'] ?? $wizardData['lot'] ?? '',
             'property_block' => $wizardData['manzana'] ?? $wizardData['block'] ?? '',
             'property_stage' => $wizardData['etapa'] ?? $wizardData['stage'] ?? '',
-            
+
             // Estados y ubicaciones
             'property_state' => $wizardData['estado_propiedad'] ?? $wizardData['estado'] ?? '',
             'property_municipality' => $wizardData['municipio_propiedad'] ?? $wizardData['municipio'] ?? '',
-            
+
             // Datos financieros
             'valor_convenio' => $valorConvenio,
             'precio_promocion' => floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? 0)),
@@ -350,12 +350,12 @@ class PdfGenerationService
             'cancelacion_hipoteca' => floatval(str_replace(',', '', $wizardData['cancelacion_hipoteca'] ?? 0)),
             'monto_credito' => floatval(str_replace(',', '', $wizardData['monto_credito'] ?? 0)),
             'tipo_credito' => $wizardData['tipo_credito'] ?? '',
-            
+
             // Porcentajes y textos de comisión
             'porcentaje_comision' => number_format($porcentajeComision, 1),
             'porcentaje_comision_letras' => $this->numberToWords($porcentajeComision),
             'precio_promocion_letras' => $this->numberToWords(floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? 0))),
-            
+
             // Fechas
             'fecha_actual' => now()->format('d/m/Y'),
             'fecha_completa' => now()->format('d \d\e F \d\e Y'),
@@ -364,16 +364,16 @@ class PdfGenerationService
             'year' => now()->format('Y'),
             'monthNames' => $monthNames,
             'xante_id' => $agreement->client_xante_id ?? $wizardData['xante_id'] ?? '',
-            
+
             // Datos bancarios (usar cuenta seleccionada o buscar por estado)
             'bank_name' => $this->getBankData($wizardData, 'bank_name'),
             'bank_account' => $this->getBankData($wizardData, 'account_number'),
             'bank_clabe' => $this->getBankData($wizardData, 'clabe'),
-            
+
             // Imágenes en formato base64 para PDFs
             'logo_path' => $this->getImageBase64('Logo-Xante.png'),
             'logo_base64' => $this->getImageBase64('Logo-Xante.png'),
-            
+
             // Imágenes de condiciones comercialización en base64
             'image_1_path' => $this->getImageBase64('1.png'),
             'image_2_path' => $this->getImageBase64('2.png'),
@@ -447,7 +447,7 @@ class PdfGenerationService
 
         // 3. Coacreditado (Si existe y es TERCERO)
         // Nota: Si es Cónyuge, ya está arriba.
-        if (!empty($data['has_co_borrower']) && ($data['co_borrower_relationship'] ?? '') === 'coacreditado') {
+        if (! empty($data['has_co_borrower']) && ($data['co_borrower_relationship'] ?? '') === 'coacreditado') {
             $participants[] = [
                 'role' => 'COACREDITADO',
                 'title' => 'DATOS DEL COACREDITADO (TERCERO):',
@@ -491,7 +491,7 @@ class PdfGenerationService
         $spouseAdded = false;
 
         // 2. Cónyuge (Solo si Bienes Mancomunados)
-        if (($data['holder_civil_status'] ?? '') === 'casado' && 
+        if (($data['holder_civil_status'] ?? '') === 'casado' &&
             ($data['holder_marital_regime'] ?? '') === 'bienes_mancomunados') {
             $signers[] = [
                 'name' => strtoupper($data['spouse_name'] ?? ''),
@@ -501,12 +501,12 @@ class PdfGenerationService
         }
 
         // 3. Coacreditado (Si existe)
-        if (!empty($data['has_co_borrower'])) {
+        if (! empty($data['has_co_borrower'])) {
             $type = $data['co_borrower_relationship'] ?? '';
 
             if ($type === 'cónyuge') {
                 // Si el cónyuge es coacreditado y NO ha sido agregado (ej. Bienes Separados)
-                if (!$spouseAdded) {
+                if (! $spouseAdded) {
                     $signers[] = [
                         'name' => strtoupper($data['spouse_name'] ?? ''),
                         'label' => 'COACREDITADO (CÓNYUGE)',
@@ -536,8 +536,9 @@ class PdfGenerationService
     {
         $imagePath = resource_path("views/pdfs/images/{$filename}");
 
-        if (!file_exists($imagePath)) {
+        if (! file_exists($imagePath)) {
             Log::warning("Imagen no encontrada: {$imagePath}");
+
             return '';
         }
 
@@ -556,7 +557,7 @@ class PdfGenerationService
                     $mimeType = $imageInfo['mime'];
                 }
             }
-            
+
             // Opción 3: Fallback a la extensión del archivo si todo lo demás falla
             if (empty($mimeType)) {
                 $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
@@ -575,9 +576,9 @@ class PdfGenerationService
                 }
             }
 
-            $base64 = "data:{$mimeType};base64," . base64_encode($imageData);
+            $base64 = "data:{$mimeType};base64,".base64_encode($imageData);
 
-            Log::info("Imagen convertida a base64", [
+            Log::info('Imagen convertida a base64', [
                 'filename' => $filename,
                 'path' => $imagePath,
                 'mime_type' => $mimeType,
@@ -587,63 +588,66 @@ class PdfGenerationService
             return $base64;
         } catch (\Exception $e) {
             Log::error("Error al convertir imagen a base64: {$filename}", ['error' => $e->getMessage()]);
+
             return '';
         }
     }
-    
+
     /**
      * Obtiene datos bancarios usando el bank_account_id seleccionado o por estado
      */
     private function getBankData(array $wizardData, string $field): string
     {
         // Prioridad 1: Usar bank_account_id si fue seleccionado en el wizard
-        if (!empty($wizardData['bank_account_id'])) {
+        if (! empty($wizardData['bank_account_id'])) {
             $bankAccount = \App\Models\StateBankAccount::find($wizardData['bank_account_id']);
-            
+
             if ($bankAccount) {
-                Log::info("Usando cuenta bancaria seleccionada en wizard", [
+                Log::info('Usando cuenta bancaria seleccionada en wizard', [
                     'bank_account_id' => $wizardData['bank_account_id'],
                     'bank_name' => $bankAccount->bank_name,
-                    'municipality' => $bankAccount->municipality
+                    'municipality' => $bankAccount->municipality,
                 ]);
-                
+
                 return $bankAccount->{$field} ?? $this->getDefaultBankData($field);
             }
         }
-        
+
         // Prioridad 2: Fallback a búsqueda por estado (para convenios antiguos)
-        if (!empty($wizardData['estado_propiedad'])) {
-            Log::info("Fallback: Buscando cuenta bancaria por estado", [
-                'estado_propiedad' => $wizardData['estado_propiedad']
+        if (! empty($wizardData['estado_propiedad'])) {
+            Log::info('Fallback: Buscando cuenta bancaria por estado', [
+                'estado_propiedad' => $wizardData['estado_propiedad'],
             ]);
-            
+
             return $this->getBankDataForState($wizardData['estado_propiedad'], $field);
         }
-        
+
         // Prioridad 3: Valores por defecto
-        Log::warning("No se encontró bank_account_id ni estado_propiedad, usando valores por defecto");
+        Log::warning('No se encontró bank_account_id ni estado_propiedad, usando valores por defecto');
+
         return $this->getDefaultBankData($field);
     }
-    
+
     /**
      * Obtiene datos bancarios específicos del estado
      */
     private function getBankDataForState(?string $stateName, string $field): string
     {
-        if (!$stateName) {
+        if (! $stateName) {
             return $this->getDefaultBankData($field);
         }
-        
+
         $bankAccount = \App\Models\StateBankAccount::where('state_name', $stateName)->first();
-        
-        if (!$bankAccount) {
+
+        if (! $bankAccount) {
             Log::warning("No se encontró cuenta bancaria para el estado: {$stateName}");
+
             return $this->getDefaultBankData($field);
         }
-        
+
         return $bankAccount->{$field} ?? $this->getDefaultBankData($field);
     }
-    
+
     /**
      * Retorna valores por defecto para datos bancarios
      */
@@ -654,10 +658,10 @@ class PdfGenerationService
             'account_number' => '0123456789',
             'clabe' => '012345678901234567',
         ];
-        
+
         return $defaults[$field] ?? '';
     }
-    
+
     /**
      * Convierte números a palabras (implementación básica)
      */
@@ -667,27 +671,41 @@ class PdfGenerationService
             if (class_exists('\NumberFormatter')) {
                 $formatter = new \NumberFormatter('es', \NumberFormatter::SPELLOUT);
                 $words = $formatter->format($number);
-                
+
                 // Reemplazar "coma" por "punto" para decimales (6.5 = "seis punto cinco" no "seis coma cinco")
                 $words = str_replace(' coma ', ' punto ', $words);
-                
+
                 return $words;
             }
         } catch (\Exception $e) {
-            Log::warning("NumberFormatter no disponible: " . $e->getMessage());
+            Log::warning('NumberFormatter no disponible: '.$e->getMessage());
         }
-        
+
         // Fallback: implementación básica para números comunes
         $number = round($number, 1);
-        
-        if ($number == 6.5) return 'seis punto cinco';
-        if ($number == 7.0) return 'siete';
-        if ($number == 7.5) return 'siete punto cinco';
-        if ($number == 8.0) return 'ocho';
-        if ($number == 8.5) return 'ocho punto cinco';
-        if ($number == 9.0) return 'nueve';
-        if ($number == 9.5) return 'nueve punto cinco';
-        
+
+        if ($number == 6.5) {
+            return 'seis punto cinco';
+        }
+        if ($number == 7.0) {
+            return 'siete';
+        }
+        if ($number == 7.5) {
+            return 'siete punto cinco';
+        }
+        if ($number == 8.0) {
+            return 'ocho';
+        }
+        if ($number == 8.5) {
+            return 'ocho punto cinco';
+        }
+        if ($number == 9.0) {
+            return 'nueve';
+        }
+        if ($number == 9.5) {
+            return 'nueve punto cinco';
+        }
+
         // Para otros números, usar formato simple
         return str_replace('.', ' punto ', number_format($number, 1, '.', ''));
     }
@@ -699,7 +717,7 @@ class PdfGenerationService
     {
         $clientId = $agreement->client_xante_id ?? $agreement->id;
         $timestamp = now()->format('YmdHis');
-        
+
         return "{$clientId}_{$type}_{$timestamp}.pdf";
     }
 
@@ -711,22 +729,22 @@ class PdfGenerationService
         // Lista completa de los 6 documentos esperados
         $expectedTypes = [
             // 4 plantillas Blade
-            'acuerdo_promocion', 
-            'datos_generales', 
-            'checklist_expediente', 
+            'acuerdo_promocion',
+            'datos_generales',
+            'checklist_expediente',
             'condiciones_comercializacion',
             // 2 documentos originales
             'aviso_privacidad',
-            'euc_venta_convenio'
+            'euc_venta_convenio',
         ];
         $generatedTypes = $agreement->generatedDocuments()->pluck('document_type')->toArray();
-        
+
         foreach ($expectedTypes as $type) {
-            if (!in_array($type, $generatedTypes)) {
+            if (! in_array($type, $generatedTypes)) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -746,32 +764,32 @@ class PdfGenerationService
         try {
             // Preparar datos para la plantilla
             $data = $this->prepareTemplateData($agreement);
-            
+
             // Agregar datos específicos para el checklist actualizado
             $data['uploadedDocuments'] = $uploadedDocuments;
             $data['isUpdated'] = $isUpdated;
-            
-            Log::info("Generando checklist dinámico", [
+
+            Log::info('Generando checklist dinámico', [
                 'agreement_id' => $agreement->id,
                 'is_updated' => $isUpdated,
                 'uploaded_documents_count' => count($uploadedDocuments),
-                'uploaded_documents' => $uploadedDocuments
+                'uploaded_documents' => $uploadedDocuments,
             ]);
-            
+
             // Verificar que la vista existe
-            $viewPath = "pdfs.templates.checklist_expediente";
-            if (!view()->exists($viewPath)) {
+            $viewPath = 'pdfs.templates.checklist_expediente';
+            if (! view()->exists($viewPath)) {
                 throw new \Exception("La plantilla Blade no existe: {$viewPath}");
             }
-            
+
             // Renderizar HTML desde Blade
             $html = view($viewPath, $data)->render();
-            
-            Log::info("HTML del checklist renderizado exitosamente", [
+
+            Log::info('HTML del checklist renderizado exitosamente', [
                 'agreement_id' => $agreement->id,
-                'html_length' => strlen($html)
+                'html_length' => strlen($html),
             ]);
-            
+
             // Configurar PDF
             $pdf = Pdf::loadHTML($html)
                 ->setPaper('letter')
@@ -780,20 +798,20 @@ class PdfGenerationService
                     'isRemoteEnabled' => true,
                     'isHtml5ParserEnabled' => true,
                 ]);
-            
-            Log::info("PDF del checklist generado exitosamente", [
+
+            Log::info('PDF del checklist generado exitosamente', [
                 'agreement_id' => $agreement->id,
-                'is_updated' => $isUpdated
+                'is_updated' => $isUpdated,
             ]);
-            
+
             return $pdf;
-            
+
         } catch (\Exception $e) {
-            Log::error("Error generando checklist dinámico para Agreement #{$agreement->id}: " . $e->getMessage(), [
+            Log::error("Error generando checklist dinámico para Agreement #{$agreement->id}: ".$e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
                 'is_updated' => $isUpdated,
-                'uploaded_documents' => $uploadedDocuments
+                'uploaded_documents' => $uploadedDocuments,
             ]);
             throw $e;
         }
@@ -805,17 +823,17 @@ class PdfGenerationService
     public function cleanupGeneratedDocuments(Agreement $agreement): void
     {
         $documents = $agreement->generatedDocuments;
-        
+
         foreach ($documents as $document) {
             // Eliminar archivo físico
             if (Storage::disk('private')->exists($document->file_path)) {
                 Storage::disk('private')->delete($document->file_path);
             }
-            
+
             // Eliminar registro de BD
             $document->delete();
         }
-        
+
         Log::info("Documentos limpiados para Agreement #{$agreement->id}");
     }
 }

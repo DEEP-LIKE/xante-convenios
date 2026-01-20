@@ -29,18 +29,18 @@ class GenerateAndSendAgreementJob implements ShouldQueue
 
             // Generate PDF
             $pdf = Pdf::loadView('pdfs.convenio', ['agreement' => $this->agreement]);
-            
+
             // Create filename
-            $filename = 'convenio_' . str_pad($this->agreement->id, 6, '0', STR_PAD_LEFT) . '_' . now()->format('Y-m-d') . '.pdf';
-            
+            $filename = 'convenio_'.str_pad($this->agreement->id, 6, '0', STR_PAD_LEFT).'_'.now()->format('Y-m-d').'.pdf';
+
             // Save PDF to storage
-            $pdfPath = 'agreements/' . $filename;
+            $pdfPath = 'agreements/'.$filename;
             Storage::disk('public')->put($pdfPath, $pdf->output());
-            
+
             // Update agreement with PDF path
             $this->agreement->update([
                 'pdf_path' => $pdfPath,
-                'status' => 'pendiente_docs'
+                'status' => 'pendiente_docs',
             ]);
 
             // Send email with PDF attachment
@@ -50,7 +50,7 @@ class GenerateAndSendAgreementJob implements ShouldQueue
             // Update sent timestamp
             $this->agreement->update([
                 'sent_at' => now(),
-                'status' => 'completado'
+                'status' => 'completado',
             ]);
 
         } catch (\Exception $e) {
@@ -58,7 +58,7 @@ class GenerateAndSendAgreementJob implements ShouldQueue
             \Log::error('Failed to generate and send agreement', [
                 'agreement_id' => $this->agreement->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             // Re-throw to mark job as failed

@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\QuoteValidation;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class QuoteValidationPolicy
 {
@@ -46,7 +45,7 @@ class QuoteValidationPolicy
     public function update(User $user, QuoteValidation $quoteValidation): bool
     {
         // Se puede actualizar si está pendiente o rechazado (para corregir)
-        if (!in_array($quoteValidation->status, ['pending', 'rejected'])) {
+        if (! in_array($quoteValidation->status, ['pending', 'rejected'])) {
             return false;
         }
 
@@ -65,7 +64,7 @@ class QuoteValidationPolicy
     public function delete(User $user, QuoteValidation $quoteValidation): bool
     {
         // Solo el solicitante puede eliminar si está pendiente
-        return $user->id === $quoteValidation->requested_by 
+        return $user->id === $quoteValidation->requested_by
             && $quoteValidation->isPending();
     }
 
@@ -80,7 +79,7 @@ class QuoteValidationPolicy
         }
 
         // Solo puede aprobar si está pendiente o rechazado
-        if (!in_array($quoteValidation->status, ['pending', 'rejected'])) {
+        if (! in_array($quoteValidation->status, ['pending', 'rejected'])) {
             return false;
         }
 

@@ -5,13 +5,10 @@ namespace App\Filament\Resources\StateCommissionRates;
 use App\Filament\Resources\StateCommissionRates\Pages\CreateStateCommissionRate;
 use App\Filament\Resources\StateCommissionRates\Pages\EditStateCommissionRate;
 use App\Filament\Resources\StateCommissionRates\Pages\ListStateCommissionRates;
-use App\Filament\Resources\StateCommissionRates\Schemas\StateCommissionRateForm;
-use App\Filament\Resources\StateCommissionRates\Tables\StateCommissionRatesTable;
 use App\Models\StateCommissionRate;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class StateCommissionRateResource extends Resource
@@ -19,15 +16,15 @@ class StateCommissionRateResource extends Resource
     protected static ?string $model = StateCommissionRate::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
-    
+
     protected static \UnitEnum|string|null $navigationGroup = 'Configuraciones';
-    
+
     protected static ?string $navigationLabel = 'Gastos notariales (GE)';
-    
+
     protected static ?string $modelLabel = 'Gasto notarial (GE)';
-    
+
     protected static ?string $pluralModelLabel = 'Gastos notariales (GE)';
-    
+
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'state_name';

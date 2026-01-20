@@ -74,7 +74,7 @@ class StateCommissionRateSeeder extends Seeder
             StateCommissionRate::updateOrCreate(
                 [
                     'state_code' => $state['code'],
-                    'municipality' => $state['municipality']
+                    'municipality' => $state['municipality'],
                 ],
                 [
                     'state_name' => $state['name'],
@@ -89,7 +89,7 @@ class StateCommissionRateSeeder extends Seeder
             StateCommissionRate::updateOrCreate(
                 [
                     'state_code' => $state['code'],
-                    'municipality' => null
+                    'municipality' => null,
                 ],
                 [
                     'state_name' => $state['name'],

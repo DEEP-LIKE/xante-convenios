@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\Agreement;
 use App\DTOs\WizardStateDTO;
+use App\Models\Agreement;
 use Filament\Notifications\Notification;
 
 /**
  * Servicio para gestionar el estado del wizard de convenios
- * 
+ *
  * Responsabilidades:
  * - Inicializar el wizard (nuevo o existente)
  * - Gestionar la sesión del wizard
@@ -28,7 +28,7 @@ class WizardStateManager
 
         // Prioridad 2: Usar el parámetro proporcionado
         // $finalAgreementId = $agreementId ?? $sessionAgreementId;
-        
+
         // CORRECCIÓN: Si no viene ID en la URL, asumimos que es NUEVO convenio.
         // No recuperamos de sesión para evitar que "Crear Nuevo" te mande al anterior.
         $finalAgreementId = $agreementId;
@@ -48,9 +48,10 @@ class WizardStateManager
     {
         $agreement = Agreement::find($agreementId);
 
-        if (!$agreement) {
+        if (! $agreement) {
             // Si el ID no es válido, limpiar sesión y empezar de nuevo
             $this->clearSession();
+
             return $this->createNewWizardState(null);
         }
 
@@ -75,17 +76,17 @@ class WizardStateManager
         // Si hay un clientId en la URL, precargar los datos del cliente
         if ($clientId) {
             $client = \App\Models\Client::where('xante_id', $clientId)->first();
-            
+
             if ($client) {
                 // Preseleccionar el cliente en el formulario (usar ID interno de BD)
                 $data['client_id'] = $client->id; // ID interno para el selector
                 $data['xante_id'] = $client->xante_id; // ID de Xante para referencia
-                
+
                 // Precargar fecha de registro (fecha del Deal en HubSpot)
                 if ($client->fecha_registro) {
                     $data['fecha_registro'] = $client->fecha_registro->format('Y-m-d');
                 }
-                
+
                 // Precargar datos del titular
                 $data['holder_name'] = $client->name;
                 $data['holder_email'] = $client->email;
@@ -95,14 +96,14 @@ class WizardStateManager
                 $data['holder_rfc'] = $client->rfc;
                 $data['holder_civil_status'] = $client->civil_status;
                 $data['holder_occupation'] = $client->occupation;
-                
+
                 // Precargar domicilio del titular
                 $data['current_address'] = $client->current_address;
                 $data['neighborhood'] = $client->neighborhood;
                 $data['postal_code'] = $client->postal_code;
                 $data['municipality'] = $client->municipality;
                 $data['state'] = $client->state;
-                
+
                 // Precargar datos del cónyuge si existe
                 if ($client->spouse) {
                     $data['spouse_name'] = $client->spouse->name;
@@ -115,34 +116,34 @@ class WizardStateManager
                     $data['spouse_municipality'] = $client->spouse->municipality;
                     $data['spouse_state'] = $client->spouse->state;
                 }
-                
+
                 // --- NUEVO: Precargar datos de Propiedad y Financieros desde el último convenio ---
                 $latestAgreement = \App\Models\Agreement::where('client_id', $client->id)
                     ->latest()
                     ->first();
-                
-                if ($latestAgreement && !empty($latestAgreement->wizard_data)) {
+
+                if ($latestAgreement && ! empty($latestAgreement->wizard_data)) {
                     // Mezclar datos del convenio (Propiedad, Financieros) con los datos actuales
                     // Usamos array_merge para que los datos del convenio NO sobrescriban los del cliente
                     // (aunque en teoría son complementarios)
                     $agreementData = $latestAgreement->wizard_data;
-                    
+
                     // Filtrar solo campos relevantes para evitar sobrescribir IDs o datos sensibles
                     $allowedFields = [
                         // Propiedad
-                        'property_address', 'community', 'housing_type', 'prototype', 
+                        'property_address', 'community', 'housing_type', 'prototype',
                         'lot', 'block', 'stage', 'property_municipality', 'property_state',
                         // Financieros
-                        'agreement_value', 'promotion_price', 'total_commission', 'final_profit'
+                        'agreement_value', 'promotion_price', 'total_commission', 'final_profit',
                     ];
-                    
+
                     foreach ($allowedFields as $field) {
-                        if (isset($agreementData[$field]) && !empty($agreementData[$field])) {
+                        if (isset($agreementData[$field]) && ! empty($agreementData[$field])) {
                             $data[$field] = $agreementData[$field];
                         }
                     }
                 }
-                
+
                 Notification::make()
                     ->title('Cliente Preseleccionado')
                     ->body("Los datos de {$client->name} han sido precargados. Puedes continuar con el siguiente paso.")
@@ -195,7 +196,7 @@ class WizardStateManager
     public function loadAgreementData(int $agreementId): array
     {
         $agreement = Agreement::find($agreementId);
-        
+
         return $agreement ? ($agreement->wizard_data ?? []) : [];
     }
 
@@ -205,7 +206,7 @@ class WizardStateManager
     public function updateCurrentStep(int $agreementId, int $step): void
     {
         Agreement::where('id', $agreementId)->update([
-            'current_step' => $step
+            'current_step' => $step,
         ]);
     }
 }

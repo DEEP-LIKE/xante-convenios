@@ -17,6 +17,7 @@ class AgreementSeeder extends Seeder
 
         if ($clients->isEmpty() || $users->isEmpty()) {
             $this->command->warn('⚠️  No hay clientes o usuarios disponibles. Ejecuta primero UserSeeder y ClientSeeder.');
+
             return;
         }
 

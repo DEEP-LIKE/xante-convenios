@@ -11,11 +11,23 @@ mkdir -p /var/www/html/storage/framework/cache
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 3. Optimización de Laravel
-# Usamos 'optimize' que combina config y route cache en un solo comando
-php /var/www/html/artisan optimize
+# 3. Validar que .env existe
+if [ ! -f /var/www/html/.env ]; then
+    echo "❌ ERROR: .env file not found!"
+    exit 1
+fi
 
-# 4. Iniciar Supervisor en primer plano (Bandera -n)
+# 4. Validar conexión a base de datos
+php /var/www/html/artisan db:show --quiet || {
+    echo "⚠️  WARNING: Cannot connect to database. Continuing anyway..."
+}
+
+# 5. Optimización de Laravel (solo si no está cacheado)
+if [ ! -f /var/www/html/bootstrap/cache/config.php ]; then
+    php /var/www/html/artisan optimize
+fi
+
+# 6. Iniciar Supervisor en primer plano (Bandera -n)
 # Esto es CRÍTICO: El parámetro -n evita que el proceso se vaya al fondo
 # y permite que Docker mantenga el contenedor encendido.
 echo "🚀 Iniciando Supervisor..."

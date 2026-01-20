@@ -22,15 +22,15 @@ class ViewQuoteAuthorization extends ViewRecord
                 ->visible(fn ($record): bool => $record->isPending() && auth()->user()->can('approve', $record))
                 ->action(function ($record) {
                     $record->approve(auth()->id());
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Solicitud Aprobada')
                         ->success()
                         ->send();
-                        
+
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
-            
+
             \Filament\Actions\Action::make('reject')
                 ->label('Rechazar')
                 ->icon('heroicon-o-x-circle')
@@ -46,12 +46,12 @@ class ViewQuoteAuthorization extends ViewRecord
                 ->visible(fn ($record): bool => $record->isPending() && auth()->user()->can('reject', $record))
                 ->action(function ($record, array $data) {
                     $record->reject(auth()->id(), $data['rejection_reason']);
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Solicitud Rechazada')
                         ->danger()
                         ->send();
-                        
+
                     $this->redirect($this->getResource()::getUrl('index'));
                 }),
         ];

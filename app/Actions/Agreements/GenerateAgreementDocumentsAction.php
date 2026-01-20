@@ -15,15 +15,16 @@ class GenerateAgreementDocumentsAction
     public function execute(int $agreementId, array $wizardData, bool $confirmDataCorrect = true): ?string
     {
         // Ya no se requiere confirmación de checkbox - el ejecutivo ya pasó validación del coordinador
-        
+
         $agreement = Agreement::find($agreementId);
 
-        if (!$agreement) {
+        if (! $agreement) {
             Notification::make()
                 ->title('Error')
                 ->body('No se encontró el convenio.')
                 ->danger()
                 ->send();
+
             return null;
         }
 
@@ -44,7 +45,7 @@ class GenerateAgreementDocumentsAction
 
             Notification::make()
                 ->title('📄 Documentos Generados')
-                ->body('Se generaron exitosamente ' . count($documents) . ' documentos')
+                ->body('Se generaron exitosamente '.count($documents).' documentos')
                 ->success()
                 ->duration(5000)
                 ->send();
@@ -58,7 +59,7 @@ class GenerateAgreementDocumentsAction
 
             Notification::make()
                 ->title('❌ Error al Generar Documentos')
-                ->body('Error: ' . $e->getMessage())
+                ->body('Error: '.$e->getMessage())
                 ->danger()
                 ->duration(8000)
                 ->send();

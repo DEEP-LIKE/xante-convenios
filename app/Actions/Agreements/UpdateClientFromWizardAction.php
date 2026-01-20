@@ -11,12 +11,13 @@ class UpdateClientFromWizardAction
     {
         $client = Client::find($clientId);
 
-        if (!$client) {
+        if (! $client) {
             Notification::make()
                 ->title('Error')
                 ->body('Cliente no encontrado.')
                 ->danger()
                 ->send();
+
             return;
         }
 
@@ -83,13 +84,13 @@ class UpdateClientFromWizardAction
         }
 
         // Actualizar cliente
-        if (!empty($clientUpdateData)) {
+        if (! empty($clientUpdateData)) {
             $client->update($clientUpdateData);
         }
 
         // Actualizar o crear cónyuge
         // Solo si hay al menos un dato relevante (ej: nombre)
-        if (!empty($spouseUpdateData) && !empty($spouseUpdateData['name'])) {
+        if (! empty($spouseUpdateData) && ! empty($spouseUpdateData['name'])) {
             $client->spouse()->updateOrCreate(
                 ['client_id' => $client->id],
                 $spouseUpdateData

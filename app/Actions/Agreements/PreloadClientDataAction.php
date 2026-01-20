@@ -11,7 +11,7 @@ class PreloadClientDataAction
     {
         $client = Client::with('spouse')->find($clientId);
 
-        if (!$client) {
+        if (! $client) {
             return;
         }
 

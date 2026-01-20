@@ -91,7 +91,7 @@ class WizardProgress extends Model
     {
         $errors = $this->validation_errors ?? [];
         $errors[$field] = $message;
-        
+
         $this->update(['validation_errors' => $errors]);
     }
 
@@ -102,6 +102,6 @@ class WizardProgress extends Model
 
     public function hasValidationErrors(): bool
     {
-        return !empty($this->validation_errors);
+        return ! empty($this->validation_errors);
     }
 }

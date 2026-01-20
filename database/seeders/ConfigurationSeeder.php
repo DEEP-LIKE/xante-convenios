@@ -23,7 +23,7 @@ class ConfigurationSeeder extends Seeder
                 'value' => '1.16',
                 'type' => 'decimal',
             ],
-            
+
             // Gastos
             [
                 'key' => 'isr_default',
@@ -43,7 +43,7 @@ class ConfigurationSeeder extends Seeder
                 'value' => '20000',
                 'type' => 'number',
             ],
-            
+
             // Créditos
             [
                 'key' => 'monto_credito_default',
@@ -63,7 +63,7 @@ class ConfigurationSeeder extends Seeder
                 'value' => 'NO APLICA',
                 'type' => 'text',
             ],
-            
+
             // General
             [
                 'key' => 'precio_promocion_multiplier',

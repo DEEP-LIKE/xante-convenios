@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\ClientDocument;
+use Illuminate\Console\Command;
 
 class CheckDocuments extends Command
 {
@@ -27,21 +27,21 @@ class CheckDocuments extends Command
     public function handle()
     {
         $agreementId = $this->argument('agreement_id');
-        
+
         $docs = ClientDocument::where('agreement_id', $agreementId)->get();
-        
+
         $this->info("Documents for agreement {$agreementId}:");
-        $this->info("Total: " . $docs->count());
-        
-        foreach($docs as $doc) {
+        $this->info('Total: '.$docs->count());
+
+        foreach ($docs as $doc) {
             $this->line("ID: {$doc->id}");
             $this->line("Name: '{$doc->document_name}'");
             $this->line("Type: '{$doc->document_type}'");
             $this->line("File: '{$doc->file_name}'");
             $this->line("Category: '{$doc->category}'");
-            $this->line("---");
+            $this->line('---');
         }
-        
+
         return 0;
     }
 }

@@ -24,30 +24,30 @@ class ValidationRejectedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return (new MailMessage)
                 ->subject('Validación no disponible')
                 ->line('La validación solicitada ya no está disponible.');
         }
 
         return (new MailMessage)
-            ->subject('Validación Rechazada - Convenio #' . $validation->agreement_id)
-            ->greeting('Hola ' . $notifiable->name . ',')
+            ->subject('Validación Rechazada - Convenio #'.$validation->agreement_id)
+            ->greeting('Hola '.$notifiable->name.',')
             ->line('Tu calculadora ha sido **rechazada** por el Coordinador FI.')
-            ->line('**Convenio ID:** #' . $validation->agreement_id)
-            ->line('**Rechazado por:** ' . $validation->validatedBy->name)
+            ->line('**Convenio ID:** #'.$validation->agreement_id)
+            ->line('**Rechazado por:** '.$validation->validatedBy->name)
             ->line('**Motivo:**')
             ->line($validation->observations)
-            ->action('Ver Detalles', url('/wizard/' . $validation->agreement_id))
+            ->action('Ver Detalles', url('/wizard/'.$validation->agreement_id))
             ->line('Por favor revisa el motivo y realiza las correcciones necesarias.');
     }
 
     public function toArray(object $notifiable): array
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return [
                 'validation_id' => $this->validationId,
                 'type' => 'validation_rejected',

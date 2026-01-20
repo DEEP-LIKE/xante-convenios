@@ -2,36 +2,33 @@
 
 namespace App\Filament\Resources\ConfigurationCalculator;
 
-use App\Filament\Resources\ConfigurationCalculator\Pages;
 use App\Models\ConfigurationCalculator;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
+use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Tables\Table;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use BackedEnum;
+use Filament\Tables\Table;
 use UnitEnum;
-use Filament\Actions\Action;
+
 // use Filament\Tables\Filters\SelectFilter; // <-- Importación eliminada por filtro de búsqueda global
 
 class ConfigurationCalculatorResource extends Resource
-
 {
     protected static ?string $model = ConfigurationCalculator::class;
 
-    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-calculator';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calculator';
 
-    protected static UnitEnum | string | null $navigationGroup = 'Configuraciones';
+    protected static UnitEnum|string|null $navigationGroup = 'Configuraciones';
 
     protected static ?string $navigationLabel = 'Calculadora';
-    
+
     protected static ?string $modelLabel = '% Calculadora';
-    
+
     protected static ?string $pluralModelLabel = 'Valores de la Calculadora';
 
     protected static ?int $navigationSort = 999;
@@ -51,12 +48,12 @@ class ConfigurationCalculatorResource extends Resource
                             ->label('Clave')
                             ->required()
                             ->disabled(), // Clave no debería ser editable
-                        
+
                         Textarea::make('description')
                             ->label('Descripción')
                             ->rows(2)
                             ->columnSpanFull(),
-                        
+
                         Select::make('type')
                             ->label('Tipo')
                             ->options([
@@ -66,7 +63,7 @@ class ConfigurationCalculatorResource extends Resource
                                 'boolean' => 'Verdadero/Falso',
                             ])
                             ->required(),
-                        
+
                         TextInput::make('value')
                             ->label('Valor')
                             ->required(),
@@ -101,7 +98,6 @@ class ConfigurationCalculatorResource extends Resource
                     ->icon('heroicon-o-pencil'),
             ]);
     }
-
 
     public static function getPages(): array
     {

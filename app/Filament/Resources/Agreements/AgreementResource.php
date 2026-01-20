@@ -8,18 +8,17 @@ use App\Filament\Resources\Agreements\Pages\ListAgreements;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\ConfigurationCalculator;
-use Filament\Forms;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
+use Filament\Forms;
+use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
-use BackedEnum;
-
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
 
 class AgreementResource extends Resource
 {
@@ -27,15 +26,14 @@ class AgreementResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-
     protected static ?string $navigationLabel = 'Convenios';
-    
+
     protected static ?string $modelLabel = 'Convenio';
-    
+
     protected static ?string $pluralModelLabel = 'Convenios';
-    
+
     protected static ?int $navigationSort = 2;
-    
+
     // Ocultar del menú principal - solo accesible vía wizard
     protected static bool $shouldRegisterNavigation = false;
 
@@ -45,18 +43,18 @@ class AgreementResource extends Resource
         if (is_null($value) || $value === '') {
             return 0.0;
         }
-        
+
         // Convertir a string y remover todo excepto dígitos, punto y signo negativo
         $stringValue = (string) $value;
-        
+
         // Remover símbolos de moneda, comas, espacios, etc.
         $cleaned = preg_replace('/[^\d.-]/', '', $stringValue);
-        
+
         // Si está vacío después de limpiar, retornar 0
         if (empty($cleaned) || $cleaned === '.' || $cleaned === '-') {
             return 0.0;
         }
-        
+
         return (float) $cleaned;
     }
 
@@ -69,33 +67,33 @@ class AgreementResource extends Resource
         $isr = (float) $get('isr') ?? 0;
         $cancelacionHipoteca = (float) $get('cancelacion_hipoteca') ?? 0;
         $montoCredito = (float) $get('monto_credito') ?? 0;
-        
+
         // CÁLCULOS CORREGIDOS SEGÚN EXCEL
-        
+
         // 1. Monto Comisión (Sin IVA) = % Comisión (Sin IVA) * Valor Convenio / 100
         $montoComisionSinIva = ($porcentajeComisionSinIva * $valorConvenio) / 100;
         $set('monto_comision_sin_iva', round($montoComisionSinIva, 2));
-    
+
         // 2. Comisión total por pagar = Monto Comisión (Sin IVA) * IVA Multiplier
         $ivaMultiplier = ConfigurationCalculator::get('iva_multiplier', 1.16);
         $comisionTotalPagar = $montoComisionSinIva * $ivaMultiplier;
         $set('comision_total_pagar', round($comisionTotalPagar, 2));
-        
+
         // 3. Comisión IVA Incluido = (Comisión Total / Valor Convenio) * 100
         if ($valorConvenio > 0) {
             $comisionIvaIncluido = ($comisionTotalPagar / $valorConvenio) * 100;
             $set('comision_iva_incluido', round($comisionIvaIncluido, 2));
         }
-        
+
         // 4. Total Gastos FI (Venta) = ISR + Cancelación de hipoteca (según Excel: =+SUMA(F33:G34))
         $totalGastosFi = $isr + $cancelacionHipoteca;
         $set('total_gastos_fi', round($totalGastosFi, 2));
-        
+
         // 5. Ganancia Final según Excel: =+C33-F33-F34-C34-F23
         // = Valor Convenio - ISR - Cancelación hipoteca - Comisión total - Monto de crédito
         $gananciaFinal = $valorConvenio - $isr - $cancelacionHipoteca - $comisionTotalPagar - $montoCredito;
         $set('ganancia_final', round($gananciaFinal, 2));
-    
+
         // 6. Campos espejo
         $set('valor_compraventa', $valorConvenio);
         $set('comision_total', round($comisionTotalPagar, 2));
@@ -114,7 +112,7 @@ class AgreementResource extends Resource
                     self::recalculateAll($set, $get);
                 })
                 ->schema([
-                    
+
                     // DATOS Y VALOR VIVIENDA
                     Section::make('DATOS Y VALOR VIVIENDA')
                         ->schema([
@@ -122,14 +120,14 @@ class AgreementResource extends Resource
                                 ->schema([
                                     Forms\Components\TextInput::make('domicilio_convenio')
                                         ->label('Domicilio Viv. Convenio')
-                                        ->default(fn() => ConfigurationCalculator::get('domicilio_convenio_default', 'PRIVADA MELQUES 6'))
+                                        ->default(fn () => ConfigurationCalculator::get('domicilio_convenio_default', 'PRIVADA MELQUES 6'))
                                         ->columnSpan(2),
-                                        
+
                                     Forms\Components\TextInput::make('comunidad')
                                         ->label('Comunidad')
-                                        ->default(fn() => ConfigurationCalculator::get('comunidad_default', 'REAL SEGOVIA'))
+                                        ->default(fn () => ConfigurationCalculator::get('comunidad_default', 'REAL SEGOVIA'))
                                         ->columnSpan(2),
-                                        
+
                                     Forms\Components\Select::make('tipo_vivienda')
                                         ->label('Tipo de vivienda')
                                         ->options([
@@ -138,12 +136,12 @@ class AgreementResource extends Resource
                                             'TOWNHOUSE' => 'TOWNHOUSE',
                                             'CONDOMINIO' => 'CONDOMINIO',
                                         ])
-                                        ->default(fn() => ConfigurationCalculator::get('tipo_vivienda_default', 'CASA'))
+                                        ->default(fn () => ConfigurationCalculator::get('tipo_vivienda_default', 'CASA'))
                                         ->columnSpan(2),
-                                        
+
                                     Forms\Components\TextInput::make('prototipo')
                                         ->label('Prototipo')
-                                        ->default(fn() => ConfigurationCalculator::get('prototipo_default', 'BURGOS'))
+                                        ->default(fn () => ConfigurationCalculator::get('prototipo_default', 'BURGOS'))
                                         ->columnSpan(2),
                                 ]),
                         ]),
@@ -157,38 +155,37 @@ class AgreementResource extends Resource
                                         ->label('% Comisión (Sin IVA)*')
                                         ->suffix('%')
                                         ->numeric()
-                                        ->default(fn() => ConfigurationCalculator::get('comision_sin_iva_default', 6.50))
+                                        ->default(fn () => ConfigurationCalculator::get('comision_sin_iva_default', 6.50))
                                         ->live(debounce: 500)
-                                        ->afterStateUpdated(fn($state, callable $set, callable $get) => 
-                                            self::recalculateAll($set, $get)
+                                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         )
                                         ->columnSpan(1),
-                                        
+
                                     Forms\Components\TextInput::make('monto_comision_sin_iva')
                                         ->label('Monto Comisión (Sin IVA)')
                                         ->prefix('$')
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 2) : '0.00')
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 2) : '0.00')
                                         ->columnSpan(1),
-                                        
+
                                     Forms\Components\TextInput::make('comision_iva_incluido')
                                         ->label('Comisión IVA incluido')
                                         ->suffix('%')
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 2) : '0.00')
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 2) : '0.00')
                                         ->columnSpan(1),
-                                        
+
                                     Forms\Components\TextInput::make('comision_total_pagar')
                                         ->label('Comisión total por pagar')
                                         ->prefix('$')
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 2) : '0.00')
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 2) : '0.00')
                                         ->columnSpan(1),
                                 ]),
                         ]),
@@ -205,26 +202,26 @@ class AgreementResource extends Resource
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 0) : '0'),
-                                        
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) : '0'),
+
                                     Forms\Components\TextInput::make('valor_convenio')
                                         ->label('Valor Convenio*')
                                         ->prefix('$')
                                         ->numeric()
                                         ->required()
-                                        ->default(fn() => ConfigurationCalculator::get('valor_convenio_default', 1495000))
+                                        ->default(fn () => ConfigurationCalculator::get('valor_convenio_default', 1495000))
                                         ->live(debounce: 500)
                                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                             if ($state && $state > 0) {
                                                 // Calcular Precio Promoción = Valor Convenio * 1.09
                                                 $precioPromocion = $state * 1.09;
                                                 $set('precio_promocion', round($precioPromocion, 0));
-                                                
+
                                                 // Cálculo directo simple para test
                                                 $porcentaje = 6.50; // Valor por defecto
                                                 $montoComision = ($porcentaje * $state) / 100;
                                                 $set('monto_comision_sin_iva', round($montoComision, 2));
-                                                
+
                                                 // Triggear recálculo completo
                                                 self::recalculateAll($set, $get);
                                             }
@@ -237,18 +234,17 @@ class AgreementResource extends Resource
                                                 self::recalculateAll($set, $get);
                                             }
                                         }),
-                                        
+
                                     Forms\Components\TextInput::make('monto_credito')
                                         ->label('Monto de crédito')
                                         ->prefix('$')
                                         ->numeric()
-                                        ->default(fn() => ConfigurationCalculator::get('monto_credito_default', 800000))
+                                        ->default(fn () => ConfigurationCalculator::get('monto_credito_default', 800000))
                                         ->live(onBlur: true)
-                                        ->afterStateUpdated(fn($state, callable $set, callable $get) => 
-                                            self::recalculateAll($set, $get)
+                                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         ),
                                 ]),
-                                
+
                             Grid::make(3)
                                 ->schema([
                                     Forms\Components\Select::make('tipo_credito')
@@ -261,11 +257,11 @@ class AgreementResource extends Resource
                                             'OTRO' => 'OTRO',
                                         ])
                                         ->default('BANCARIO'),
-                                        
+
                                     Forms\Components\TextInput::make('otro_banco')
                                         ->label('Otro - Banco')
                                         ->placeholder('NO APLICA')
-                                        ->visible(fn(callable $get) => $get('tipo_credito') === 'OTRO')
+                                        ->visible(fn (callable $get) => $get('tipo_credito') === 'OTRO')
                                         ->columnSpan(2),
                                 ]),
                         ]),
@@ -281,29 +277,27 @@ class AgreementResource extends Resource
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 0) : '0'),
-                                        
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) : '0'),
+
                                     Forms\Components\TextInput::make('isr')
                                         ->label('ISR')
                                         ->prefix('$')
                                         ->numeric()
-                                        ->default(fn() => ConfigurationCalculator::get('isr_default', 0))
+                                        ->default(fn () => ConfigurationCalculator::get('isr_default', 0))
                                         ->live(onBlur: true)
-                                        ->afterStateUpdated(fn($state, callable $set, callable $get) => 
-                                            self::recalculateAll($set, $get)
+                                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         ),
-                                        
+
                                     Forms\Components\TextInput::make('cancelacion_hipoteca')
                                         ->label('Cancelación de hipoteca')
                                         ->prefix('$')
                                         ->numeric()
-                                        ->default(fn() => ConfigurationCalculator::get('cancelacion_hipoteca_default', 20000))
+                                        ->default(fn () => ConfigurationCalculator::get('cancelacion_hipoteca_default', 20000))
                                         ->live(onBlur: true)
-                                        ->afterStateUpdated(fn($state, callable $set, callable $get) => 
-                                            self::recalculateAll($set, $get)
+                                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         ),
                                 ]),
-                                
+
                             Grid::make(3)
                                 ->schema([
                                     Forms\Components\TextInput::make('comision_total')
@@ -312,26 +306,26 @@ class AgreementResource extends Resource
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 0) : '0'),
-                                        
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) : '0'),
+
                                     Forms\Components\TextInput::make('ganancia_final')
                                         ->label('Ganancia Final (Est.)')
                                         ->prefix('$')
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 0) : '0'),
-                                        
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) : '0'),
+
                                     Forms\Components\TextInput::make('total_gastos_fi')
                                         ->label('Total Gastos FI (Venta)')
                                         ->prefix('$')
                                         ->numeric()
                                         ->disabled()
                                         ->dehydrated()
-                                        ->formatStateUsing(fn($state) => $state ? number_format($state, 0) : '0'),
+                                        ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) : '0'),
                                 ]),
                         ]),
-                        
+
                     // NOTA EXPLICATIVA
                     Forms\Components\Placeholder::make('nota_calculadora')
                         ->label('')
@@ -346,7 +340,7 @@ class AgreementResource extends Resource
                 ->persistCollapsed(),
         ];
     }
-    
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -384,7 +378,7 @@ class AgreementResource extends Resource
                                         $set('holder_postal_code', $client->postal_code);
                                         $set('holder_municipality', $client->municipality);
                                         $set('holder_state', $client->state);
-                                        
+
                                         // Datos cónyuge
                                         $set('spouse_name', $client->spouse_name);
                                         $set('spouse_birthdate', $client->spouse_birthdate);
@@ -403,7 +397,7 @@ class AgreementResource extends Resource
                                         $set('spouse_postal_code', $client->spouse_postal_code);
                                         $set('spouse_municipality', $client->spouse_municipality);
                                         $set('spouse_state', $client->spouse_state);
-                                        
+
                                         // Contactos AC/Presidente
                                         $set('ac_name', $client->ac_name);
                                         $set('ac_phone', $client->ac_phone);
@@ -432,6 +426,7 @@ class AgreementResource extends Resource
                             ])
                             ->createOptionUsing(function (array $data): string {
                                 $client = Client::create($data);
+
                                 return $client->xante_id;
                             }),
                         Forms\Components\Select::make('status')
@@ -446,7 +441,7 @@ class AgreementResource extends Resource
                             ->default('expediente_incompleto')
                             ->required(),
                     ])->columns(2),
-                
+
                 Section::make('Datos Personales Titular')
                     ->schema([
                         Forms\Components\TextInput::make('holder_name')
@@ -527,7 +522,7 @@ class AgreementResource extends Resource
                             ->disabled()
                             ->dehydrated(false),
                     ])->columns(2),
-                
+
                 Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE')
                     ->schema([
                         Forms\Components\TextInput::make('spouse_name')
@@ -608,7 +603,7 @@ class AgreementResource extends Resource
                             ->disabled()
                             ->dehydrated(false),
                     ])->columns(2),
-                
+
                 Section::make('CONTACTO AC Y/O PRESIDENTE DE PRIVADA')
                     ->schema([
                         Forms\Components\TextInput::make('ac_name')
@@ -640,7 +635,7 @@ class AgreementResource extends Resource
                             ->disabled()
                             ->dehydrated(false),
                     ])->columns(2),
-                
+
                 Section::make('CHECKLIST DE DOCUMENTOS')
                     ->schema([
                         Forms\Components\CheckboxList::make('documents_checklist')
@@ -741,7 +736,7 @@ class AgreementResource extends Resource
                         BulkActionGroup::make([
                             DeleteBulkAction::make(),
                         ]),
-                    ] 
+                    ]
                     : []
             )
             ->checkIfRecordIsSelectableUsing(

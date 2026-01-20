@@ -5,13 +5,10 @@ namespace App\Filament\Resources\StateBankAccounts;
 use App\Filament\Resources\StateBankAccounts\Pages\CreateStateBankAccount;
 use App\Filament\Resources\StateBankAccounts\Pages\EditStateBankAccount;
 use App\Filament\Resources\StateBankAccounts\Pages\ListStateBankAccounts;
-use App\Filament\Resources\StateBankAccounts\Schemas\StateBankAccountForm;
-use App\Filament\Resources\StateBankAccounts\Tables\StateBankAccountsTable;
 use App\Models\StateBankAccount;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class StateBankAccountResource extends Resource
@@ -19,15 +16,15 @@ class StateBankAccountResource extends Resource
     protected static ?string $model = StateBankAccount::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-library';
-    
+
     protected static \UnitEnum|string|null $navigationGroup = 'Configuraciones';
-    
+
     protected static ?string $navigationLabel = 'Cuentas Bancarias por Estado';
-    
+
     protected static ?string $modelLabel = 'Cuenta Bancaria por Estado';
-    
+
     protected static ?string $pluralModelLabel = 'Cuentas Bancarias por Estado';
-    
+
     protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'state_name';

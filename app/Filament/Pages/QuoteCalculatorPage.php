@@ -2,42 +2,50 @@
 
 namespace App\Filament\Pages;
 
-use Filament\Pages\Page;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Notifications\Notification;
-use Filament\Actions\Action;
 use App\Models\Client;
+use App\Models\ConfigurationCalculator;
 use App\Models\Proposal;
 use App\Models\StateCommissionRate;
-use App\Models\ConfigurationCalculator;
 use App\Services\AgreementCalculatorService;
-use Illuminate\Support\Facades\Auth;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Illuminate\Support\Facades\Auth;
 
 class QuoteCalculatorPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
+
     protected static ?string $navigationLabel = 'Propuesta / Calculadora';
+
     // protected static \UnitEnum|string|null $navigationGroup = 'Configuraciones';
     protected static ?string $title = 'Calculadora de Cotizaciones';
+
     protected static ?string $slug = 'quote-calculator';
+
     protected static ?int $navigationSort = 3;
+
     protected static bool $shouldRegisterNavigation = true;
 
     public string $view = 'filament.pages.quote-calculator';
 
     public ?array $data = [];
+
     public ?int $selectedClientId = null;
+
     public ?string $selectedClientIdxante = null;
+
     public bool $showResults = false;
+
     public array $calculationResults = [];
 
     protected AgreementCalculatorService $calculatorService;
@@ -52,7 +60,7 @@ class QuoteCalculatorPage extends Page implements HasForms
         // Cargar valores por defecto de configuración
         $defaults = $this->calculatorService->getDefaultConfiguration();
         $this->data = $defaults;
-        
+
         // Llenar el formulario con los valores por defecto
         $this->form->fill($this->data);
     }
@@ -68,10 +76,9 @@ class QuoteCalculatorPage extends Page implements HasForms
                         ->label('Seleccionar cliente (opcional)')
                         ->placeholder('Busque por nombre o ID Xante...')
                         ->options(function () {
-                            return Client::query()
-                                ->selectRaw("id, CONCAT(name, ' — ', xante_id) as display_name")
-                                ->pluck('display_name', 'id')
-                                ->toArray();
+                            return Client::all()->mapWithKeys(function ($client) {
+                                return [$client->id => $client->name.' — '.$client->xante_id];
+                            })->toArray();
                         })
                         ->searchable()
                         ->live()
@@ -81,10 +88,10 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 if ($client) {
                                     $this->selectedClientId = $client->id;
                                     $this->selectedClientIdxante = $client->xante_id;
-                                    
+
                                     // Intentar precargar propuesta existente
                                     $this->tryLoadExistingProposal($client->xante_id);
-                                    
+
                                     Notification::make()
                                         ->title('Cliente seleccionado')
                                         ->body("Cliente: {$client->name} (ID: {$client->xante_id})")
@@ -108,7 +115,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                     $this->selectedClientIdxante = null;
                                     $this->data['client_id'] = null;
                                     $this->form->fill($this->data);
-                                    
+
                                     Notification::make()
                                         ->title('Cliente deseleccionado')
                                         ->body('Ahora está en modo calculadora rápida')
@@ -131,6 +138,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->numeric()
                                 ->prefix('$')
                                 ->required()
+                                ->minValue(1)
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function ($state) {
                                     if ($state && $state > 0) {
@@ -188,11 +196,11 @@ class QuoteCalculatorPage extends Page implements HasForms
                                     $sinIva = (float) $get('porcentaje_comision_sin_iva');
                                     $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
                                     $ivaPercentage = $config ? (float) $config->value : 16.00;
-                                    
-                                    if ($sinIva > 0 && $ivaPercentage > 0) {
-                                        $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
-                                        $component->state($conIva);
-                                    }
+
+                                    // if ($sinIva > 0 && $ivaPercentage > 0) {
+                                    //    $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
+                                    //    $component->state($conIva);
+                                    // }
                                 })
                                 ->disabled()
                                 ->dehydrated(false)
@@ -201,11 +209,13 @@ class QuoteCalculatorPage extends Page implements HasForms
                                     $sinIva = (float) $get('porcentaje_comision_sin_iva');
                                     $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
                                     $ivaPercentage = $config ? (float) $config->value : 16.00;
-                                    
+
                                     if ($sinIva > 0 && $ivaPercentage > 0) {
                                         $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
-                                        return number_format($sinIva, 2) . '% × (1 + ' . number_format($ivaPercentage, 0) . '%) = ' . number_format($conIva, 2) . '%';
+
+                                        return number_format($sinIva, 2).'% × (1 + '.number_format($ivaPercentage, 0).'%) = '.number_format($conIva, 2).'%';
                                     }
+
                                     return 'Comisión sin IVA × (1 + IVA%)';
                                 }),
                             TextInput::make('state_commission_percentage')
@@ -217,8 +227,9 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->extraAttributes(['class' => 'bg-gray-50'])
                                 ->helperText(function (callable $get) {
                                     $stateName = $get('estado_propiedad');
-                                    return $stateName 
-                                        ? '% de comisión por estado: ' . $stateName
+
+                                    return $stateName
+                                        ? '% de comisión por estado: '.$stateName
                                         : 'Seleccione un estado';
                                 }),
                             TextInput::make('monto_credito')
@@ -343,36 +354,38 @@ class QuoteCalculatorPage extends Page implements HasForms
     protected function recalculateAllFinancials(): void
     {
         // Helper para sanitizar valores numéricos (convertir strings formateados a float)
-        $sanitizeFloat = function($value) {
+        $sanitizeFloat = function ($value) {
             if (is_string($value)) {
                 return (float) str_replace([',', '$', ' '], '', str_replace(',', '.', $value));
             }
+
             return (float) ($value ?? 0);
         };
-        
+
         $valorConvenio = $sanitizeFloat($this->data['valor_convenio'] ?? 0);
 
         if ($valorConvenio <= 0) {
             $this->clearCalculatedFields();
+
             return;
         }
 
         // Preparar parámetros con el multiplicador calculado desde el porcentaje de estado
         $rawStatePercentage = $this->data['state_commission_percentage'] ?? 9;
         $statePercentage = $sanitizeFloat($rawStatePercentage);
-        
+
         // Fallback si es nulo o vacío
         if ($rawStatePercentage === null || $rawStatePercentage === '') {
             $statePercentage = 9.0;
         }
-        
+
         $dataWithMultiplier = $this->data;
         $dataWithMultiplier['precio_promocion_multiplicador'] = 1 + ($statePercentage / 100);
         $dataWithMultiplier['iva_percentage'] = (float) (ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->value('value') ?? 16.00);
 
         // Validar parámetros
         $errors = $this->calculatorService->validateParameters($valorConvenio, $dataWithMultiplier);
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             foreach ($errors as $error) {
                 Notification::make()
                     ->title('Error de validación')
@@ -380,6 +393,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                     ->danger()
                     ->send();
             }
+
             return;
         }
 
@@ -389,7 +403,7 @@ class QuoteCalculatorPage extends Page implements HasForms
 
         // Actualizar campos calculados con valores formateados para UI
         $this->data = array_merge($this->data, $formattedValues);
-        
+
         // Guardar también los valores numéricos para el guardado en BD
         $this->calculationResults = $calculations;
         $this->showResults = true;
@@ -431,12 +445,12 @@ class QuoteCalculatorPage extends Page implements HasForms
             ->latest()
             ->first();
 
-        if ($proposal && !empty($proposal->data)) {
+        if ($proposal && ! empty($proposal->data)) {
             $this->data = array_merge($this->data, $proposal->data);
             $this->form->fill($this->data);
-            
+
             // Si hay valor convenio, recalcular
-            if (!empty($this->data['valor_convenio'])) {
+            if (! empty($this->data['valor_convenio'])) {
                 $this->recalculateAllFinancials();
             }
 
@@ -454,34 +468,36 @@ class QuoteCalculatorPage extends Page implements HasForms
      */
     public function linkProposal(): void
     {
-        if (!$this->selectedClientId || !$this->selectedClientIdxante) {
-            Notification::make()
-                ->title('Error')
-                ->body('Debe seleccionar un cliente para enlazar la propuesta.')
-                ->danger()
-                ->send();
-            return;
-        }
-
-        if (empty($this->data['valor_convenio']) || $this->data['valor_convenio'] <= 0) {
-            Notification::make()
-                ->title('Error')
-                ->body('Debe ingresar un valor de convenio válido antes de enlazar.')
-                ->danger()
-                ->send();
-            return;
-        }
-
         try {
             // Obtener datos actuales del formulario
             $formData = $this->form->getState();
             $this->data = array_merge($this->data, $formData);
 
+            if (! $this->selectedClientId || ! $this->selectedClientIdxante) {
+                Notification::make()
+                    ->title('Error')
+                    ->body('Debe seleccionar un cliente para enlazar la propuesta.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
+            if (empty($this->data['valor_convenio']) || $this->data['valor_convenio'] <= 0) {
+                Notification::make()
+                    ->title('Error')
+                    ->body('Debe ingresar un valor de convenio válido antes de enlazar.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
             // Preparar datos para guardar: usar valores numéricos en lugar de formateados
             $dataToSave = $this->data;
-            
+
             // Si tenemos cálculos, usar los valores numéricos
-            if (!empty($this->calculationResults)) {
+            if (! empty($this->calculationResults)) {
                 $dataToSave = array_merge($dataToSave, $this->calculationResults);
             }
 
@@ -505,10 +521,13 @@ class QuoteCalculatorPage extends Page implements HasForms
                 ->duration(5000)
                 ->send();
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Link Proposal Error: '.$e->getMessage());
             Notification::make()
                 ->title('Error al enlazar')
-                ->body('Ocurrió un error al guardar la propuesta: ' . $e->getMessage())
+                ->body('Ocurrió un error al guardar la propuesta: '.$e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -525,17 +544,18 @@ class QuoteCalculatorPage extends Page implements HasForms
                 ->body('Debe ingresar un valor de convenio válido para calcular.')
                 ->danger()
                 ->send();
+
             return;
         }
 
         // Los cálculos ya se realizaron automáticamente
         // Solo mostrar notificación de confirmación
         $valorConvenio = (float) $this->data['valor_convenio'];
-        $gananciaFinal = !empty($this->calculationResults['ganancia_final']) ? $this->calculationResults['ganancia_final'] : 0;
+        $gananciaFinal = ! empty($this->calculationResults['ganancia_final']) ? $this->calculationResults['ganancia_final'] : 0;
 
         Notification::make()
             ->title('🧮 Cálculo Realizado')
-            ->body("Valor: $" . number_format($valorConvenio, 2) . " | Ganancia: $" . number_format($gananciaFinal, 2))
+            ->body('Valor: $'.number_format($valorConvenio, 2).' | Ganancia: $'.number_format($gananciaFinal, 2))
             ->success()
             ->duration(5000)
             ->send();
@@ -552,7 +572,7 @@ class QuoteCalculatorPage extends Page implements HasForms
         $this->selectedClientIdxante = null;
         $this->showResults = false;
         $this->calculationResults = [];
-        
+
         $this->form->fill($this->data);
 
         Notification::make()

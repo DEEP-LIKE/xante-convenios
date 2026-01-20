@@ -56,18 +56,18 @@ class GeneratedDocument extends Model
      */
     public function getFileSize(): string
     {
-        if (!$this->fileExists()) {
+        if (! $this->fileExists()) {
             return 'N/A';
         }
 
         $bytes = Storage::disk('private')->size($this->file_path);
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 
     /**
@@ -75,18 +75,18 @@ class GeneratedDocument extends Model
      */
     public function getFormattedSizeAttribute(): string
     {
-        if (!$this->file_size) {
+        if (! $this->file_size) {
             return 'N/A';
         }
 
         $bytes = $this->file_size;
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 
     /**
@@ -94,7 +94,7 @@ class GeneratedDocument extends Model
      */
     public function getFormattedTypeAttribute(): string
     {
-        return match($this->document_type) {
+        return match ($this->document_type) {
             'acuerdo_promocion' => 'Acuerdo de Promoción Inmobiliaria',
             'datos_generales' => 'Datos Generales - Fase I',
             'checklist_expediente' => 'Checklist de Expediente Básico',

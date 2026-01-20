@@ -1,5 +1,24 @@
 # ----------------------------------------------------------------------
-# 1. IMAGEN BASE: PHP 8.3 con Apache (Ubuntu/Debian)
+# STAGE 1: BUILD DE ASSETS CON NODE.JS
+# ----------------------------------------------------------------------
+FROM node:20-alpine AS node-builder
+
+WORKDIR /app
+
+# Copiar archivos de dependencias de Node
+COPY package.json package-lock.json ./
+
+# Instalar dependencias de Node
+RUN npm ci
+
+# Copiar archivos necesarios para el build
+COPY . .
+
+# Compilar assets de frontend (Vite)
+RUN npm run build
+
+# ----------------------------------------------------------------------
+# STAGE 2: IMAGEN DE PRODUCCIÓN CON PHP Y APACHE
 # ----------------------------------------------------------------------
 FROM php:8.3-apache
 
@@ -10,7 +29,7 @@ WORKDIR /var/www/html
 RUN a2enmod rewrite headers
 
 # ----------------------------------------------------------------------
-# 2. INSTALACIÓN DE HERRAMIENTAS Y LIBRERÍAS (+ SUPERVISOR)
+# INSTALACIÓN DE HERRAMIENTAS Y LIBRERÍAS (+ SUPERVISOR)
 # ----------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -28,19 +47,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ----------------------------------------------------------------------
-# 3. INSTALAR NODE.JS (Versión actualizada desde NodeSource)
-# ----------------------------------------------------------------------
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# ----------------------------------------------------------------------
-# 4. INSTALACIÓN DE COMPOSER
+# INSTALACIÓN DE COMPOSER
 # ----------------------------------------------------------------------
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # ----------------------------------------------------------------------
-# 5. INSTALACIÓN DE EXTENSIONES DE PHP
+# INSTALACIÓN DE EXTENSIONES DE PHP
 # ----------------------------------------------------------------------
 RUN docker-php-ext-configure gd --with-freetype \
     && docker-php-ext-install -j$(nproc) \
@@ -57,46 +69,40 @@ RUN docker-php-ext-configure gd --with-freetype \
     && rm -rf /tmp/*
 
 # ----------------------------------------------------------------------
-# 6. COPIAR ARCHIVOS DE DEPENDENCIAS PRIMERO (optimización de cache)
+# COPIAR ARCHIVOS DE DEPENDENCIAS PRIMERO (optimización de cache)
 # ----------------------------------------------------------------------
 COPY composer.json composer.lock ./
-COPY package.json package-lock.json ./
 
 # Instalar dependencias de PHP (sin autoloader todavía)
-RUN composer install --no-dev --no-autoloader --no-scripts
-
-# Instalar dependencias de Node.js
-RUN npm ci
+RUN composer install --no-dev --no-autoloader --no-scripts \
+    && rm -rf /root/.composer/cache
 
 # ----------------------------------------------------------------------
-# 7. COPIAR TODO EL CÓDIGO FUENTE
+# COPIAR TODO EL CÓDIGO FUENTE
 # ----------------------------------------------------------------------
 COPY . .
 
+# Copiar assets compilados desde el stage de Node
+COPY --from=node-builder /app/public/build ./public/build
+
 # ----------------------------------------------------------------------
-# 8. FINALIZAR COMPOSER Y COMPILAR ASSETS
+# FINALIZAR COMPOSER Y OPTIMIZACIONES
 # ----------------------------------------------------------------------
 # Generar autoloader optimizado
-RUN composer dump-autoload --optimize
+RUN composer dump-autoload --optimize --classmap-authoritative
 
-# Publicar assets de Filament ANTES de compilar Vite
+# Publicar assets de Filament
 RUN php artisan filament:assets --no-interaction
 
-# Compilar assets de frontend (Vite)
-RUN npm run build
-
-# Limpiar archivos innecesarios
-RUN rm -rf node_modules
-
 # ----------------------------------------------------------------------
-# 9. OPTIMIZACIÓN DE LARAVEL PARA PRODUCCIÓN
+# OPTIMIZACIÓN DE LARAVEL PARA PRODUCCIÓN
 # ----------------------------------------------------------------------
 RUN php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache
 
 # ----------------------------------------------------------------------
-# 10. CONFIGURACIÓN DE APACHE
+# CONFIGURACIÓN DE APACHE
 # ----------------------------------------------------------------------
 # Apuntar DocumentRoot a /public
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' \
@@ -113,24 +119,24 @@ RUN echo '<Directory /var/www/html/public>' >> /etc/apache2/sites-available/000-
 RUN echo 'SetEnvIf X-Forwarded-Proto https HTTPS=on' >> /etc/apache2/apache2.conf
 
 # ----------------------------------------------------------------------
-# 11. CONFIGURACIÓN DE SUPERVISOR PARA LARAVEL QUEUE
+# CONFIGURACIÓN DE SUPERVISOR PARA LARAVEL QUEUE
 # ----------------------------------------------------------------------
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # ----------------------------------------------------------------------
-# 12. PERMISOS
+# PERMISOS
 # ----------------------------------------------------------------------
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
 # ----------------------------------------------------------------------
-# 13. SCRIPT DE INICIO
+# SCRIPT DE INICIO
 # ----------------------------------------------------------------------
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # ----------------------------------------------------------------------
-# 14. EXPONER PUERTO Y COMANDO DE INICIO
+# EXPONER PUERTO Y COMANDO DE INICIO
 # ----------------------------------------------------------------------
 # IMPORTANTE: Desactivamos que apache inicie por si solo como servicio background
 RUN update-rc.d apache2 disable

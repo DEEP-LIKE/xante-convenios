@@ -120,56 +120,56 @@ class QuoteAuthorization extends Model
         $this->status = 'approved';
         $this->authorized_by = $authorizedById;
         $this->authorized_at = now();
-        
+
         $saved = $this->save();
-        
+
         // Si hay una validación vinculada, actualizar sus valores
         if ($saved && $this->quote_validation_id) {
             $validation = $this->quoteValidation;
             if ($validation) {
                 $snapshot = $validation->calculator_snapshot;
-                
+
                 // Actualizar precio si aplica
                 if ($this->isPriceChange() && $this->new_price) {
                     $snapshot['valor_convenio'] = $this->new_price;
                     $snapshot['valor_compraventa'] = $this->new_price;
                 }
-                
+
                 // Actualizar comisión si aplica
                 if ($this->isCommissionChange() && $this->new_commission_percentage) {
                     $snapshot['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
                 }
-                
+
                 // Recalcular valores con el servicio de calculadora
                 if ($this->isPriceChange() || $this->isCommissionChange()) {
                     $calculatorService = app(\App\Services\AgreementCalculatorService::class);
-                    
+
                     // Preparar parámetros para el cálculo
                     // Aseguramos que los valores sean float/int correctos
                     $params = $snapshot;
-                    
+
                     // Si cambió la comisión, asegurarse que el nuevo valor se use en el cálculo
                     if ($this->isCommissionChange() && $this->new_commission_percentage) {
                         $params['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
                         $snapshot['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
                     }
-                    
+
                     $recalculated = $calculatorService->calculateAllFinancials(
                         (float) ($snapshot['valor_convenio'] ?? 0),
                         $params
                     );
-                    
+
                     // Actualizar todos los valores calculados en el snapshot
                     $snapshot = array_merge($snapshot, $recalculated);
                 }
-                
+
                 $validation->calculator_snapshot = $snapshot;
                 // Cambiar estado de vuelta a pending para que el coordinador pueda aprobar
                 $validation->status = 'pending';
                 $validation->save();
             }
         }
-        
+
         return $saved;
     }
 
@@ -179,9 +179,9 @@ class QuoteAuthorization extends Model
         $this->authorized_by = $authorizedById;
         $this->authorized_at = now();
         $this->rejection_reason = $reason;
-        
+
         $saved = $this->save();
-        
+
         // Si hay una validación vinculada, revertir su estado a pending
         if ($saved && $this->quote_validation_id) {
             $validation = $this->quoteValidation;
@@ -191,7 +191,7 @@ class QuoteAuthorization extends Model
                 $validation->save();
             }
         }
-        
+
         return $saved;
     }
 }

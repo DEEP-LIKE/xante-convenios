@@ -47,7 +47,7 @@ class UserPolicy
         if ($user->id === $model->id) {
             return false;
         }
-        
+
         return $user->role === 'gerencia';
     }
 
@@ -68,7 +68,7 @@ class UserPolicy
         if ($user->id === $model->id) {
             return false;
         }
-        
+
         return $user->role === 'gerencia';
     }
 }

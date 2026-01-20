@@ -4,12 +4,12 @@ namespace App\Services;
 
 use App\Models\Agreement;
 use App\Models\ClientDocument;
-use Illuminate\Support\Facades\Storage;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Servicio para gestionar subida y eliminación de documentos del cliente
- * 
+ *
  * Responsabilidades:
  * - Guardar documentos subidos
  * - Eliminar documentos
@@ -74,6 +74,7 @@ class DocumentUploadService
     public function getDocumentDisplayName(string $fieldName): string
     {
         $displayNames = $this->getDisplayNames();
+
         return $displayNames[$fieldName] ?? $fieldName;
     }
 
@@ -90,15 +91,15 @@ class DocumentUploadService
             $finalFilePath = null;
 
             // Procesar diferentes tipos de entrada de archivo
-            if (is_string($filePath) && !empty($filePath)) {
+            if (is_string($filePath) && ! empty($filePath)) {
                 $finalFilePath = $filePath;
                 $fileName = basename($filePath);
                 if (Storage::disk('private')->exists($filePath)) {
                     $fileSize = Storage::disk('private')->size($filePath);
                 }
-            } elseif (is_array($filePath) && !empty($filePath)) {
+            } elseif (is_array($filePath) && ! empty($filePath)) {
                 $firstFile = $filePath[0];
-                if (!empty($firstFile)) {
+                if (! empty($firstFile)) {
                     $finalFilePath = $firstFile;
                     $fileName = basename($firstFile);
                     if (Storage::disk('private')->exists($firstFile)) {
@@ -108,18 +109,18 @@ class DocumentUploadService
             } elseif (is_object($filePath)) {
                 if (method_exists($filePath, 'getClientOriginalName')) {
                     $fileName = $filePath->getClientOriginalName();
-                    $finalFilePath = $filePath->store('convenios/' . $agreement->id . '/client_documents/' . $category, 'private');
+                    $finalFilePath = $filePath->store('convenios/'.$agreement->id.'/client_documents/'.$category, 'private');
                     $fileSize = $filePath->getSize();
                 }
             }
 
             if (empty($finalFilePath)) {
-                throw new \Exception("No se pudo obtener la ruta del archivo");
+                throw new \Exception('No se pudo obtener la ruta del archivo');
             }
 
             if (empty($fileName)) {
                 $extension = pathinfo($finalFilePath, PATHINFO_EXTENSION) ?: 'pdf';
-                $fileName = $documentName . '_' . time() . '.' . $extension;
+                $fileName = $documentName.'_'.time().'.'.$extension;
             }
 
             // Buscar si ya existe un documento de este tipo
@@ -129,10 +130,10 @@ class DocumentUploadService
 
             if ($existingDocument) {
                 // Eliminar el archivo anterior
-                if (!empty($existingDocument->file_path) && Storage::disk('private')->exists($existingDocument->file_path)) {
+                if (! empty($existingDocument->file_path) && Storage::disk('private')->exists($existingDocument->file_path)) {
                     Storage::disk('private')->delete($existingDocument->file_path);
                 }
-                
+
                 // Actualizar el registro existente
                 $existingDocument->update([
                     'document_name' => $documentName,
@@ -159,7 +160,7 @@ class DocumentUploadService
             \Log::error('Error saving document', [
                 'agreement_id' => $agreement->id,
                 'field_name' => $fieldName,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -179,9 +180,9 @@ class DocumentUploadService
 
             if ($clientDocument) {
                 $documentName = $clientDocument->document_name;
-                
+
                 // Eliminar el archivo físico
-                if (!empty($clientDocument->file_path) && Storage::disk('private')->exists($clientDocument->file_path)) {
+                if (! empty($clientDocument->file_path) && Storage::disk('private')->exists($clientDocument->file_path)) {
                     Storage::disk('private')->delete($clientDocument->file_path);
                 }
 
@@ -190,7 +191,7 @@ class DocumentUploadService
 
                 Notification::make()
                     ->title('🗑️ Documento Eliminado')
-                    ->body('El documento "' . $documentName . '" ha sido eliminado correctamente')
+                    ->body('El documento "'.$documentName.'" ha sido eliminado correctamente')
                     ->success()
                     ->duration(3000)
                     ->send();
@@ -200,12 +201,12 @@ class DocumentUploadService
             \Log::error('Error deleting document', [
                 'agreement_id' => $agreement->id,
                 'field_name' => $fieldName,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             Notification::make()
                 ->title('❌ Error al Eliminar')
-                ->body('Error al eliminar el documento: ' . $e->getMessage())
+                ->body('Error al eliminar el documento: '.$e->getMessage())
                 ->danger()
                 ->duration(4000)
                 ->send();
@@ -225,7 +226,7 @@ class DocumentUploadService
 
         foreach ($clientDocuments as $document) {
             $fieldName = $fieldMap[$document->document_type] ?? null;
-            if ($fieldName && !empty($document->file_path)) {
+            if ($fieldName && ! empty($document->file_path)) {
                 // Verificar que el archivo existe físicamente
                 if (Storage::disk('private')->exists($document->file_path)) {
                     $documents[$fieldName] = [$document->file_path];
@@ -237,7 +238,7 @@ class DocumentUploadService
         }
 
         // Limpiar registros huérfanos
-        if (!empty($documentsToDelete)) {
+        if (! empty($documentsToDelete)) {
             ClientDocument::whereIn('id', $documentsToDelete)->delete();
         }
 

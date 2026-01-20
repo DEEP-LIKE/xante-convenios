@@ -2,34 +2,29 @@
 
 namespace App\Filament\Resources;
 
-use App\Models\Agreement;
-use Filament\Resources\Resource;
-use Filament\Tables\Table;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Filters\SelectFilter;
 use App\Filament\Resources\WizardResource\Pages;
+use App\Models\Agreement;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Tables\Actions\HeaderAction;
-use Illuminate\Support\Facades\Artisan;
-
-
+use Filament\Actions\DeleteBulkAction;
+use Filament\Resources\Resource;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
 class WizardResource extends Resource
 {
     protected static ?string $model = Agreement::class;
 
-    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-sparkles';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-sparkles';
 
     protected static ?string $navigationLabel = 'Convenios';
-    
+
     protected static ?string $modelLabel = 'Convenio';
-    
+
     protected static ?string $pluralModelLabel = 'Convenios';
-    
+
     protected static ?int $navigationSort = 1;
 
     public static function table(Table $table): Table
@@ -43,22 +38,22 @@ class WizardResource extends Resource
                         if ($record->client && $record->client->name) {
                             return $record->client->name;
                         }
-                        
+
                         // 2. Buscar en el campo directo holder_name
-                        if (!empty($record->holder_name)) {
+                        if (! empty($record->holder_name)) {
                             return $record->holder_name;
                         }
-                        
+
                         // 3. Buscar en wizard_data
                         $wizardData = $record->wizard_data ?? [];
-                        if (!empty($wizardData['holder_name'])) {
+                        if (! empty($wizardData['holder_name'])) {
                             return $wizardData['holder_name'];
                         }
                         // 4. Buscar en otros campos de wizard_data
-                        if (!empty($wizardData['name'])) {
+                        if (! empty($wizardData['name'])) {
                             return $wizardData['name'];
                         }
-                        
+
                         return 'Pendiente';
                     })
                     ->searchable()
@@ -71,60 +66,62 @@ class WizardResource extends Resource
                         if ($record->client && $record->client->xante_id) {
                             return $record->client->xante_id;
                         }
-                        
+
                         // 2. Buscar en client_xante_id directo
-                        if (!empty($record->client_xante_id)) {
+                        if (! empty($record->client_xante_id)) {
                             return $record->client_xante_id;
                         }
-                        
+
                         // 3. Buscar en wizard_data
                         $wizardData = $record->wizard_data ?? [];
-                        if (!empty($wizardData['xante_id'])) {
+                        if (! empty($wizardData['xante_id'])) {
                             return $wizardData['xante_id'];
                         }
-                        
+
                         // Si no hay ID, mostrar "Sin asignar"
                         return 'Sin asignar';
                     })
                     ->color(function (Agreement $record) {
                         // Verificar si tiene ID Xante
                         $hasXanteId = false;
-                        
+
                         if ($record->client && $record->client->xante_id) {
                             $hasXanteId = true;
                         } else {
                             $wizardData = $record->wizard_data ?? [];
-                            if (!empty($wizardData['xante_id'])) {
+                            if (! empty($wizardData['xante_id'])) {
                                 $hasXanteId = true;
                             }
                         }
-                        
+
                         return $hasXanteId ? 'primary' : 'gray';
                     })
                     ->searchable()
                     ->sortable(),
-                    
+
                 TextColumn::make('current_wizard')
                     ->label('Etapa Actual')
                     ->formatStateUsing(function ($state, $record) {
                         $wizardNumber = $state ?? 1;
                         $etapaNumero = $wizardNumber === 1 ? 'I' : 'II';
                         $wizardName = $wizardNumber === 1 ? 'Captura de Información' : 'Gestión Documental';
+
                         return "Etapa {$etapaNumero}: {$wizardName}";
                     })
                     ->badge()
                     ->color(function ($state) {
                         return ($state ?? 1) === 1 ? 'info' : 'success';
                     }),
-                    
+
                 TextColumn::make('current_step')
                     ->label('Paso Actual')
                     ->formatStateUsing(function ($state, $record) {
                         if (($record->current_wizard ?? 1) === 1) {
-                            return "Paso {$state}: " . ($record->getCurrentStepName() ?? 'Desconocido');
+                            return "Paso {$state}: ".($record->getCurrentStepName() ?? 'Desconocido');
                         } else {
                             $wizard2Steps = $record->getWizard2Steps();
                             $stepName = $wizard2Steps[$record->wizard2_current_step ?? 1] ?? 'Desconocido';
+
                             return "Paso {$record->wizard2_current_step}: {$stepName}";
                         }
                     })
@@ -133,10 +130,10 @@ class WizardResource extends Resource
                     ->color(function ($state, $record) {
                         $currentWizard = $record->current_wizard ?? 1;
                         $currentStep = $currentWizard === 1 ? $state : ($record->wizard2_current_step ?? 1);
-                        
+
                         // Si es Paso 5 (Validación), usar color del estado de validación
                         if ($currentStep == 5) {
-                            return match($record->validation_status) {
+                            return match ($record->validation_status) {
                                 'pending' => 'warning',
                                 'approved' => 'success',
                                 'rejected' => 'danger',
@@ -145,9 +142,9 @@ class WizardResource extends Resource
                             };
                         }
 
-                        return match($currentStep) {
+                        return match ($currentStep) {
                             1 => 'gray',
-                            2 => 'blue', 
+                            2 => 'blue',
                             3 => 'info',
                             4 => 'yellow',
                             default => 'gray'
@@ -157,7 +154,7 @@ class WizardResource extends Resource
                         // Solo mostrar estado de validación si estamos en el paso 5 (Validación)
                         if (($record->current_wizard ?? 1) === 1 && ($record->current_step == 5)) {
                             // Retornar iconos SVG directos con estilos inline para controlar tamaño y alineación
-                            return match($record->validation_status) {
+                            return match ($record->validation_status) {
                                 'pending' => new \Illuminate\Support\HtmlString('
                                     <div style="margin-top: 4px;">
                                         <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 9999px; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 12px; font-weight: 500;">
@@ -189,9 +186,10 @@ class WizardResource extends Resource
                                 default => ''
                             };
                         }
+
                         return null;
                     }),
-                    
+
                 TextColumn::make('status')
                     ->label('Estado')
                     ->badge()
@@ -217,13 +215,13 @@ class WizardResource extends Resource
                     ->formatStateUsing(function (string $state, Agreement $record): string {
                         return $record->status_label;
                     }),
-                    
+
                 TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
+
                 TextColumn::make('createdBy.name')
                     ->label('Creado por')
                     ->default('Sistema')
@@ -239,14 +237,14 @@ class WizardResource extends Resource
                         4 => 'Paso 4: Calculadora',
                         5 => 'Paso 5: Validación',
                     ]),
-                    
+
                 SelectFilter::make('current_wizard')
                     ->label('Etapa Actual')
                     ->options([
                         1 => 'Etapa I: Captura de Información',
                         2 => 'Etapa II: Gestión Documental',
                     ]),
-                    
+
                 SelectFilter::make('status')
                     ->label('Estado')
                     ->options([
@@ -268,11 +266,9 @@ class WizardResource extends Resource
             ->actions([
                 // Botón único que se adapta al wizard actual
                 Action::make('continue')
-                    ->label(fn (Agreement $record): string => 
-                        $record->status === 'completed' ? 'Ver' : 'Continuar'
+                    ->label(fn (Agreement $record): string => $record->status === 'completed' ? 'Ver' : 'Continuar'
                     )
-                    ->icon(fn (Agreement $record): string => 
-                        $record->status === 'completed' ? 'heroicon-o-eye' : 'heroicon-o-play'
+                    ->icon(fn (Agreement $record): string => $record->status === 'completed' ? 'heroicon-o-eye' : 'heroicon-o-play'
                     )
                     ->color('primary')
                     ->url(function (Agreement $record): string {
@@ -280,17 +276,17 @@ class WizardResource extends Resource
                         if ($record->status === 'completed') {
                             return "/admin/manage-documents/{$record->id}";
                         }
-                        
+
                         // Si está en Wizard 1 y puede regresar
                         if ($record->current_wizard === 1 && $record->can_return_to_wizard1 === true) {
                             return "/admin/convenios/crear?agreement={$record->id}";
                         }
-                        
+
                         // Si está en Wizard 2 o documentos generados
                         if ($record->current_wizard === 2 || $record->status === 'documents_generated') {
                             return "/admin/manage-documents/{$record->id}";
                         }
-                        
+
                         // Por defecto, ir al Wizard 1
                         return "/admin/convenios/crear?agreement={$record->id}";
                     }),
@@ -302,7 +298,7 @@ class WizardResource extends Resource
                             DeleteBulkAction::make()
                                 ->requiresConfirmation(),
                         ]),
-                    ] 
+                    ]
                     : []
             )
             ->checkIfRecordIsSelectableUsing(
@@ -313,7 +309,7 @@ class WizardResource extends Resource
                     ->label('Nuevo Convenio')
                     ->icon('heroicon-o-plus')
                     ->color('primary')
-                    ->url('/admin/convenios/crear')
+                    ->url('/admin/convenios/crear'),
             ])
             ->defaultSort('created_at', 'desc')
             ->poll('30s') // Auto-refresh cada 30 segundos
@@ -330,14 +326,15 @@ class WizardResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         $incomplete = static::getModel()::whereNotIn('status', ['completed'])->count();
+
         return $incomplete > 0 ? (string) $incomplete : null;
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
         $incomplete = static::getModel()::whereNotIn('status', ['completed'])->count();
-        
-        return match(true) {
+
+        return match (true) {
             $incomplete > 10 => 'danger',
             $incomplete > 5 => 'warning',
             $incomplete > 0 => 'info',

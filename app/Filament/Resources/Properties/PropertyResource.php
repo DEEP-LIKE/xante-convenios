@@ -8,25 +8,25 @@ use App\Filament\Resources\Properties\Pages\ListProperties;
 use App\Filament\Resources\Properties\Schemas\PropertyForm;
 use App\Filament\Resources\Properties\Tables\PropertiesTable;
 use App\Models\Property;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use BackedEnum;
 use Filament\Tables\Table;
 
 class PropertyResource extends Resource
 {
     protected static ?string $model = Property::class;
 
-    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-home';
-    
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-home';
+
     protected static ?string $navigationLabel = 'Propiedades';
-    
+
     protected static ?string $modelLabel = 'Propiedad';
-    
+
     protected static ?string $pluralModelLabel = 'Propiedades';
-    
+
     protected static ?int $navigationSort = 3;
-    
+
     // Ocultar del menú principal - solo accesible vía wizard
     protected static bool $shouldRegisterNavigation = false;
 

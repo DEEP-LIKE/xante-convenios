@@ -32,7 +32,7 @@ return new class extends Migration
                 'awaiting_client_docs',
                 'documents_complete',
                 'completed',
-                'cancelled'
+                'cancelled',
             ])->default('draft')->change();
         });
     }

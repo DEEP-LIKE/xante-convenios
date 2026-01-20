@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -15,8 +15,8 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('Nombre')    
-                    ->sortable()   
+                    ->label('Nombre')
+                    ->sortable()
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Correo electrónico')
@@ -37,7 +37,7 @@ class UsersTable
                         'ejecutivo' => 'Ejecutivo',
                         default => $state,
                     }),
-                TextColumn::make('created_at')  
+                TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),

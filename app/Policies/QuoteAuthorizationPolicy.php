@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\QuoteAuthorization;
+use App\Models\User;
 
 class QuoteAuthorizationPolicy
 {
@@ -45,7 +45,7 @@ class QuoteAuthorizationPolicy
     public function update(User $user, QuoteAuthorization $quoteAuthorization): bool
     {
         // Solo el solicitante puede actualizar si está pendiente
-        return $user->id === $quoteAuthorization->requested_by 
+        return $user->id === $quoteAuthorization->requested_by
             && $quoteAuthorization->isPending();
     }
 
@@ -55,7 +55,7 @@ class QuoteAuthorizationPolicy
     public function delete(User $user, QuoteAuthorization $quoteAuthorization): bool
     {
         // Solo el solicitante puede eliminar si está pendiente
-        return $user->id === $quoteAuthorization->requested_by 
+        return $user->id === $quoteAuthorization->requested_by
             && $quoteAuthorization->isPending();
     }
 
@@ -70,7 +70,7 @@ class QuoteAuthorizationPolicy
         }
 
         // Solo puede aprobar si está pendiente
-        if (!$quoteAuthorization->isPending()) {
+        if (! $quoteAuthorization->isPending()) {
             return false;
         }
 

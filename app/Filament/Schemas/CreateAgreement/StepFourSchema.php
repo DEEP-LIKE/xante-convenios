@@ -2,14 +2,14 @@
 
 namespace App\Filament\Schemas\CreateAgreement;
 
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Placeholder;
-use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use Illuminate\Support\HtmlString;
 use App\Models\ConfigurationCalculator;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Support\HtmlString;
 
 class StepFourSchema
 {
@@ -20,13 +20,13 @@ class StepFourSchema
             ->icon('heroicon-o-calculator')
             ->afterValidation(function () use ($page) {
                 $page->saveStepData(4);
-                
+
                 // Enviar a validación después de completar la calculadora
                 $agreementId = $page->agreementId ?? request()->get('agreement');
-                
+
                 \Log::info('Step 4 completed - Checking validation request', [
                     'agreement_id' => $agreementId,
-                    'has_agreement_id' => (bool) $agreementId
+                    'has_agreement_id' => (bool) $agreementId,
                 ]);
 
                 if ($agreementId) {
@@ -61,15 +61,15 @@ class StepFourSchema
                             ->label('')
                             ->content(function () use ($page) {
                                 $proposalInfo = $page->hasExistingProposal();
-                                
-                                if (!$proposalInfo) {
+
+                                if (! $proposalInfo) {
                                     return '';
                                 }
-                                
+
                                 $valorConvenio = $proposalInfo['valor_convenio'] ?? 0;
                                 $gananciaFinal = $proposalInfo['ganancia_final'] ?? 0;
                                 $fechaCalculo = $proposalInfo['created_at']->format('d/m/Y H:i');
-                                
+
                                 return new HtmlString('
                                     <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); 
                                                 border-left: 4px solid #F59E0B; 
@@ -94,15 +94,15 @@ class StepFourSchema
                                                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
                                                         <div>
                                                             <strong style="color: #78350F;">📅 Fecha del cálculo:</strong><br>
-                                                            <span style="color: #92400E;">' . $fechaCalculo . '</span>
+                                                            <span style="color: #92400E;">'.$fechaCalculo.'</span>
                                                         </div>
                                                         <div>
                                                             <strong style="color: #78350F;">💰 Valor Convenio:</strong><br>
-                                                            <span style="color: #92400E; font-weight: 600;">$' . number_format($valorConvenio, 2) . '</span>
+                                                            <span style="color: #92400E; font-weight: 600;">$'.number_format($valorConvenio, 2).'</span>
                                                         </div>
                                                         <div>
                                                             <strong style="color: #78350F;">💵 Ganancia Estimada:</strong><br>
-                                                            <span style="color: #059669; font-weight: 700; font-size: 16px;">$' . number_format($gananciaFinal, 2) . '</span>
+                                                            <span style="color: #059669; font-weight: 700; font-size: 16px;">$'.number_format($gananciaFinal, 2).'</span>
                                                         </div>
                                                         <div>
                                                             <strong style="color: #78350F;">📊 Estado:</strong><br>
@@ -224,6 +224,7 @@ class StepFourSchema
                                     ->step(0.01)
                                     ->default(function () {
                                         $config = ConfigurationCalculator::where('key', 'comision_sin_iva_default')->first();
+
                                         return $config ? $config->value : 6.50;
                                     })
                                     ->disabled()
@@ -239,7 +240,7 @@ class StepFourSchema
                                         $sinIva = (float) $get('porcentaje_comision_sin_iva');
                                         $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
                                         $ivaPercentage = $config ? (float) $config->value : 16.00;
-                                        
+
                                         if ($sinIva > 0 && $ivaPercentage > 0) {
                                             $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
                                             $component->state($conIva);
@@ -252,12 +253,14 @@ class StepFourSchema
                                         $sinIva = (float) $get('porcentaje_comision_sin_iva');
                                         $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
                                         $ivaPercentage = $config ? (float) $config->value : 16.00;
-                                        
+
                                         if ($sinIva > 0 && $ivaPercentage > 0) {
                                             $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
-                                            return 'Comisión sin IVA × (1 + % IVA)' ;
+
+                                            return 'Comisión sin IVA × (1 + % IVA)';
                                             // //. number_format($sinIva, 2) . '% × (1 + ' . number_format($ivaPercentage, 0) . '%) = ' . number_format($conIva, 2) . '%';
                                         }
+
                                         return 'Comisión sin IVA × (1 + IVA%)';
                                     }),
                                 TextInput::make('state_commission_percentage')
@@ -269,8 +272,9 @@ class StepFourSchema
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText(function (callable $get) {
                                         $stateName = $get('estado_propiedad');
-                                        return $stateName 
-                                            ? '% de comisión por estado: ' . $stateName
+
+                                        return $stateName
+                                            ? '% de comisión por estado: '.$stateName
                                             : 'Seleccione un estado en el paso anterior';
                                     }),
                                 TextInput::make('monto_credito')
@@ -279,6 +283,7 @@ class StepFourSchema
                                     ->prefix('$')
                                     ->default(function () {
                                         $config = ConfigurationCalculator::where('key', 'monto_credito_default')->first();
+
                                         return $config ? $config->value : 800000;
                                     })
                                     ->live(onBlur: true)
@@ -306,7 +311,7 @@ class StepFourSchema
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                  TextInput::make('valor_compraventa')
+                                TextInput::make('valor_compraventa')
                                     ->label('Valor CompraVenta')
                                     ->prefix('$')
                                     ->disabled()

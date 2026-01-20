@@ -4,11 +4,10 @@ namespace App\Mail;
 
 use App\Models\Agreement;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
 
 class AgreementMail extends Mailable
@@ -23,7 +22,7 @@ class AgreementMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Convenio de Compraventa - ' . $this->agreement->client->name,
+            subject: 'Convenio de Compraventa - '.$this->agreement->client->name,
         );
     }
 
@@ -44,7 +43,7 @@ class AgreementMail extends Mailable
     {
         return [
             Attachment::fromPath($this->pdfPath)
-                ->as('convenio_' . str_pad($this->agreement->id, 6, '0', STR_PAD_LEFT) . '.pdf')
+                ->as('convenio_'.str_pad($this->agreement->id, 6, '0', STR_PAD_LEFT).'.pdf')
                 ->withMime('application/pdf'),
         ];
     }

@@ -2,18 +2,18 @@
 
 namespace App\Filament\Widgets;
 
-use Filament\Widgets\ChartWidget;
 use App\Models\Agreement;
+use Filament\Widgets\ChartWidget;
 
 class ProposalClosuresWidget extends ChartWidget
 {
     protected static ?int $sort = 2;
-    
+
     public static function canView(): bool
     {
         return false;
     }
-    
+
     public function getHeading(): string
     {
         return 'Cierres con Propuesta Final Ofrecida';
@@ -27,15 +27,15 @@ class ProposalClosuresWidget extends ChartWidget
             ->orderBy('proposal_saved_at', 'desc')
             ->take(10)
             ->get(); // Cambiar count() por get()
-        
+
         // Si solo quieres mostrar el conteo como un número simple
         $count = $closures->count();
-        
+
         // Extraer los valores de proposal_value para el gráfico
         $values = $closures->pluck('proposal_value')->map(function ($value) {
             return is_numeric($value) ? (float) $value : 0;
         })->toArray();
-        
+
         return [
             'datasets' => [
                 [
@@ -56,7 +56,7 @@ class ProposalClosuresWidget extends ChartWidget
                 ],
             ],
             'labels' => $closures->map(function ($agreement) {
-                return 'Convenio #' . $agreement->id;
+                return 'Convenio #'.$agreement->id;
             })->toArray(),
         ];
     }
@@ -65,8 +65,8 @@ class ProposalClosuresWidget extends ChartWidget
     {
         return 'line';
     }
-    
-     protected function getOptions(): array
+
+    protected function getOptions(): array
     {
         return [
             'responsive' => true,
@@ -86,19 +86,19 @@ class ProposalClosuresWidget extends ChartWidget
                     'beginAtZero' => true,
                     'ticks' => [
                         // Asegura que solo se muestren números enteros, ya que son conteos
-                        'precision' => 0, 
+                        'precision' => 0,
                         'stepSize' => 1,
                     ],
                     'title' => [
                         'display' => true,
                         'text' => 'Cantidad de Convenios',
-                    ]
+                    ],
                 ],
                 'x' => [
                     'grid' => [
                         'display' => false, // Oculta las líneas de la cuadrícula vertical
-                    ]
-                ]
+                    ],
+                ],
             ],
             'plugins' => [
                 'legend' => [

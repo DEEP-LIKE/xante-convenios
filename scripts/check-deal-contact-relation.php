@@ -1,10 +1,10 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
 use Illuminate\Support\Facades\Http;
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -22,23 +22,23 @@ echo "===============================================================\n\n";
 $contactResponse = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
     'Content-Type' => 'application/json',
-])->post($baseUrl . '/crm/v3/objects/contacts/search', [
+])->post($baseUrl.'/crm/v3/objects/contacts/search', [
     'filterGroups' => [
         [
             'filters' => [
                 [
                     'propertyName' => 'email',
                     'operator' => 'EQ',
-                    'value' => $searchEmail
-                ]
-            ]
-        ]
+                    'value' => $searchEmail,
+                ],
+            ],
+        ],
     ],
     'properties' => ['email', 'firstname', 'lastname', 'xante_id', 'hs_object_id'],
-    'limit' => 1
+    'limit' => 1,
 ]);
 
-if (!$contactResponse->successful() || empty($contactResponse->json()['results'])) {
+if (! $contactResponse->successful() || empty($contactResponse->json()['results'])) {
     echo "❌ No se encontró el contacto\n";
     exit(1);
 }
@@ -50,9 +50,9 @@ $contactProps = $contact['properties'];
 echo "✅ CONTACTO ENCONTRADO\n";
 echo "------------------------------------------------\n";
 echo "Contact ID: {$contactId}\n";
-echo "Nombre: " . ($contactProps['firstname'] ?? '') . " " . ($contactProps['lastname'] ?? '') . "\n";
-echo "Email: " . ($contactProps['email'] ?? 'N/A') . "\n";
-echo "Xante ID: " . ($contactProps['xante_id'] ?? 'N/A') . "\n\n";
+echo 'Nombre: '.($contactProps['firstname'] ?? '').' '.($contactProps['lastname'] ?? '')."\n";
+echo 'Email: '.($contactProps['email'] ?? 'N/A')."\n";
+echo 'Xante ID: '.($contactProps['xante_id'] ?? 'N/A')."\n\n";
 
 // Obtener asociaciones del contacto con deals
 echo "🔗 ASOCIACIONES DEL CONTACTO CON DEALS\n";
@@ -60,9 +60,9 @@ echo "------------------------------------------------\n";
 
 $associationsResponse = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
-])->get($baseUrl . "/crm/v3/objects/contacts/{$contactId}/associations/deals");
+])->get($baseUrl."/crm/v3/objects/contacts/{$contactId}/associations/deals");
 
-if (!$associationsResponse->successful()) {
+if (! $associationsResponse->successful()) {
     echo "❌ Error obteniendo asociaciones\n";
     exit(1);
 }
@@ -72,61 +72,61 @@ $associations = $associationsResponse->json()['results'] ?? [];
 if (empty($associations)) {
     echo "❌ No hay deals asociados\n\n";
 } else {
-    echo "✅ Deals asociados: " . count($associations) . "\n\n";
-    
+    echo '✅ Deals asociados: '.count($associations)."\n\n";
+
     foreach ($associations as $index => $assoc) {
         $dealId = $assoc['id'] ?? $assoc['toObjectId'] ?? null;
         $associationType = $assoc['type'] ?? 'N/A';
-        
-        echo "   ASOCIACIÓN #" . ($index + 1) . ":\n";
+
+        echo '   ASOCIACIÓN #'.($index + 1).":\n";
         echo "   - Deal ID: {$dealId}\n";
         echo "   - Tipo de asociación: {$associationType}\n";
-        
+
         // Obtener detalles del deal
         $dealResponse = Http::withHeaders([
             'Authorization' => "Bearer {$token}",
-        ])->get($baseUrl . "/crm/v3/objects/deals/{$dealId}", [
-            'properties' => 'dealname,amount,estatus_de_convenio,hs_object_id,num_associated_contacts'
+        ])->get($baseUrl."/crm/v3/objects/deals/{$dealId}", [
+            'properties' => 'dealname,amount,estatus_de_convenio,hs_object_id,num_associated_contacts',
         ]);
-        
+
         if ($dealResponse->successful()) {
             $deal = $dealResponse->json();
             $dealProps = $deal['properties'];
-            
-            echo "   - Nombre del Deal: " . ($dealProps['dealname'] ?? 'N/A') . "\n";
-            echo "   - Monto: $" . number_format($dealProps['amount'] ?? 0, 2) . "\n";
-            echo "   - Estatus: " . ($dealProps['estatus_de_convenio'] ?? 'N/A') . "\n";
-            echo "   - Contactos asociados: " . ($dealProps['num_associated_contacts'] ?? '0') . "\n";
+
+            echo '   - Nombre del Deal: '.($dealProps['dealname'] ?? 'N/A')."\n";
+            echo '   - Monto: $'.number_format($dealProps['amount'] ?? 0, 2)."\n";
+            echo '   - Estatus: '.($dealProps['estatus_de_convenio'] ?? 'N/A')."\n";
+            echo '   - Contactos asociados: '.($dealProps['num_associated_contacts'] ?? '0')."\n";
         }
         echo "\n";
     }
 }
 
 // Ahora verificar desde el Deal hacia el Contact
-if (!empty($associations)) {
+if (! empty($associations)) {
     $firstDealId = $associations[0]['id'] ?? $associations[0]['toObjectId'];
-    
+
     echo "🔗 ASOCIACIONES DEL DEAL CON CONTACTS (verificación inversa)\n";
     echo "------------------------------------------------\n";
     echo "Deal ID: {$firstDealId}\n\n";
-    
+
     $dealContactsResponse = Http::withHeaders([
         'Authorization' => "Bearer {$token}",
-    ])->get($baseUrl . "/crm/v3/objects/deals/{$firstDealId}/associations/contacts");
-    
+    ])->get($baseUrl."/crm/v3/objects/deals/{$firstDealId}/associations/contacts");
+
     if ($dealContactsResponse->successful()) {
         $dealContacts = $dealContactsResponse->json()['results'] ?? [];
-        
-        echo "✅ Contacts asociados al Deal: " . count($dealContacts) . "\n\n";
-        
+
+        echo '✅ Contacts asociados al Deal: '.count($dealContacts)."\n\n";
+
         foreach ($dealContacts as $index => $assoc) {
             $associatedContactId = $assoc['id'] ?? $assoc['toObjectId'] ?? null;
             $associationType = $assoc['type'] ?? 'N/A';
-            
-            echo "   CONTACT #" . ($index + 1) . ":\n";
+
+            echo '   CONTACT #'.($index + 1).":\n";
             echo "   - Contact ID: {$associatedContactId}\n";
             echo "   - Tipo de asociación: {$associationType}\n";
-            echo "   - ¿Es el mismo contacto?: " . ($associatedContactId == $contactId ? '✅ SÍ' : '❌ NO') . "\n\n";
+            echo '   - ¿Es el mismo contacto?: '.($associatedContactId == $contactId ? '✅ SÍ' : '❌ NO')."\n\n";
         }
     }
 }

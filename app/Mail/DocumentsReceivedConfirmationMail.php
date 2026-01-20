@@ -2,19 +2,20 @@
 
 namespace App\Mail;
 
+use App\Models\Agreement;
 use Illuminate\Bus\Queueable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Agreement;
-use Illuminate\Database\Eloquent\Collection;
 
 class DocumentsReceivedConfirmationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public Agreement $agreement;
+
     public Collection $clientDocuments;
 
     /**

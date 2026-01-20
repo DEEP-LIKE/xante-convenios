@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Agreement;
-use Filament\Widgets\ChartWidget;
 use Carbon\Carbon;
+use Filament\Widgets\ChartWidget;
 
 class AgreementsChart extends ChartWidget
 {
@@ -32,7 +32,7 @@ class AgreementsChart extends ChartWidget
         for ($i = 2; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
             // Formateo del nombre del mes en español (ej: "Oct 2025")
-            $monthName = $month->locale('es')->monthName . ' ' . $month->format('Y'); 
+            $monthName = $month->locale('es')->monthName.' '.$month->format('Y');
             $months[] = $monthName;
 
             // 1. Convenios nuevos (creados en ese mes)
@@ -76,7 +76,7 @@ class AgreementsChart extends ChartWidget
     protected function getType(): string
     {
         // CAMBIADO: Usar 'line' para visualizar la tendencia en el tiempo.
-        return 'line'; 
+        return 'line';
     }
 
     protected function getOptions(): array
@@ -99,19 +99,19 @@ class AgreementsChart extends ChartWidget
                     'beginAtZero' => true,
                     'ticks' => [
                         // Asegura que solo se muestren números enteros, ya que son conteos
-                        'precision' => 0, 
+                        'precision' => 0,
                         'stepSize' => 1,
                     ],
                     'title' => [
                         'display' => true,
                         'text' => 'Cantidad de Convenios',
-                    ]
+                    ],
                 ],
                 'x' => [
                     'grid' => [
                         'display' => false, // Oculta las líneas de la cuadrícula vertical
-                    ]
-                ]
+                    ],
+                ],
             ],
             'plugins' => [
                 'legend' => [

@@ -2,11 +2,11 @@
 
 namespace App\Filament\Schemas\CreateAgreement;
 
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
-use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 
@@ -92,13 +92,15 @@ class StepThreeSchema
                                         $stateName = $get('estado_propiedad');
                                         if ($stateName) {
                                             $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
+
                                             return $rate ? $rate->commission_percentage : 0;
                                         }
+
                                         return 0;
                                     })
                                     ->afterStateHydrated(function (\Filament\Forms\Components\Hidden $component, $state, callable $get) {
                                         // Si el campo está vacío (convenio existente sin este dato), calcularlo
-                                        if (!$state || $state == 0) {
+                                        if (! $state || $state == 0) {
                                             $stateName = $get('estado_propiedad');
                                             if ($stateName) {
                                                 $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
@@ -117,7 +119,7 @@ class StepThreeSchema
                                     ->required()
                                     ->maxDate(Carbon::today()->subYears(3))
                                     ->validationMessages([
-                                        'max' => 'La propiedad debe tener una antigüedad mínima de 3 años.'
+                                        'max' => 'La propiedad debe tener una antigüedad mínima de 3 años.',
                                     ]),
                             ]),
                     ])
@@ -130,7 +132,7 @@ class StepThreeSchema
                             ->label('Cuenta Bancaria')
                             ->options(function (callable $get) {
                                 $stateName = $get('estado_propiedad');
-                                if (!$stateName) {
+                                if (! $stateName) {
                                     return [];
                                 }
 
@@ -144,6 +146,7 @@ class StepThreeSchema
                                         if ($account->municipality) {
                                             $label .= " ({$account->municipality})";
                                         }
+
                                         return [$account->id => $label];
                                     });
                             })
@@ -153,7 +156,7 @@ class StepThreeSchema
                             ->live()
                             ->helperText('Seleccione la cuenta bancaria correspondiente al estado y municipio de la propiedad.'),
                     ])
-                    ->visible(fn (callable $get) => !empty($get('estado_propiedad')))
+                    ->visible(fn (callable $get) => ! empty($get('estado_propiedad')))
                     ->collapsible(),
             ]);
     }

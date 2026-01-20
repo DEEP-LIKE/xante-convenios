@@ -3,20 +3,22 @@
 namespace App\Jobs;
 
 use App\Services\HubspotSyncService;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class SyncHubspotClientsJob implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 300; // 5 minutos
+
     public int $tries = 3;
+
     public int $maxExceptions = 3;
 
     private ?int $userId;
@@ -37,7 +39,7 @@ class SyncHubspotClientsJob implements ShouldQueue
     {
         Log::info('Iniciando job de sincronización HubSpot', [
             'user_id' => $this->userId,
-            'job_id' => $this->job->getJobId()
+            'job_id' => $this->job->getJobId(),
         ]);
 
         // Marcar sincronización en progreso
@@ -45,23 +47,23 @@ class SyncHubspotClientsJob implements ShouldQueue
         Cache::put('hubspot_sync_started_at', now(), 600);
 
         try {
-            $syncService = new HubspotSyncService();
-            
+            $syncService = new HubspotSyncService;
+
             // Verificar conexión primero
             $connectionTest = $syncService->testConnection();
-            if (!$connectionTest['success']) {
-                throw new \Exception('Error de conexión con HubSpot: ' . $connectionTest['message']);
+            if (! $connectionTest['success']) {
+                throw new \Exception('Error de conexión con HubSpot: '.$connectionTest['message']);
             }
 
             // Ejecutar sincronización
             $stats = $syncService->syncClients();
-            
+
             // Guardar estadísticas en caché
             Cache::put('hubspot_last_sync_stats', $stats, 3600); // 1 hora
             Cache::put('hubspot_last_sync_completed_at', now(), 3600);
-            
+
             Log::info('Sincronización HubSpot completada exitosamente', $stats);
-            
+
             // Notificar al usuario si está disponible
             if ($this->userId) {
                 $this->sendSuccessNotification($stats);
@@ -71,7 +73,7 @@ class SyncHubspotClientsJob implements ShouldQueue
             Log::error('Error en job de sincronización HubSpot', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'user_id' => $this->userId
+                'user_id' => $this->userId,
             ]);
 
             // Notificar error al usuario
@@ -80,7 +82,6 @@ class SyncHubspotClientsJob implements ShouldQueue
             }
 
             throw $e;
-
         } finally {
             // Limpiar flags de progreso
             Cache::forget('hubspot_sync_in_progress');
@@ -96,7 +97,7 @@ class SyncHubspotClientsJob implements ShouldQueue
         Log::error('Job de sincronización HubSpot falló', [
             'error' => $exception->getMessage(),
             'user_id' => $this->userId,
-            'attempts' => $this->attempts()
+            'attempts' => $this->attempts(),
         ]);
 
         // Limpiar flags de progreso
@@ -105,7 +106,7 @@ class SyncHubspotClientsJob implements ShouldQueue
 
         // Notificar fallo al usuario
         if ($this->userId) {
-            $this->sendErrorNotification('La sincronización falló después de ' . $this->attempts() . ' intentos');
+            $this->sendErrorNotification('La sincronización falló después de '.$this->attempts().' intentos');
         }
     }
 
@@ -116,8 +117,8 @@ class SyncHubspotClientsJob implements ShouldQueue
     {
         try {
             $recipient = $this->getNotificationRecipient();
-            
-            if (!$recipient) {
+
+            if (! $recipient) {
                 return;
             }
 
@@ -137,7 +138,7 @@ class SyncHubspotClientsJob implements ShouldQueue
         } catch (\Exception $e) {
             Log::warning('No se pudo enviar notificación de éxito', [
                 'error' => $e->getMessage(),
-                'user_id' => $this->userId
+                'user_id' => $this->userId,
             ]);
         }
     }
@@ -149,8 +150,8 @@ class SyncHubspotClientsJob implements ShouldQueue
     {
         try {
             $recipient = $this->getNotificationRecipient();
-            
-            if (!$recipient) {
+
+            if (! $recipient) {
                 return;
             }
 
@@ -164,7 +165,7 @@ class SyncHubspotClientsJob implements ShouldQueue
         } catch (\Exception $e) {
             Log::warning('No se pudo enviar notificación de error', [
                 'error' => $e->getMessage(),
-                'user_id' => $this->userId
+                'user_id' => $this->userId,
             ]);
         }
     }
@@ -190,6 +191,6 @@ class SyncHubspotClientsJob implements ShouldQueue
      */
     public function tags(): array
     {
-        return ['hubspot', 'sync', 'clients', 'user:' . $this->userId];
+        return ['hubspot', 'sync', 'clients', 'user:'.$this->userId];
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 class ListHubspotProperties extends Command
 {
     protected $signature = 'hubspot:list-properties {object=deals}';
+
     protected $description = 'Lista todas las propiedades disponibles en HubSpot para un objeto (deals, contacts)';
 
     public function handle()
@@ -16,8 +17,9 @@ class ListHubspotProperties extends Command
         $token = config('hubspot.token');
         $baseUrl = config('hubspot.api_base_url');
 
-        if (!$token) {
+        if (! $token) {
             $this->error('Token de HubSpot no configurado');
+
             return 1;
         }
 
@@ -30,8 +32,9 @@ class ListHubspotProperties extends Command
                 ])
                 ->get("{$baseUrl}/crm/v3/properties/{$object}");
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 $this->error("Error HTTP {$response->status()}: {$response->body()}");
+
                 return 1;
             }
 
@@ -39,6 +42,7 @@ class ListHubspotProperties extends Command
 
             if (empty($properties)) {
                 $this->warn('No se encontraron propiedades');
+
                 return 0;
             }
 
@@ -56,17 +60,18 @@ class ListHubspotProperties extends Command
             }
 
             $this->table($headers, $rows);
-            $this->info("\nTotal de propiedades: " . count($properties));
+            $this->info("\nTotal de propiedades: ".count($properties));
 
             // Guardar en archivo
-            $filename = storage_path("logs/hubspot_{$object}_properties_" . date('Y-m-d_His') . ".json");
+            $filename = storage_path("logs/hubspot_{$object}_properties_".date('Y-m-d_His').'.json');
             file_put_contents($filename, json_encode($properties, JSON_PRETTY_PRINT));
             $this->info("Detalles completos guardados en: {$filename}");
 
             return 0;
 
         } catch (\Exception $e) {
-            $this->error("Excepción: " . $e->getMessage());
+            $this->error('Excepción: '.$e->getMessage());
+
             return 1;
         }
     }

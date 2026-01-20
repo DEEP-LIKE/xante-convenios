@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\ConfigurationCalculator;
+use Illuminate\Database\Seeder;
 
 class CalculatorConfigurationSeeder extends Seeder
 {
@@ -50,7 +50,7 @@ class CalculatorConfigurationSeeder extends Seeder
                 'value' => '20000.00',
                 'type' => 'decimal',
             ],
-            
+
             // Configuraciones de propiedad
             [
                 'key' => 'domicilio_convenio_default',
@@ -75,7 +75,7 @@ class CalculatorConfigurationSeeder extends Seeder
                 'description' => 'Prototipo por defecto para propiedades',
                 'value' => 'BURGOS',
                 'type' => 'string',
-            ]
+            ],
         ];
 
         foreach ($configurations as $config) {

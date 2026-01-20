@@ -4,7 +4,7 @@ namespace App\Services;
 
 /**
  * Servicio para realizar cálculos de comparación de valores
- * 
+ *
  * Responsabilidades:
  * - Calcular diferencias entre valores
  * - Calcular porcentajes de diferencia
@@ -40,6 +40,7 @@ class DocumentComparisonService
         }
 
         $difference = $final - $original;
+
         return ($difference / $original) * 100;
     }
 
@@ -56,7 +57,7 @@ class DocumentComparisonService
      */
     public function formatCurrency(float $value): string
     {
-        return '$' . number_format($value, 2);
+        return '$'.number_format($value, 2);
     }
 
     /**

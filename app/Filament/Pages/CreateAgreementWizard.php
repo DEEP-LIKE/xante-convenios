@@ -2,32 +2,31 @@
 
 namespace App\Filament\Pages;
 
-use Filament\Pages\Page;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Form;
-use Filament\Notifications\Notification;
-use Filament\Actions\Action;
-use App\Models\Agreement;
-use App\Models\Client;
-use Filament\Schemas\Components\Wizard;
-use App\Services\AgreementCalculatorService;
-use App\Services\WizardStateManager;
-use App\Services\ProposalPreloadService;
-use App\Services\ClientSearchService;
-use App\Services\WizardSummaryRenderer;
+use App\Actions\Agreements\GenerateAgreementDocumentsAction;
+use App\Actions\Agreements\PreloadClientDataAction;
 use App\Actions\Agreements\SaveWizardStepAction;
 use App\Actions\Agreements\UpdateClientFromWizardAction;
-use App\Actions\Agreements\PreloadClientDataAction;
-use App\Actions\Agreements\GenerateAgreementDocumentsAction;
+use App\Models\Agreement;
+use App\Models\Client;
+use App\Services\AgreementCalculatorService;
+use App\Services\ClientSearchService;
+use App\Services\ProposalPreloadService;
+use App\Services\WizardStateManager;
+use App\Services\WizardSummaryRenderer;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Form;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Concerns\InteractsWithInfolists;
 use Filament\Infolists\Contracts\HasInfolists;
 use Filament\Infolists\Infolist;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\IconEntry;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Wizard;
 use Filament\Support\Enums\FontWeight;
 
 class CreateAgreementWizard extends Page implements HasForms, HasInfolists
@@ -36,16 +35,23 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
     use InteractsWithInfolists;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-plus';
+
     protected static ?string $title = 'Nuevo Convenio';
+
     protected static ?string $navigationLabel = 'Crear Convenio';
+
     protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $slug = 'convenios/crear';
 
     public string $view = 'filament.pages.create-agreement-wizard';
 
     public ?array $data = [];
+
     public ?int $agreementId = null;
+
     public int $currentStep = 1;
+
     public int $totalSteps = 5;
 
     protected $listeners = [
@@ -93,7 +99,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
                                     ->schema([
                                         TextEntry::make('current_address_full')
                                             ->label('Calle y Número')
-                                            ->state(fn ($record) => ($this->data['current_address'] ?? '') . ' ' . (!empty($this->data['holder_house_number']) ? '#' . $this->data['holder_house_number'] : '')),
+                                            ->state(fn ($record) => ($this->data['current_address'] ?? '').' '.(! empty($this->data['holder_house_number']) ? '#'.$this->data['holder_house_number'] : '')),
                                         TextEntry::make('neighborhood')
                                             ->label('Colonia'),
                                         TextEntry::make('postal_code')
@@ -101,9 +107,9 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
                                         TextEntry::make('location_full')
                                             ->label('Municipio / Estado')
                                             ->state(fn ($record) => collect([$this->data['municipality'] ?? null, $this->data['state'] ?? null])->filter()->join(', ')),
-                                    ])
+                                    ]),
                             ])
-                            ->visible(fn () => !empty($this->data['current_address']))
+                            ->visible(fn () => ! empty($this->data['current_address'])),
                     ])
                     ->collapsible(),
 
@@ -130,7 +136,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
                                     ->schema([
                                         TextEntry::make('spouse_address_full')
                                             ->label('Calle y Número')
-                                            ->state(fn ($record) => ($this->data['spouse_current_address'] ?? '') . ' ' . (!empty($this->data['spouse_house_number']) ? '#' . $this->data['spouse_house_number'] : '')),
+                                            ->state(fn ($record) => ($this->data['spouse_current_address'] ?? '').' '.(! empty($this->data['spouse_house_number']) ? '#'.$this->data['spouse_house_number'] : '')),
                                         TextEntry::make('spouse_neighborhood')
                                             ->label('Colonia'),
                                         TextEntry::make('spouse_postal_code')
@@ -138,11 +144,11 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
                                         TextEntry::make('spouse_location_full')
                                             ->label('Municipio / Estado')
                                             ->state(fn ($record) => collect([$this->data['spouse_municipality'] ?? null, $this->data['spouse_state'] ?? null])->filter()->join(', ')),
-                                    ])
+                                    ]),
                             ])
-                            ->visible(fn () => !empty($this->data['spouse_current_address']))
+                            ->visible(fn () => ! empty($this->data['spouse_current_address'])),
                     ])
-                    ->visible(fn () => !empty($this->data['spouse_name']))
+                    ->visible(fn () => ! empty($this->data['spouse_name']))
                     ->collapsible(),
 
                 Section::make('Propiedad del Convenio')
@@ -200,15 +206,18 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
             ]);
     }
 
-
     // ========================================
     // DEPENDENCY INJECTION
     // ========================================
 
     protected AgreementCalculatorService $calculatorService;
+
     protected WizardStateManager $stateManager;
+
     protected ProposalPreloadService $proposalService;
+
     protected ClientSearchService $clientSearch;
+
     protected WizardSummaryRenderer $renderer;
 
     /**
@@ -249,7 +258,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
         // Cargar defaults de calculadora
         $this->loadCalculatorDefaults();
-        
+
         // Redirigir según estado del acuerdo
         if ($this->agreementId) {
             $agreement = Agreement::find($this->agreementId);
@@ -257,8 +266,8 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
                 // Si la validación está aprobada, ir al Paso 5 (Validación) para que vean el estado
                 // y puedan dar click en "Siguiente/Continuar"
                 if ($agreement->validation_status === 'approved' || $agreement->can_generate_documents) {
-                   $this->currentStep = 5; 
-                } 
+                    $this->currentStep = 5;
+                }
                 // Si la validación está pendiente, ir a Validación (Paso 5)
                 elseif ($agreement->validation_status === 'pending') {
                     $this->currentStep = 5;
@@ -288,36 +297,36 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
                 \App\Filament\Schemas\CreateAgreement\StepFourSchema::make($this),
                 \App\Filament\Schemas\CreateAgreement\StepFiveSchema::make($this),
             ])
-            ->submitAction(
-                Action::make('submit')
-                    ->action('generateDocumentsAndProceed')
-                    ->label('Continuar y Generar Documentos')
-                    ->icon('heroicon-o-document-plus')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Confirmar Envío')
-                    ->modalDescription('¿Estás seguro de que desea finalizar y generar los documentos?')
-                    ->modalSubmitActionLabel('Sí, Confirmar')
-                    ->disabled(function () {
-                        $agreementId = request()->get('agreement');
-                        if (!$agreementId) {
-                            return true; // Deshabilitar si no hay agreement
-                        }
-                        
-                        $agreement = \App\Models\Agreement::find($agreementId);
-                        if (!$agreement) {
-                            return true; // Deshabilitar si no se encuentra el agreement
-                        }
-                        
-                        // Solo habilitar si está aprobado
-                        return $agreement->validation_status !== 'approved';
-                    })
-            )
-            ->nextAction(fn (Action $action) => $action->label('Siguiente'))
-            ->previousAction(fn (Action $action) => $action->label('Anterior'))
-            ->persistStepInQueryString()
-            ->startOnStep($this->currentStep)
-            ->skippable(false)
+                ->submitAction(
+                    Action::make('submit')
+                        ->action('generateDocumentsAndProceed')
+                        ->label('Continuar y Generar Documentos')
+                        ->icon('heroicon-o-document-plus')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Confirmar Envío')
+                        ->modalDescription('¿Estás seguro de que desea finalizar y generar los documentos?')
+                        ->modalSubmitActionLabel('Sí, Confirmar')
+                        ->disabled(function () {
+                            $agreementId = request()->get('agreement');
+                            if (! $agreementId) {
+                                return true; // Deshabilitar si no hay agreement
+                            }
+
+                            $agreement = \App\Models\Agreement::find($agreementId);
+                            if (! $agreement) {
+                                return true; // Deshabilitar si no se encuentra el agreement
+                            }
+
+                            // Solo habilitar si está aprobado
+                            return $agreement->validation_status !== 'approved';
+                        })
+                )
+                ->nextAction(fn (Action $action) => $action->label('Siguiente'))
+                ->previousAction(fn (Action $action) => $action->label('Anterior'))
+                ->persistStepInQueryString()
+                ->startOnStep($this->currentStep)
+                ->skippable(false),
         ];
     }
 
@@ -345,24 +354,25 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
     public function recalculateAllFinancials(callable $set, callable $get): void
     {
         $valorConvenio = (float) str_replace(['$', ','], '', $get('valor_convenio') ?? 0);
-        
+
         // Obtener y sanitizar el porcentaje de comisión por estado
         $rawStateCommission = $get('state_commission_percentage');
-        
+
         // Función helper local para sanitizar floats
-        $sanitizeFloat = function($value) {
+        $sanitizeFloat = function ($value) {
             if (is_string($value)) {
                 $value = str_replace(',', '.', $value);
             }
+
             return (float) $value;
         };
-        
+
         $stateCommission = $sanitizeFloat($rawStateCommission);
-        
+
         // Si es 0 y hay un default configurado (ej fallback), podríamos usarlo, pero mejor confiar en el input
         // Fallback a 9 solo si es nulo o vacío, pero si es 0 explicitamente (estado sin comision), respetar 0.
         if ($rawStateCommission === null || $rawStateCommission === '') {
-             $stateCommission = 9.0; // Valor default historial
+            $stateCommission = 9.0; // Valor default historial
         }
 
         \Illuminate\Support\Facades\Log::info('Recalculating Financials', [
@@ -374,6 +384,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
         if ($valorConvenio <= 0) {
             $this->clearCalculatedFields($set);
+
             return;
         }
 
@@ -430,20 +441,20 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
         $this->data = array_merge($this->data ?? [], $formData);
         $this->currentStep = $step;
 
-        $action = new SaveWizardStepAction();
+        $action = new SaveWizardStepAction;
         $result = $action->execute(
             $this->agreementId,
             $step,
             $this->data,
-            fn($clientId) => $this->updateClientData($clientId)
+            fn ($clientId) => $this->updateClientData($clientId)
         );
 
         // Capturar el agreementId si se creó uno nuevo
         if ($result['success'] && $result['agreementId']) {
             $this->agreementId = $result['agreementId'];
-            
+
             // Actualizar query string si es necesario
-            if (!request()->has('agreement')) {
+            if (! request()->has('agreement')) {
                 $this->dispatch('update-query-string', ['agreement' => $this->agreementId]);
             }
         }
@@ -454,7 +465,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
      */
     public function updateClientData(int $clientId): void
     {
-        $action = new UpdateClientFromWizardAction();
+        $action = new UpdateClientFromWizardAction;
         $action->execute($clientId, $this->data);
     }
 
@@ -487,7 +498,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
      */
     public function preloadClientData(int $clientId, callable $set): void
     {
-        $action = new PreloadClientDataAction();
+        $action = new PreloadClientDataAction;
         $action->execute($clientId, $set);
     }
 
@@ -501,8 +512,8 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
     public function hasExistingProposal(): ?array
     {
         $clientId = $this->data['client_id'] ?? null;
-        
-        if (!$clientId) {
+
+        if (! $clientId) {
             return null;
         }
 
@@ -515,8 +526,8 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
     protected function preloadProposalDataIfExists(): void
     {
         $clientId = $this->data['client_id'] ?? null;
-        
-        if (!$clientId) {
+
+        if (! $clientId) {
             return;
         }
 
@@ -583,31 +594,31 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
         if ($agreement && $agreement->client) {
             $syncAction = app(\App\Actions\Agreements\SyncClientToHubspotAction::class);
             $syncErrors = $syncAction->execute($agreement, $this->data);
-            
+
             // Si hay errores críticos en la sincronización, DETENER el proceso
-            if (!empty($syncErrors) && isset($syncErrors['error'])) {
+            if (! empty($syncErrors) && isset($syncErrors['error'])) {
                 $this->dispatch('hideLoading');
-                
+
                 Notification::make()
                     ->title('Error de Sincronización con HubSpot')
                     ->body('No se pudo sincronizar la información con HubSpot. Por favor, intenta nuevamente en unos momentos. Tus datos han sido guardados.')
                     ->danger()
                     ->persistent()
                     ->send();
-                
+
                 \Illuminate\Support\Facades\Log::error('Sincronización HubSpot falló - Proceso detenido', [
                     'agreement_id' => $this->agreementId,
-                    'errors' => $syncErrors
+                    'errors' => $syncErrors,
                 ]);
-                
+
                 return; // DETENER aquí - No generar PDFs ni avanzar
             }
-            
+
             // Si solo hay warnings (campos no sincronizables), continuar
-            if (!empty($syncErrors)) {
+            if (! empty($syncErrors)) {
                 \Illuminate\Support\Facades\Log::info('Advertencias en sincronización HubSpot', [
                     'agreement_id' => $this->agreementId,
-                    'warnings' => $syncErrors
+                    'warnings' => $syncErrors,
                 ]);
             }
         }

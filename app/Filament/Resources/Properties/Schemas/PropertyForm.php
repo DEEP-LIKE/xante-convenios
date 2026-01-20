@@ -38,7 +38,7 @@ class PropertyForm
                                 'otro' => 'Otro',
                             ]),
                     ])->columns(2),
-                
+
                 Section::make('Información Financiera')
                     ->schema([
                         TextInput::make('value')

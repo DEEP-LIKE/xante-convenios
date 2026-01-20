@@ -12,22 +12,22 @@ return new class extends Migration
             $table->id();
             $table->string('idxante')->unique();
             $table->foreignId('client_id')->constrained()->onDelete('cascade');
-            
+
             // Valores calculados
-            $table->decimal('valor_convenio', 15, 2);
-            $table->decimal('comision_total', 15, 2);
-            $table->decimal('ganancia_final', 15, 2);
-            
+            $table->decimal('valor_convenio', 15, 2)->nullable();
+            $table->decimal('comision_total', 15, 2)->nullable();
+            $table->decimal('ganancia_final', 15, 2)->nullable();
+
             // Parámetros de cálculo
-            $table->decimal('porcentaje_comision', 5, 2);
-            $table->decimal('porcentaje_iva', 5, 2);
-            $table->integer('numero_parcialidades');
-            
+            $table->decimal('porcentaje_comision', 5, 2)->nullable();
+            $table->decimal('porcentaje_iva', 5, 2)->nullable();
+            $table->integer('numero_parcialidades')->nullable();
+
             // Datos completos del cálculo (JSON solo para histórico)
             $table->json('calculation_data')->nullable();
-            
+
             $table->timestamps();
-            
+
             // Índices
             $table->index('client_id');
             $table->index('idxante');

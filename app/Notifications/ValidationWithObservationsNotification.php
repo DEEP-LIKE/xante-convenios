@@ -24,30 +24,30 @@ class ValidationWithObservationsNotification extends Notification implements Sho
     public function toMail(object $notifiable): MailMessage
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return (new MailMessage)
                 ->subject('Validación no disponible')
                 ->line('La validación solicitada ya no está disponible.');
         }
 
         return (new MailMessage)
-            ->subject('Observaciones en tu Validación - Convenio #' . $validation->agreement_id)
-            ->greeting('Hola ' . $notifiable->name . ',')
+            ->subject('Observaciones en tu Validación - Convenio #'.$validation->agreement_id)
+            ->greeting('Hola '.$notifiable->name.',')
             ->line('El Coordinador FI ha solicitado cambios en tu calculadora.')
-            ->line('**Convenio ID:** #' . $validation->agreement_id)
-            ->line('**Revisado por:** ' . $validation->validatedBy->name)
+            ->line('**Convenio ID:** #'.$validation->agreement_id)
+            ->line('**Revisado por:** '.$validation->validatedBy->name)
             ->line('**Observaciones:**')
             ->line($validation->observations)
-            ->action('Ver Observaciones', url('/wizard/' . $validation->agreement_id))
+            ->action('Ver Observaciones', url('/wizard/'.$validation->agreement_id))
             ->line('Por favor realiza los ajustes necesarios y reenvía a validación.');
     }
 
     public function toArray(object $notifiable): array
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return [
                 'validation_id' => $this->validationId,
                 'type' => 'validation_with_observations',

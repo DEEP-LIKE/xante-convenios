@@ -2,12 +2,12 @@
 
 namespace App\Filament\Schemas\CreateAgreement;
 
-use Filament\Forms\Components\Select;
+use App\Models\Agreement;
+use App\Models\Client;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Wizard\Step;
-use App\Models\Client;
-use App\Models\Agreement;
 use Illuminate\Support\Facades\Auth;
 
 class StepOneSchema
@@ -19,7 +19,7 @@ class StepOneSchema
             ->icon('heroicon-o-magnifying-glass')
             ->afterValidation(function ($state) use ($page) {
                 // Si no tenemos un ID de convenio, es la primera vez que pasamos este paso.
-                if (!$page->agreementId) {
+                if (! $page->agreementId) {
                     $client = Client::find($state['client_id']);
 
                     // Crear el convenio por primera vez
@@ -50,7 +50,7 @@ class StepOneSchema
                             ->orderBy('hubspot_synced_at', 'asc')
                             ->limit(100)
                             ->get()
-                            ->mapWithKeys(fn ($client) => [$client->id => $client->name . ' — ' . $client->xante_id])
+                            ->mapWithKeys(fn ($client) => [$client->id => $client->name.' — '.$client->xante_id])
                             ->toArray();
                     })
                     ->getSearchResultsUsing(function (string $search) {
@@ -63,12 +63,13 @@ class StepOneSchema
                             ->orderBy('hubspot_synced_at', 'asc')
                             ->limit(100)
                             ->get()
-                            ->mapWithKeys(fn ($client) => [$client->id => $client->name . ' — ' . $client->xante_id])
+                            ->mapWithKeys(fn ($client) => [$client->id => $client->name.' — '.$client->xante_id])
                             ->toArray();
                     })
                     ->getOptionLabelUsing(function ($value) {
                         $client = Client::find($value);
-                        return $client ? $client->name . ' — ' . $client->xante_id : '';
+
+                        return $client ? $client->name.' — '.$client->xante_id : '';
                     })
                     ->required()
                     ->live()

@@ -11,28 +11,28 @@ return [
     */
 
     'token' => env('HUBSPOT_TOKEN'),
-    
+
     'api_base_url' => 'https://api.hubapi.com',
-    
+
     'rate_limit' => [
         'requests_per_second' => 10,
         'burst_limit' => 100,
     ],
-    
+
     'endpoints' => [
         'contacts' => '/crm/v3/objects/contacts',
         'deals' => '/crm/v3/objects/deals',
         'deals_search' => '/crm/v3/objects/deals/search',
         'properties' => '/crm/v3/properties',
     ],
-    
+
     'sync' => [
         'batch_size' => 100,
         'timeout' => 30,
         'retry_attempts' => 3,
         'retry_delay' => 2, // seconds
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Deal Synchronization Configuration
@@ -55,7 +55,7 @@ return [
             'num_associated_contacts',
             'hs_object_id',
             'hs_lastmodifieddate',
-            
+
             // Datos del titular
             'nombre_completo',
             'email',
@@ -66,7 +66,7 @@ return [
             'rfc',
             'estado_civil',
             'ocupacion',
-            
+
             // Domicilio del titular
             'domicilio_actual',
             'numero_casa',
@@ -74,13 +74,13 @@ return [
             'codigo_postal',
             'municipio',
             'estado',
-            
+
             // Datos del cónyuge
             'nombre_completo_conyuge',
             'email_conyuge',
             'telefono_movil_conyuge',
             'curp_conyuge',
-            
+
             // Domicilio del cónyuge
             'domicilio_actual_conyuge',
             'numero_casa_conyuge',
@@ -88,7 +88,7 @@ return [
             'codigo_postal_conyuge',
             'municipio_conyuge',
             'estado_conyuge',
-            
+
             // Datos de la propiedad
             'domicilio_convenio',
             'comunidad',
@@ -99,7 +99,7 @@ return [
             'etapa',
             'municipio_propiedad',
             'estado_propiedad',
-            
+
             // Datos financieros
             'valor_convenio',
             'precio_promocion',
@@ -107,7 +107,7 @@ return [
             'ganancia_final',
         ],
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Search Filters
@@ -124,14 +124,14 @@ return [
                         [
                             'propertyName' => 'estatus_de_convenio',
                             'operator' => 'EQ',
-                            'value' => 'Aceptado'
-                        ]
-                    ]
-                ]
-            ]
+                            'value' => 'Aceptado',
+                        ],
+                    ],
+                ],
+            ],
         ],
     ],
-    
+
     'mapping' => [
         // Mapeo de campos de HubSpot a campos de Laravel
         'contact_fields' => [
@@ -141,7 +141,7 @@ return [
             'phone' => 'phone',
             'createdate' => 'fecha_registro',  // Fecha de creación en HubSpot
             'lastmodifieddate' => 'updated_at',
-            
+
             // Nuevos campos expandidos
             'address' => 'current_address',
             'city' => 'municipality',
@@ -151,7 +151,7 @@ return [
             'date_of_birth' => 'birthdate',
             'jobtitle' => 'occupation',
         ],
-        
+
         // Propiedades personalizadas que se buscarán
         'custom_properties' => [
             'xante_id',

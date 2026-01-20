@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('co_borrowers', function (Blueprint $table) {
             $table->id();
-            
+
             // Datos personales
             $table->string('name');
             $table->string('email')->nullable();
@@ -21,13 +21,13 @@ return new class extends Migration
             $table->date('birthdate')->nullable();
             $table->string('curp', 18)->nullable();
             $table->string('rfc', 13)->nullable();
-            
+
             // Datos adicionales
             $table->string('civil_status')->nullable();
             $table->string('regime_type')->nullable(); // Régimen Fiscal
             $table->string('occupation')->nullable();
             $table->string('delivery_file')->nullable();
-            
+
             // Dirección
             $table->text('current_address')->nullable();
             $table->string('house_number')->nullable();
@@ -35,7 +35,7 @@ return new class extends Migration
             $table->string('postal_code')->nullable();
             $table->string('municipality')->nullable();
             $table->string('state')->nullable();
-            
+
             $table->timestamps();
             $table->softDeletes();
         });

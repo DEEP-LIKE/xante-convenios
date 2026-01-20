@@ -1,10 +1,10 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
 use Illuminate\Support\Facades\Http;
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -28,17 +28,17 @@ echo "------------------------------------------------\n";
 $contactResponse = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
     'Content-Type' => 'application/json',
-])->post($baseUrl . '/crm/v3/objects/contacts/search', [
+])->post($baseUrl.'/crm/v3/objects/contacts/search', [
     'filterGroups' => [
         [
             'filters' => [
                 [
                     'propertyName' => 'email',
                     'operator' => 'EQ',
-                    'value' => $searchEmail
-                ]
-            ]
-        ]
+                    'value' => $searchEmail,
+                ],
+            ],
+        ],
     ],
     'properties' => [
         'email',
@@ -48,23 +48,23 @@ $contactResponse = Http::withHeaders([
         'xante_client_id',
         'id_xante',
         'client_xante_id',
-        'hs_object_id'
+        'hs_object_id',
     ],
-    'limit' => 1
+    'limit' => 1,
 ]);
 
 if ($contactResponse->successful()) {
     $contactResults = $contactResponse->json()['results'] ?? [];
-    
-    if (!empty($contactResults)) {
+
+    if (! empty($contactResults)) {
         $contact = $contactResults[0];
         $contactProps = $contact['properties'] ?? [];
-        
+
         echo "✅ CONTACTO ENCONTRADO\n";
-        echo "   HubSpot Contact ID: " . ($contact['id'] ?? 'N/A') . "\n";
-        echo "   Nombre: " . ($contactProps['firstname'] ?? '') . " " . ($contactProps['lastname'] ?? '') . "\n";
-        echo "   Email: " . ($contactProps['email'] ?? 'N/A') . "\n\n";
-        
+        echo '   HubSpot Contact ID: '.($contact['id'] ?? 'N/A')."\n";
+        echo '   Nombre: '.($contactProps['firstname'] ?? '').' '.($contactProps['lastname'] ?? '')."\n";
+        echo '   Email: '.($contactProps['email'] ?? 'N/A')."\n\n";
+
         echo "   Campos xante_id en CONTACT:\n";
         $xanteFields = ['xante_id', 'xante_client_id', 'id_xante', 'client_xante_id'];
         foreach ($xanteFields as $field) {
@@ -73,14 +73,14 @@ if ($contactResponse->successful()) {
             $displayValue = $value ?: '(vacío)';
             echo "   - {$field}: {$status} {$displayValue}\n";
         }
-        
+
         $contactId = $contact['id'];
     } else {
         echo "❌ No se encontró contacto con ese email\n";
         $contactId = null;
     }
 } else {
-    echo "❌ Error al buscar en Contacts: " . $contactResponse->status() . "\n";
+    echo '❌ Error al buscar en Contacts: '.$contactResponse->status()."\n";
     $contactId = null;
 }
 
@@ -92,27 +92,29 @@ echo "\n";
 if ($contactId) {
     echo "🔍 BUSCANDO DEALS ASOCIADOS AL CONTACTO...\n";
     echo "------------------------------------------------\n";
-    
+
     // Obtener deals asociados al contacto
     $dealsResponse = Http::withHeaders([
         'Authorization' => "Bearer {$token}",
-    ])->get($baseUrl . "/crm/v3/objects/contacts/{$contactId}/associations/deals");
-    
+    ])->get($baseUrl."/crm/v3/objects/contacts/{$contactId}/associations/deals");
+
     if ($dealsResponse->successful()) {
         $dealAssociations = $dealsResponse->json()['results'] ?? [];
-        
-        if (!empty($dealAssociations)) {
-            echo "✅ DEALS ENCONTRADOS: " . count($dealAssociations) . "\n\n";
-            
+
+        if (! empty($dealAssociations)) {
+            echo '✅ DEALS ENCONTRADOS: '.count($dealAssociations)."\n\n";
+
             foreach ($dealAssociations as $index => $assoc) {
                 $dealId = $assoc['id'] ?? $assoc['toObjectId'] ?? null;
-                
-                if (!$dealId) continue;
-                
+
+                if (! $dealId) {
+                    continue;
+                }
+
                 // Obtener detalles del deal
                 $dealDetailsResponse = Http::withHeaders([
                     'Authorization' => "Bearer {$token}",
-                ])->get($baseUrl . "/crm/v3/objects/deals/{$dealId}", [
+                ])->get($baseUrl."/crm/v3/objects/deals/{$dealId}", [
                     'properties' => implode(',', [
                         'dealname',
                         'amount',
@@ -121,20 +123,20 @@ if ($contactId) {
                         'xante_client_id',
                         'id_xante',
                         'client_xante_id',
-                        'hs_object_id'
-                    ])
+                        'hs_object_id',
+                    ]),
                 ]);
-                
+
                 if ($dealDetailsResponse->successful()) {
                     $deal = $dealDetailsResponse->json();
                     $dealProps = $deal['properties'] ?? [];
-                    
-                    echo "   📋 DEAL #" . ($index + 1) . ":\n";
-                    echo "      HubSpot Deal ID: " . ($deal['id'] ?? 'N/A') . "\n";
-                    echo "      Nombre: " . ($dealProps['dealname'] ?? 'N/A') . "\n";
-                    echo "      Monto: $" . number_format($dealProps['amount'] ?? 0, 2) . "\n";
-                    echo "      Estatus: " . ($dealProps['estatus_de_convenio'] ?? 'N/A') . "\n\n";
-                    
+
+                    echo '   📋 DEAL #'.($index + 1).":\n";
+                    echo '      HubSpot Deal ID: '.($deal['id'] ?? 'N/A')."\n";
+                    echo '      Nombre: '.($dealProps['dealname'] ?? 'N/A')."\n";
+                    echo '      Monto: $'.number_format($dealProps['amount'] ?? 0, 2)."\n";
+                    echo '      Estatus: '.($dealProps['estatus_de_convenio'] ?? 'N/A')."\n\n";
+
                     echo "      Campos xante_id en DEAL:\n";
                     $xanteFields = ['xante_id', 'xante_client_id', 'id_xante', 'client_xante_id'];
                     foreach ($xanteFields as $field) {
@@ -150,7 +152,7 @@ if ($contactId) {
             echo "❌ No se encontraron deals asociados\n\n";
         }
     } else {
-        echo "❌ Error al buscar deals asociados: " . $dealsResponse->status() . "\n\n";
+        echo '❌ Error al buscar deals asociados: '.$dealsResponse->status()."\n\n";
     }
 }
 

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Clients\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\Action;
 use Filament\Tables\Table;
 
 class ClientsTable

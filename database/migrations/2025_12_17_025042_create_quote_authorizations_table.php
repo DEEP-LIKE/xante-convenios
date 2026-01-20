@@ -20,23 +20,23 @@ return new class extends Migration
             $table->foreignId('authorized_by')->nullable()->constrained('users')->onDelete('set null');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->enum('change_type', ['commission', 'price', 'both']);
-            
+
             // Campos para cambio de comisión
             $table->decimal('old_commission_percentage', 5, 2)->nullable();
             $table->decimal('new_commission_percentage', 5, 2)->nullable();
-            
+
             // Campos para cambio de precio
             $table->decimal('old_price', 15, 2)->nullable();
             $table->decimal('new_price', 15, 2)->nullable();
             $table->decimal('discount_amount', 15, 2)->nullable();
             $table->text('discount_reason')->nullable();
-            
+
             // Campos de respuesta
             $table->text('rejection_reason')->nullable();
             $table->timestamp('authorized_at')->nullable();
-            
+
             $table->timestamps();
-            
+
             // Índices para mejorar rendimiento
             $table->index(['status', 'change_type']);
             $table->index('requested_by');

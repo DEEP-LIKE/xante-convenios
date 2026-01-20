@@ -7,13 +7,15 @@ use Livewire\Component;
 class XanteLoading extends Component
 {
     public bool $show = false;
+
     public string $message = 'Generando documentos...';
+
     public string $size = 'lg';
 
     protected $listeners = [
         'showLoading' => 'showLoading',
         'hideLoading' => 'hideLoading',
-        'updateLoadingMessage' => 'updateMessage'
+        'updateLoadingMessage' => 'updateMessage',
     ];
 
     public function showLoading($message = null)
@@ -39,7 +41,7 @@ class XanteLoading extends Component
         return view('components.xante-loading', [
             'show' => $this->show,
             'message' => $this->message,
-            'size' => $this->size
+            'size' => $this->size,
         ]);
     }
 }

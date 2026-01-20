@@ -4,11 +4,10 @@ namespace App\Livewire;
 
 use App\Models\Agreement;
 use App\Models\Client;
-use App\Services\WizardService;
 use App\Services\CalculationService;
+use App\Services\WizardService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Auth;
 
 class AgreementWizard extends Component
 {
@@ -16,18 +15,25 @@ class AgreementWizard extends Component
 
     // Propiedades principales
     public $agreementId;
+
     public $currentStep = 1;
+
     public $wizardData = [];
+
     public $agreement;
+
     public $wizardSummary = [];
 
     // Servicios
     protected WizardService $wizardService;
+
     protected CalculationService $calculationService;
 
     // Propiedades del paso actual
     public $stepData = [];
+
     public $validationErrors = [];
+
     public $isLoading = false;
 
     // Listeners para eventos
@@ -77,14 +83,14 @@ class AgreementWizard extends Component
     {
         if ($this->validateCurrentStep()) {
             $this->saveCurrentStep();
-            
+
             // Si está en paso 4 (calculadora), enviar a validación
             if ($this->currentStep === 4) {
                 $this->sendToValidation();
             }
-            
+
             $nextStep = $this->wizardService->getNextStep($this->currentStep, $this->wizardData);
-            
+
             if ($nextStep && $nextStep <= 6) {
                 $this->currentStep = $nextStep;
                 $this->loadStepData();
@@ -127,9 +133,9 @@ class AgreementWizard extends Component
     public function saveAndExit()
     {
         $this->saveCurrentStep();
-        
+
         session()->flash('message', 'Progreso guardado exitosamente. Puede continuar más tarde.');
-        
+
         return redirect()->route('filament.admin.resources.agreements.index');
     }
 
@@ -139,17 +145,17 @@ class AgreementWizard extends Component
     public function completeWizard()
     {
         // Verificar que la validación esté aprobada
-        if (!$this->agreement->hasApprovedValidation()) {
+        if (! $this->agreement->hasApprovedValidation()) {
             $this->addError('validation', 'No puedes completar el convenio sin la aprobación del Coordinador FI.');
-            
+
             session()->flash('error', 'Debes esperar la aprobación del Coordinador FI antes de continuar.');
-            
+
             return;
         }
 
         if ($this->validateAllSteps()) {
             $this->saveCurrentStep();
-            
+
             // Marcar el convenio como completado
             $this->agreement->update([
                 'status' => 'expediente_completo',
@@ -158,7 +164,7 @@ class AgreementWizard extends Component
             ]);
 
             session()->flash('message', 'Convenio completado exitosamente.');
-            
+
             return redirect()->route('filament.admin.resources.agreements.edit', $this->agreement);
         }
     }
@@ -170,12 +176,12 @@ class AgreementWizard extends Component
     {
         try {
             $newAgreement = $this->wizardService->cloneAgreement($sourceAgreementId);
-            
+
             session()->flash('message', 'Convenio clonado exitosamente.');
-            
+
             return redirect()->route('agreement-wizard', ['agreementId' => $newAgreement->id]);
         } catch (\Exception $e) {
-            $this->addError('clone', 'Error al clonar el convenio: ' . $e->getMessage());
+            $this->addError('clone', 'Error al clonar el convenio: '.$e->getMessage());
         }
     }
 
@@ -187,10 +193,10 @@ class AgreementWizard extends Component
     public function searchClient($searchTerm, $searchType = 'xante_id')
     {
         $this->isLoading = true;
-        
+
         try {
             $results = [];
-            
+
             switch ($searchType) {
                 case 'xante_id':
                     $results = Client::where('xante_id', 'like', "%{$searchTerm}%")->limit(10)->get();
@@ -202,11 +208,11 @@ class AgreementWizard extends Component
                     $results = Client::where('email', 'like', "%{$searchTerm}%")->limit(10)->get();
                     break;
             }
-            
+
             $this->emit('searchResults', $results->toArray());
-            
+
         } catch (\Exception $e) {
-            $this->addError('search', 'Error en la búsqueda: ' . $e->getMessage());
+            $this->addError('search', 'Error en la búsqueda: '.$e->getMessage());
         } finally {
             $this->isLoading = false;
         }
@@ -218,14 +224,14 @@ class AgreementWizard extends Component
     public function selectClient($clientXanteId)
     {
         $client = Client::where('xante_id', $clientXanteId)->first();
-        
+
         if ($client) {
             $this->stepData['client_xante_id'] = $clientXanteId;
             $this->stepData['client_found'] = true;
-            
+
             // Auto-poblar datos del cliente
             $this->populateClientData($client);
-            
+
             $this->emit('clientSelected', $client->toArray());
         }
     }
@@ -246,14 +252,14 @@ class AgreementWizard extends Component
             ];
 
             $calculations = $this->calculationService->calculateFinancialValues($input);
-            
+
             // Actualizar stepData con los cálculos
             $this->stepData = array_merge($this->stepData, $calculations);
-            
+
             $this->emit('calculationsUpdated', $calculations);
-            
+
         } catch (\Exception $e) {
-            $this->addError('calculations', 'Error en los cálculos: ' . $e->getMessage());
+            $this->addError('calculations', 'Error en los cálculos: '.$e->getMessage());
         }
     }
 
@@ -271,7 +277,7 @@ class AgreementWizard extends Component
             ->first();
 
         $this->stepData = $progress ? ($progress->step_data ?? []) : [];
-        
+
         // Cargar datos del convenio si existen
         $this->mergeAgreementData();
     }
@@ -285,28 +291,28 @@ class AgreementWizard extends Component
                     $this->stepData['client_found'] = true;
                 }
                 break;
-                
+
             case 2:
                 // Datos del titular
                 $holderFields = [
                     'holder_name', 'holder_email', 'holder_phone', 'holder_birthdate',
-                    'holder_curp', 'holder_rfc', 'holder_civil_status', 'holder_occupation'
+                    'holder_curp', 'holder_rfc', 'holder_civil_status', 'holder_occupation',
                 ];
-                
+
                 foreach ($holderFields as $field) {
                     if ($this->agreement->$field) {
                         $this->stepData[$field] = $this->agreement->$field;
                     }
                 }
                 break;
-                
+
             case 5:
                 // Datos de la calculadora
                 $calculatorFields = [
                     'precio_promocion', 'valor_convenio', 'porcentaje_comision_sin_iva',
-                    'monto_credito', 'tipo_credito', 'isr', 'cancelacion_hipoteca'
+                    'monto_credito', 'tipo_credito', 'isr', 'cancelacion_hipoteca',
                 ];
-                
+
                 foreach ($calculatorFields as $field) {
                     if ($this->agreement->$field) {
                         $this->stepData[$field] = $this->agreement->$field;
@@ -319,31 +325,34 @@ class AgreementWizard extends Component
     private function validateCurrentStep(): bool
     {
         $validationResult = $this->wizardService->validateStep($this->currentStep, $this->stepData);
-        
-        if (!$validationResult->isValid()) {
+
+        if (! $validationResult->isValid()) {
             $this->validationErrors = $validationResult->getErrors();
+
             return false;
         }
-        
+
         $this->validationErrors = [];
+
         return true;
     }
 
     private function validateAllSteps(): bool
     {
         for ($step = 1; $step <= 6; $step++) {
-            if (!$this->agreement->isStepCompleted($step)) {
+            if (! $this->agreement->isStepCompleted($step)) {
                 $this->addError('completion', "El paso {$step} no está completado.");
+
                 return false;
             }
         }
-        
+
         return true;
     }
 
     private function saveCurrentStep()
     {
-        if (!empty($this->stepData)) {
+        if (! empty($this->stepData)) {
             $this->wizardService->saveStep($this->agreementId, $this->currentStep, $this->stepData);
             $this->loadWizardSummary();
         }
@@ -358,7 +367,7 @@ class AgreementWizard extends Component
             'holder_email' => $client->email,
             'holder_phone' => $client->phone,
             'fecha_registro' => $client->fecha_registro?->format('Y-m-d'), // Nueva fecha del Deal
-            
+
             // Datos personales
             'holder_birthdate' => $client->birthdate?->format('Y-m-d'),
             'holder_curp' => $client->curp,
@@ -367,18 +376,18 @@ class AgreementWizard extends Component
             'holder_regime_type' => $client->regime_type,
             'holder_occupation' => $client->occupation,
             'holder_delivery_file' => $client->delivery_file,
-            
+
             // Teléfonos adicionales
             'holder_office_phone' => $client->office_phone,
             'holder_additional_contact_phone' => $client->additional_contact_phone,
-            
+
             // Dirección completa
             'current_address' => $client->current_address,
             'neighborhood' => $client->neighborhood,
             'postal_code' => $client->postal_code,
             'municipality' => $client->municipality,
             'state' => $client->state,
-            
+
             // Datos del cónyuge (si existen)
             'spouse_name' => $client->spouse?->name,
             'spouse_birthdate' => $client->spouse?->birthdate?->format('Y-m-d'),
@@ -397,7 +406,7 @@ class AgreementWizard extends Component
             'spouse_postal_code' => $client->spouse?->postal_code,
             'spouse_municipality' => $client->spouse?->municipality,
             'spouse_state' => $client->spouse?->state,
-            
+
             // Contacto AC y Presidente
             'ac_name' => $client->ac_name,
             'ac_phone' => $client->ac_phone,
@@ -406,12 +415,12 @@ class AgreementWizard extends Component
             'private_president_phone' => $client->private_president_phone,
             'private_president_quota' => $client->private_president_quota,
         ]);
-        
+
         // Filtrar valores nulos para no sobrescribir datos existentes
-        $this->stepData = array_filter($this->stepData, function($value) {
+        $this->stepData = array_filter($this->stepData, function ($value) {
             return $value !== null && $value !== '';
         });
-        
+
         // Log para debugging
         \Log::info('Datos del cliente precargados en wizard', [
             'client_xante_id' => $client->xante_id,
@@ -423,11 +432,11 @@ class AgreementWizard extends Component
     private function getAccessibleSteps(): array
     {
         $accessible = [];
-        
+
         for ($step = 1; $step <= 6; $step++) {
             $accessible[$step] = $this->agreement->canAccessStep($step);
         }
-        
+
         return $accessible;
     }
 
@@ -478,7 +487,7 @@ class AgreementWizard extends Component
             session()->flash('message', 'Cliente creado exitosamente.');
 
         } catch (\Exception $e) {
-            $this->addError('create_client', 'Error al crear el cliente: ' . $e->getMessage());
+            $this->addError('create_client', 'Error al crear el cliente: '.$e->getMessage());
         }
     }
 
@@ -487,11 +496,11 @@ class AgreementWizard extends Component
      */
     public function copyHolderData()
     {
-        if (!empty($this->stepData['holder_name'])) {
+        if (! empty($this->stepData['holder_name'])) {
             $this->stepData['spouse_name'] = $this->stepData['holder_name'] ?? '';
             $this->stepData['spouse_occupation'] = $this->stepData['holder_occupation'] ?? '';
             $this->stepData['spouse_regime_type'] = $this->stepData['holder_regime_type'] ?? '';
-            
+
             // Si mismo domicilio está marcado, copiar también la dirección
             if ($this->stepData['spouse_same_address'] ?? false) {
                 $this->stepData['spouse_current_address'] = $this->stepData['holder_current_address'] ?? '';
@@ -500,7 +509,7 @@ class AgreementWizard extends Component
                 $this->stepData['spouse_municipality'] = $this->stepData['holder_municipality'] ?? '';
                 $this->stepData['spouse_state'] = $this->stepData['holder_state'] ?? '';
             }
-            
+
             session()->flash('message', 'Datos del titular copiados al cónyuge.');
         }
     }
@@ -511,19 +520,20 @@ class AgreementWizard extends Component
     public function searchInDataLake()
     {
         $this->isLoading = true;
-        
+
         try {
             // Aquí se integraría con el servicio real de Data Lake
             // Por ahora simulamos la búsqueda
-            
+
             $searchTerm = $this->stepData['property_search_term'] ?? '';
             $searchType = $this->stepData['property_search_type'] ?? 'address';
-            
+
             if (empty($searchTerm)) {
                 $this->addError('property_search', 'Ingrese un término de búsqueda');
+
                 return;
             }
-            
+
             // Simulación de resultados
             $this->stepData['property_search_results'] = [
                 [
@@ -531,14 +541,14 @@ class AgreementWizard extends Component
                     'address' => $searchTerm,
                     'development' => 'Desarrollo Ejemplo',
                     'type' => 'Casa',
-                    'status' => 'Disponible'
-                ]
+                    'status' => 'Disponible',
+                ],
             ];
-            
+
             session()->flash('message', 'Búsqueda completada en Data Lake.');
-            
+
         } catch (\Exception $e) {
-            $this->addError('property_search', 'Error en la búsqueda: ' . $e->getMessage());
+            $this->addError('property_search', 'Error en la búsqueda: '.$e->getMessage());
         } finally {
             $this->isLoading = false;
         }
@@ -550,16 +560,16 @@ class AgreementWizard extends Component
     public function resetToDefaults()
     {
         $this->calculationService->clearConfigurationCache();
-        
+
         $this->stepData['porcentaje_comision_sin_iva'] = ConfigurationCalculator::get('comision_sin_iva_default', 6.50);
         $this->stepData['monto_credito'] = ConfigurationCalculator::get('monto_credito_default', 800000);
         $this->stepData['isr'] = ConfigurationCalculator::get('isr_default', 0);
         $this->stepData['cancelacion_hipoteca'] = ConfigurationCalculator::get('cancelacion_hipoteca_default', 20000);
         $this->stepData['tipo_credito'] = ConfigurationCalculator::get('tipo_credito_default', 'BANCARIO');
         $this->stepData['otro_banco'] = ConfigurationCalculator::get('otro_banco_default', 'NO APLICA');
-        
+
         $this->updateCalculations();
-        
+
         session()->flash('message', 'Valores restaurados a los por defecto.');
     }
 
@@ -568,8 +578,10 @@ class AgreementWizard extends Component
      */
     public function calculateScenario($type, $value)
     {
-        if (!$value) return 0;
-        
+        if (! $value) {
+            return 0;
+        }
+
         $baseCalculation = [
             'valor_convenio' => $this->stepData['valor_convenio'] ?? 0,
             'porcentaje_comision_sin_iva' => $this->stepData['porcentaje_comision_sin_iva'] ?? 6.50,
@@ -577,7 +589,7 @@ class AgreementWizard extends Component
             'cancelacion_hipoteca' => $this->stepData['cancelacion_hipoteca'] ?? 0,
             'monto_credito' => $this->stepData['monto_credito'] ?? 0,
         ];
-        
+
         switch ($type) {
             case 'commission':
                 $baseCalculation['porcentaje_comision_sin_iva'] = $value;
@@ -589,8 +601,9 @@ class AgreementWizard extends Component
                 $baseCalculation['cancelacion_hipoteca'] = $value;
                 break;
         }
-        
+
         $result = $this->calculationService->calculateFinancialValues($baseCalculation);
+
         return $result['ganancia_final'] ?? 0;
     }
 
@@ -604,11 +617,11 @@ class AgreementWizard extends Component
         $checklist = $this->stepData['documents_checklist'] ?? [];
         $total = count($this->getRequiredDocuments());
         $completed = count(array_filter($checklist));
-        
+
         return [
             'total' => $total,
             'completed' => $completed,
-            'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0
+            'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0,
         ];
     }
 
@@ -627,13 +640,13 @@ class AgreementWizard extends Component
     {
         $requiredDocs = $this->getRequiredDocuments();
         $checklist = $this->stepData['documents_checklist'] ?? [];
-        
+
         foreach ($requiredDocs as $doc) {
-            if (!($checklist[$doc] ?? false)) {
+            if (! ($checklist[$doc] ?? false)) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -645,7 +658,7 @@ class AgreementWizard extends Component
         $requiredDocs = $this->getRequiredDocuments();
         $checklist = $this->stepData['documents_checklist'] ?? [];
         $missing = [];
-        
+
         $docLabels = [
             'titular_ine' => 'INE del Titular',
             'titular_curp' => 'CURP del Titular',
@@ -654,13 +667,13 @@ class AgreementWizard extends Component
             'propiedad_traslado_dominio' => 'Traslado de Dominio',
             // Agregar más según sea necesario
         ];
-        
+
         foreach ($requiredDocs as $doc) {
-            if (!($checklist[$doc] ?? false)) {
+            if (! ($checklist[$doc] ?? false)) {
                 $missing[] = $docLabels[$doc] ?? $doc;
             }
         }
-        
+
         return $missing;
     }
 
@@ -675,18 +688,18 @@ class AgreementWizard extends Component
             'titular_rfc',
             'propiedad_instrumento_notarial',
             'propiedad_traslado_dominio',
-            'otros_autorizacion_buro'
+            'otros_autorizacion_buro',
         ];
-        
+
         // Agregar documentos del cónyuge si es necesario
         if ($this->requiresSpouseDocuments()) {
             $required = array_merge($required, [
                 'conyuge_ine',
                 'conyuge_curp',
-                'conyuge_acta_nacimiento'
+                'conyuge_acta_nacimiento',
             ]);
         }
-        
+
         return $required;
     }
 
@@ -715,7 +728,7 @@ class AgreementWizard extends Component
     public function processUpload()
     {
         $this->validate([
-            'stepData.upload_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240'
+            'stepData.upload_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
         try {
@@ -723,12 +736,12 @@ class AgreementWizard extends Component
             // Por ahora solo marcamos como recibido
             $documentType = $this->stepData['upload_document_type'];
             $this->stepData['documents_checklist'][$documentType] = true;
-            
+
             $this->closeUploadModal();
             session()->flash('message', 'Documento subido exitosamente.');
-            
+
         } catch (\Exception $e) {
-            $this->addError('upload', 'Error al subir el documento: ' . $e->getMessage());
+            $this->addError('upload', 'Error al subir el documento: '.$e->getMessage());
         }
     }
 
@@ -741,11 +754,11 @@ class AgreementWizard extends Component
             $this->agreement->update([
                 'status' => 'expediente_completo',
                 'completion_percentage' => 100,
-                'completed_at' => now()
+                'completed_at' => now(),
             ]);
-            
+
             session()->flash('message', 'Convenio marcado como completo exitosamente.');
-            
+
             return redirect()->route('filament.admin.resources.agreements.index');
         }
     }
@@ -757,7 +770,7 @@ class AgreementWizard extends Component
      */
     public function autoSave()
     {
-        if (!empty($this->stepData)) {
+        if (! empty($this->stepData)) {
             $this->saveCurrentStep();
         }
     }
@@ -773,32 +786,32 @@ class AgreementWizard extends Component
         ]);
 
         $validationService = app(\App\Services\ValidationService::class);
-        
+
         try {
             // Crear solicitud de validación
             $validation = $validationService->requestValidation(
-                $this->agreement, 
+                $this->agreement,
                 auth()->user()
             );
-            
+
             \Log::info('Validation created successfully', [
                 'validation_id' => $validation->id,
                 'agreement_id' => $this->agreement->id,
             ]);
-            
+
             session()->flash('message', '✓ Calculadora enviada a validación del Coordinador FI');
             session()->flash('message_type', 'success');
-            
+
         } catch (\Exception $e) {
             \Log::error('Error al enviar a validación', [
                 'agreement_id' => $this->agreement->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
-            $this->addError('validation', 'Error al enviar a validación: ' . $e->getMessage());
-            
-            session()->flash('error', 'Error al enviar a validación: ' . $e->getMessage());
+
+            $this->addError('validation', 'Error al enviar a validación: '.$e->getMessage());
+
+            session()->flash('error', 'Error al enviar a validación: '.$e->getMessage());
         }
     }
 
@@ -809,10 +822,10 @@ class AgreementWizard extends Component
     {
         if ($this->agreement->hasObservations()) {
             $this->sendToValidation();
-            
+
             // Recargar el agreement para obtener el nuevo estado
             $this->agreement->refresh();
-            
+
             session()->flash('message', 'Calculadora reenviada a validación');
             session()->flash('message_type', 'success');
         }

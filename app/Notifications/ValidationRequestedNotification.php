@@ -24,8 +24,8 @@ class ValidationRequestedNotification extends Notification implements ShouldQueu
     public function toMail(object $notifiable): MailMessage
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             // Si la validación ya no existe, no enviar el correo
             return (new MailMessage)
                 ->subject('Validación no disponible')
@@ -33,21 +33,21 @@ class ValidationRequestedNotification extends Notification implements ShouldQueu
         }
 
         return (new MailMessage)
-            ->subject('Nueva Validación Pendiente - Convenio #' . $validation->agreement_id)
-            ->greeting('¡Hola ' . $notifiable->name . '!')
+            ->subject('Nueva Validación Pendiente - Convenio #'.$validation->agreement_id)
+            ->greeting('¡Hola '.$notifiable->name.'!')
             ->line('Hay una nueva calculadora pendiente de validación.')
-            ->line('**Ejecutivo:** ' . $validation->requestedBy->name)
-            ->line('**Convenio ID:** #' . $validation->agreement_id)
-            ->line('**Revisión:** #' . $validation->revision_number)
-            ->action('Revisar Validación', url('/admin/quote-validations/' . $validation->id . '/view'))
+            ->line('**Ejecutivo:** '.$validation->requestedBy->name)
+            ->line('**Convenio ID:** #'.$validation->agreement_id)
+            ->line('**Revisión:** #'.$validation->revision_number)
+            ->action('Revisar Validación', url('/admin/quote-validations/'.$validation->id.'/view'))
             ->line('Por favor revisa los cálculos y aprueba o solicita cambios.');
     }
 
     public function toArray(object $notifiable): array
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return [
                 'validation_id' => $this->validationId,
                 'type' => 'validation_requested',

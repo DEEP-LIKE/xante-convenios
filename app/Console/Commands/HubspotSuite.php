@@ -3,10 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Services\HubspotSyncService;
-use App\Jobs\SyncHubspotClientsJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class HubspotSuite extends Command
 {
@@ -29,6 +27,7 @@ class HubspotSuite extends Command
     protected $description = 'Suite unificada de herramientas para diagnóstico y pruebas de HubSpot';
 
     private string $token;
+
     private string $baseUrl;
 
     public function __construct()
@@ -45,13 +44,13 @@ class HubspotSuite extends Command
     {
         $action = $this->argument('action');
 
-        if (!$action) {
+        if (! $action) {
             $action = $this->choice('Selecciona una acción', [
-                'test', 
-                'diagnose', 
-                'explore', 
+                'test',
+                'diagnose',
+                'explore',
                 'list-properties',
-                'exit'
+                'exit',
             ], 'test');
         }
 
@@ -59,7 +58,7 @@ class HubspotSuite extends Command
             return 0;
         }
 
-        $this->info("🚀 Iniciando HubSpot Suite: " . strtoupper($action));
+        $this->info('🚀 Iniciando HubSpot Suite: '.strtoupper($action));
         $this->line('═══════════════════════════════════════════════════');
 
         switch ($action) {
@@ -73,6 +72,7 @@ class HubspotSuite extends Command
                 return $this->listProperties();
             default:
                 $this->error("Acción no reconocida: $action");
+
                 return 1;
         }
     }
@@ -83,27 +83,29 @@ class HubspotSuite extends Command
     private function runTests()
     {
         $this->info('🧪 Probando Integración General...');
-        
-        $syncService = new HubspotSyncService();
-        
+
+        $syncService = new HubspotSyncService;
+
         // 1. Configuración
         $this->info("\n1️⃣ Verificando configuración...");
-        if (!$this->token) {
+        if (! $this->token) {
             $this->error('❌ HUBSPOT_TOKEN no configurado');
+
             return 1;
         }
-        $this->info('✅ Token configurado: ' . substr($this->token, 0, 10) . '...');
-        
+        $this->info('✅ Token configurado: '.substr($this->token, 0, 10).'...');
+
         // 2. Conexión
         $this->info("\n2️⃣ Probando conexión con HubSpot...");
         $connectionTest = $syncService->testConnection();
         if ($connectionTest['success']) {
             $this->info('✅ Conexión exitosa con HubSpot');
         } else {
-            $this->error('❌ Error de conexión: ' . $connectionTest['message']);
+            $this->error('❌ Error de conexión: '.$connectionTest['message']);
+
             return 1;
         }
-        
+
         // 3. Estadísticas
         $this->info("\n3️⃣ Estadísticas actuales...");
         $stats = $syncService->getSyncStats();
@@ -113,12 +115,12 @@ class HubspotSuite extends Command
             ['Sin HubSpot ID', $stats['clients_without_hubspot_id']],
             ['Última sincronización', $stats['last_sync'] ? $stats['last_sync']->format('d/m/Y H:i') : 'Nunca'],
         ]);
-        
+
         // 4. Sincronización (Opcional)
         if ($this->option('sync')) {
             $this->info("\n4️⃣ Ejecutando sincronización real...");
             $syncStats = $syncService->syncClients(maxPages: 5, timeLimit: 30);
-            
+
             $this->info("\n📊 Resultados:");
             $this->table(['Métrica', 'Valor'], [
                 ['Total Deals procesados', $syncStats['total_deals']],
@@ -141,25 +143,26 @@ class HubspotSuite extends Command
     {
         $dealId = $this->option('id');
 
-        if (!$dealId) {
-            $this->info("Buscando un Deal reciente para diagnosticar...");
+        if (! $dealId) {
+            $this->info('Buscando un Deal reciente para diagnosticar...');
             $dealId = $this->getFirstDealId();
-            if (!$dealId) {
+            if (! $dealId) {
                 $this->error('❌ No se encontraron Deals en HubSpot para analizar.');
+
                 return 1;
             }
         }
 
         $this->info("\n🎯 Analizando Deal ID: {$dealId}");
-        
+
         // Estrategia 1: Propiedades
         $this->info("\n📦 Analizando propiedades del Deal...");
-        $response = Http::withToken($this->token)->get($this->baseUrl . "/crm/v3/objects/deals/{$dealId}");
+        $response = Http::withToken($this->token)->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}");
         if ($response->successful()) {
             $props = $response->json()['properties'] ?? [];
-            $this->line("   • Nombre: " . ($props['dealname'] ?? 'N/A'));
-            $this->line("   • Monto: " . ($props['amount'] ?? 'N/A'));
-            
+            $this->line('   • Nombre: '.($props['dealname'] ?? 'N/A'));
+            $this->line('   • Monto: '.($props['amount'] ?? 'N/A'));
+
             // Buscar campos de contacto ocultos
             $contactFields = [];
             foreach ($props as $key => $val) {
@@ -168,35 +171,37 @@ class HubspotSuite extends Command
                 }
             }
             if ($contactFields) {
-                $this->info("   ✅ Campos de contacto encontrados en propiedades:");
-                foreach ($contactFields as $k => $v) $this->line("     - $k: $v");
+                $this->info('   ✅ Campos de contacto encontrados en propiedades:');
+                foreach ($contactFields as $k => $v) {
+                    $this->line("     - $k: $v");
+                }
             }
         }
 
         // Estrategia 2: Asociaciones V3
         $this->info("\n🔗 Verificando Asociaciones (API v3)...");
-        $assocResponse = Http::withToken($this->token)->get($this->baseUrl . "/crm/v3/objects/deals/{$dealId}/associations/contacts");
+        $assocResponse = Http::withToken($this->token)->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}/associations/contacts");
         if ($assocResponse->successful()) {
             $results = $assocResponse->json()['results'] ?? [];
             if ($results) {
-                $this->info("   ✅ " . count($results) . " asociaciones encontradas.");
+                $this->info('   ✅ '.count($results).' asociaciones encontradas.');
                 foreach ($results as $assoc) {
-                    $this->line("     - Contact ID: " . ($assoc['id'] ?? $assoc['toObjectId']));
+                    $this->line('     - Contact ID: '.($assoc['id'] ?? $assoc['toObjectId']));
                 }
             } else {
-                $this->warn("   ⚠️  Sin asociaciones directas.");
+                $this->warn('   ⚠️  Sin asociaciones directas.');
             }
         }
 
         // Estrategia 3: Campo hs_all_associated_contact_ids
         $this->info("\n🔍 Verificando campo 'hs_all_associated_contact_ids'...");
-        $searchResponse = Http::withToken($this->token)->get($this->baseUrl . "/crm/v3/objects/deals/{$dealId}?properties=hs_all_associated_contact_ids");
+        $searchResponse = Http::withToken($this->token)->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}?properties=hs_all_associated_contact_ids");
         if ($searchResponse->successful()) {
             $val = $searchResponse->json()['properties']['hs_all_associated_contact_ids'] ?? null;
             if ($val) {
                 $this->info("   ✅ Campo encontrado: $val");
             } else {
-                $this->warn("   ⚠️  Campo vacío o no existente.");
+                $this->warn('   ⚠️  Campo vacío o no existente.');
             }
         }
 
@@ -211,9 +216,9 @@ class HubspotSuite extends Command
         $limit = $this->option('limit');
         $this->info("🔎 Explorando últimos $limit Deals...");
 
-        $response = Http::withToken($this->token)->get($this->baseUrl . '/crm/v3/objects/deals', [
+        $response = Http::withToken($this->token)->get($this->baseUrl.'/crm/v3/objects/deals', [
             'limit' => $limit,
-            'properties' => 'dealname,amount,dealstage,createdate,estatus_de_convenio'
+            'properties' => 'dealname,amount,dealstage,createdate,estatus_de_convenio',
         ]);
 
         if ($response->successful()) {
@@ -227,12 +232,12 @@ class HubspotSuite extends Command
                     $deal['id'],
                     substr($props['dealname'] ?? '', 0, 30),
                     $props['estatus_de_convenio'] ?? 'N/A',
-                    $props['createdate'] ?? 'N/A'
+                    $props['createdate'] ?? 'N/A',
                 ];
             }
             $this->table($headers, $data);
         } else {
-            $this->error("Error explorando deals: " . $response->body());
+            $this->error('Error explorando deals: '.$response->body());
         }
 
         return 0;
@@ -243,17 +248,17 @@ class HubspotSuite extends Command
     // ==========================================
     private function listProperties()
     {
-        $this->info("📋 Listando propiedades de Contactos...");
-        
-        $response = Http::withToken($this->token)->get($this->baseUrl . "/crm/v3/properties/contacts");
-        
+        $this->info('📋 Listando propiedades de Contactos...');
+
+        $response = Http::withToken($this->token)->get($this->baseUrl.'/crm/v3/properties/contacts');
+
         if ($response->successful()) {
             $properties = $response->json()['results'];
             $headers = ['Name', 'Label', 'Type'];
             $data = [];
-            
+
             $keywords = ['address', 'city', 'state', 'zip', 'birth', 'job', 'occupation', 'curp', 'rfc', 'phone'];
-            
+
             foreach ($properties as $prop) {
                 $name = $prop['name'];
                 // Filtrar por keywords relevantes
@@ -262,17 +267,17 @@ class HubspotSuite extends Command
                         $data[] = [
                             $prop['name'],
                             substr($prop['label'], 0, 40),
-                            $prop['type']
+                            $prop['type'],
                         ];
                         break;
                     }
                 }
             }
-            
+
             $this->table($headers, $data);
             $this->info("\nSe muestran solo propiedades relevantes (dirección, trabajo, etc.)");
         } else {
-            $this->error("Error obteniendo propiedades.");
+            $this->error('Error obteniendo propiedades.');
         }
 
         return 0;
@@ -280,7 +285,8 @@ class HubspotSuite extends Command
 
     private function getFirstDealId(): ?string
     {
-        $response = Http::withToken($this->token)->get($this->baseUrl . '/crm/v3/objects/deals', ['limit' => 1]);
+        $response = Http::withToken($this->token)->get($this->baseUrl.'/crm/v3/objects/deals', ['limit' => 1]);
+
         return $response->json()['results'][0]['id'] ?? null;
     }
 }

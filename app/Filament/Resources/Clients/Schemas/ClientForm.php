@@ -92,7 +92,7 @@ class ClientForm
                             ->required()
                             ->maxLength(255),
                     ])->columns(2),
-                
+
                 Section::make('DATOS PERSONALES COACREDITADO / CÓNYUGE')
                     ->relationship('spouse')
                     ->schema([
@@ -160,7 +160,7 @@ class ClientForm
                             ->label('Estado')
                             ->maxLength(255),
                     ])->columns(2),
-                
+
                 Section::make('CONTACTO AC Y/O PRESIDENTE DE PRIVADA')
                     ->schema([
                         TextInput::make('ac_name')

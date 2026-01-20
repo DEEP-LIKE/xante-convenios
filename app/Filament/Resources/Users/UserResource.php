@@ -8,34 +8,27 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
-use Filament\Schemas\Components\Section;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
-use Filament\Actions\Action;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\TextColumn;
-use BackedEnum;
 use UnitEnum;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-users';
-    
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
+
     protected static ?string $navigationLabel = 'Usuarios';
-    
+
     protected static ?string $modelLabel = 'Usuario';
-    
+
     protected static ?string $pluralModelLabel = 'Usuarios';
-    
+
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static UnitEnum | string | null $navigationGroup = 'Configuraciones';
+    protected static UnitEnum|string|null $navigationGroup = 'Configuraciones';
 
     protected static ?int $navigationSort = 1000;
 

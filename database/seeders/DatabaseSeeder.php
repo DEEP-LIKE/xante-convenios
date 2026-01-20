@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -10,7 +9,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🚀 Iniciando población de base de datos...');
-        
+
         $this->call([
             UserSeeder::class,
             ConfigurationSeeder::class,           // Agregado

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Servicio para búsqueda de clientes
- * 
+ *
  * Responsabilidades:
  * - Buscar clientes por diferentes criterios
  * - Obtener cliente por ID
@@ -16,13 +16,13 @@ class ClientSearchService
 {
     /**
      * Busca clientes por término de búsqueda
-     * 
+     *
      * Busca en: nombre, email, xante_id
      */
     public function search(string $term, int $limit = 10): Collection
     {
         if (empty($term)) {
-            return new Collection();
+            return new Collection;
         }
 
         return Client::where('name', 'like', "%{$term}%")
@@ -46,7 +46,7 @@ class ClientSearchService
     public function findFirst(string $term): ?Client
     {
         $results = $this->search($term, 1);
-        
+
         return $results->first();
     }
 

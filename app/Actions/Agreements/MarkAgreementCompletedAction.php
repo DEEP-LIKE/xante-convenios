@@ -33,12 +33,12 @@ class MarkAgreementCompletedAction
         } catch (\Exception $e) {
             \Log::error('Error marking agreement as completed', [
                 'agreement_id' => $agreement->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             Notification::make()
                 ->title('❌ Error al Completar')
-                ->body('Error: ' . $e->getMessage())
+                ->body('Error: '.$e->getMessage())
                 ->danger()
                 ->send();
 

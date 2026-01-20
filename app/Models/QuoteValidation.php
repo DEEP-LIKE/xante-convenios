@@ -125,16 +125,16 @@ class QuoteValidation extends Model
         $this->status = 'approved';
         $this->validated_by = $validatorId;
         $this->validated_at = now();
-        
+
         $saved = $this->save();
-        
+
         if ($saved) {
             // Obtener snapshot con los valores finales validados
             $snapshot = $this->calculator_snapshot;
-            
+
             // Sincronizar wizard_data con los valores validados
             $currentWizardData = $this->agreement->wizard_data ?? [];
-            
+
             // Mapear snapshot a las claves usadas en wizard_data
             $updates = [
                 'valor_convenio' => (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0),
@@ -152,15 +152,15 @@ class QuoteValidation extends Model
                 'state_commission_percentage' => (float) ($snapshot['multiplicador_estado'] ?? 0),
                 'indicador_ganancia' => $snapshot['indicador_ganancia'] ?? 'N/A',
             ];
-            
+
             // Actualizar el agreement con el estado de validación y wizard_data
             $this->agreement->update([
                 'validation_status' => 'approved',
                 'can_generate_documents' => true,
-                'wizard_data' => array_merge($currentWizardData, $updates)
+                'wizard_data' => array_merge($currentWizardData, $updates),
             ]);
         }
-        
+
         return $saved;
     }
 
@@ -170,9 +170,9 @@ class QuoteValidation extends Model
         $this->validated_by = $validatorId;
         $this->validated_at = now();
         $this->observations = $reason;
-        
+
         $saved = $this->save();
-        
+
         if ($saved) {
             // Actualizar el agreement
             $this->agreement->update([
@@ -180,7 +180,7 @@ class QuoteValidation extends Model
                 'can_generate_documents' => false,
             ]);
         }
-        
+
         return $saved;
     }
 
@@ -190,9 +190,9 @@ class QuoteValidation extends Model
         $this->validated_by = $validatorId;
         $this->validated_at = now();
         $this->observations = $observations;
-        
+
         $saved = $this->save();
-        
+
         if ($saved) {
             // Actualizar el agreement
             $this->agreement->update([
@@ -200,14 +200,14 @@ class QuoteValidation extends Model
                 'can_generate_documents' => false,
             ]);
         }
-        
+
         return $saved;
     }
 
     // Métodos de utilidad
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'Pendiente',
             'approved' => 'Aprobada',
             'rejected' => 'Rechazada',
@@ -218,7 +218,7 @@ class QuoteValidation extends Model
 
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'warning',
             'approved' => 'success',
             'rejected' => 'danger',
@@ -241,9 +241,9 @@ class QuoteValidation extends Model
     ): QuoteAuthorization {
         // Determinar tipo de cambio
         $changeType = 'both';
-        if ($newPrice && !$newCommissionPercentage) {
+        if ($newPrice && ! $newCommissionPercentage) {
             $changeType = 'price';
-        } elseif (!$newPrice && $newCommissionPercentage) {
+        } elseif (! $newPrice && $newCommissionPercentage) {
             $changeType = 'commission';
         }
 
@@ -279,7 +279,7 @@ class QuoteValidation extends Model
                 'new_commission_percentage' => $newCommissionPercentage,
                 'discount_reason' => $justification,
             ]);
-            
+
             $authorization = $existingAuthorization;
         } else {
             // Crear nueva autorización
@@ -310,7 +310,7 @@ class QuoteValidation extends Model
     public function hasValueChanges(float $currentPrice, float $currentCommission): bool
     {
         $snapshot = $this->calculator_snapshot;
-        
+
         // Sanitizar valores del snapshot (pueden venir con formato de miles/moneda)
         $originalPrice = (float) str_replace([',', '$', ' '], '', $snapshot['valor_convenio'] ?? 0);
         $originalCommission = (float) str_replace([',', '$', ' '], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);

@@ -4,11 +4,11 @@
  * Script de diagnóstico para encontrar deals en HubSpot
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
 use Illuminate\Support\Facades\Http;
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -25,30 +25,30 @@ echo "[TEST 1] Buscando deals solo por email (sin filtro de estado)...\n";
 $response1 = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
     'Content-Type' => 'application/json',
-])->post($baseUrl . '/crm/v3/objects/deals/search', [
+])->post($baseUrl.'/crm/v3/objects/deals/search', [
     'filterGroups' => [
         [
             'filters' => [
                 [
                     'propertyName' => 'email',
                     'operator' => 'EQ',
-                    'value' => $userEmail
-                ]
-            ]
-        ]
+                    'value' => $userEmail,
+                ],
+            ],
+        ],
     ],
     'properties' => ['dealname', 'email', 'estatus_de_convenio', 'nombre_completo'],
-    'limit' => 10
+    'limit' => 10,
 ]);
 
-echo "Status: " . $response1->status() . "\n";
-echo "Total encontrados: " . ($response1->json('total') ?? 0) . "\n";
+echo 'Status: '.$response1->status()."\n";
+echo 'Total encontrados: '.($response1->json('total') ?? 0)."\n";
 if ($response1->json('total') > 0) {
     foreach ($response1->json('results') as $deal) {
         echo "  - Deal ID: {$deal['id']}\n";
-        echo "    Nombre: " . ($deal['properties']['dealname'] ?? 'N/A') . "\n";
-        echo "    Email: " . ($deal['properties']['email'] ?? 'N/A') . "\n";
-        echo "    Estado: " . ($deal['properties']['estatus_de_convenio'] ?? 'N/A') . "\n\n";
+        echo '    Nombre: '.($deal['properties']['dealname'] ?? 'N/A')."\n";
+        echo '    Email: '.($deal['properties']['email'] ?? 'N/A')."\n";
+        echo '    Estado: '.($deal['properties']['estatus_de_convenio'] ?? 'N/A')."\n\n";
     }
 }
 
@@ -57,31 +57,31 @@ echo "\n[TEST 2] Buscando deals solo con estado 'Aceptado' (sin filtro de email)
 $response2 = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
     'Content-Type' => 'application/json',
-])->post($baseUrl . '/crm/v3/objects/deals/search', [
+])->post($baseUrl.'/crm/v3/objects/deals/search', [
     'filterGroups' => [
         [
             'filters' => [
                 [
                     'propertyName' => 'estatus_de_convenio',
                     'operator' => 'EQ',
-                    'value' => 'Aceptado'
-                ]
-            ]
-        ]
+                    'value' => 'Aceptado',
+                ],
+            ],
+        ],
     ],
     'properties' => ['dealname', 'email', 'estatus_de_convenio', 'nombre_completo'],
-    'limit' => 5
+    'limit' => 5,
 ]);
 
-echo "Status: " . $response2->status() . "\n";
-echo "Total encontrados: " . ($response2->json('total') ?? 0) . "\n";
+echo 'Status: '.$response2->status()."\n";
+echo 'Total encontrados: '.($response2->json('total') ?? 0)."\n";
 if ($response2->json('total') > 0) {
     echo "Primeros 5 deals con estado 'Aceptado':\n";
     foreach ($response2->json('results') as $deal) {
         echo "  - Deal ID: {$deal['id']}\n";
-        echo "    Nombre: " . ($deal['properties']['dealname'] ?? 'N/A') . "\n";
-        echo "    Email: " . ($deal['properties']['email'] ?? 'N/A') . "\n";
-        echo "    Estado: " . ($deal['properties']['estatus_de_convenio'] ?? 'N/A') . "\n\n";
+        echo '    Nombre: '.($deal['properties']['dealname'] ?? 'N/A')."\n";
+        echo '    Email: '.($deal['properties']['email'] ?? 'N/A')."\n";
+        echo '    Estado: '.($deal['properties']['estatus_de_convenio'] ?? 'N/A')."\n\n";
     }
 }
 
@@ -89,16 +89,16 @@ if ($response2->json('total') > 0) {
 echo "\n[TEST 3] Verificando si 'email' es una propiedad válida de Deal...\n";
 $propsResponse = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
-])->get($baseUrl . '/crm/v3/properties/deals');
+])->get($baseUrl.'/crm/v3/properties/deals');
 
 if ($propsResponse->successful()) {
     $properties = $propsResponse->json('results');
     $emailProp = collect($properties)->firstWhere('name', 'email');
-    
+
     if ($emailProp) {
         echo "✓ La propiedad 'email' EXISTE en deals\n";
-        echo "  Tipo: " . $emailProp['type'] . "\n";
-        echo "  Label: " . $emailProp['label'] . "\n";
+        echo '  Tipo: '.$emailProp['type']."\n";
+        echo '  Label: '.$emailProp['label']."\n";
     } else {
         echo "✗ La propiedad 'email' NO EXISTE en deals\n";
         echo "  Propiedades disponibles que contienen 'email':\n";

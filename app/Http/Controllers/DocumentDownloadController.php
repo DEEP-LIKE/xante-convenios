@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\GeneratedDocument;
-use App\Models\Agreement;
 use App\Mail\DocumentsReadyMail;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Agreement;
+use App\Models\GeneratedDocument;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentDownloadController extends Controller
@@ -15,7 +14,7 @@ class DocumentDownloadController extends Controller
     public function download(GeneratedDocument $document): StreamedResponse
     {
         // Verificar que el archivo existe
-        if (!$document->fileExists()) {
+        if (! $document->fileExists()) {
             abort(404, 'Documento no encontrado');
         }
 
@@ -40,11 +39,11 @@ class DocumentDownloadController extends Controller
             $wizardData = $agreement->wizard_data ?? [];
             $clientEmail = $wizardData['holder_email'] ?? null;
 
-            if (!$clientEmail && $agreement->client) {
+            if (! $clientEmail && $agreement->client) {
                 $clientEmail = $agreement->client->email;
             }
 
-            if (!$clientEmail) {
+            if (! $clientEmail) {
                 return redirect()->back()->with('error', 'El cliente no tiene un email registrado.');
             }
 
@@ -80,7 +79,7 @@ class DocumentDownloadController extends Controller
             \Log::error('Error sending documents to client', [
                 'agreement_id' => $agreement->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return redirect()->back()->with('error', 'Ocurrió un error al enviar los documentos. Por favor, inténtelo nuevamente.');

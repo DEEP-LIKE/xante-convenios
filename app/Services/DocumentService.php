@@ -6,8 +6,8 @@ use App\Models\Agreement;
 use App\Models\DocumentManager;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -20,13 +20,13 @@ class DocumentService
     {
         // Validar el archivo
         $this->validateFile($file);
-        
+
         // Determinar la categoría del documento
         $category = $this->determineDocumentCategory($documentType);
-        
+
         // Generar nombre único para el archivo
         $fileName = $this->generateUniqueFileName($file, $agreementId, $documentType);
-        
+
         // Crear registro en la base de datos
         $document = DocumentManager::create([
             'agreement_id' => $agreementId,
@@ -73,10 +73,10 @@ class DocumentService
     public function validateDocument(int $documentId, User $validator): ValidationResult
     {
         $document = DocumentManager::findOrFail($documentId);
-        
+
         // Realizar validaciones automáticas
         $validationResults = $this->performAutomaticValidation($document);
-        
+
         // Si pasa las validaciones automáticas, marcar como válido
         if ($validationResults['is_valid']) {
             $document->markAsValid($validator, $validationResults['notes']);
@@ -93,18 +93,18 @@ class DocumentService
     public function generateDocumentPackage(int $agreementId): string
     {
         $agreement = Agreement::with('documents')->findOrFail($agreementId);
-        
+
         // Crear directorio temporal
         $tempDir = storage_path('app/temp/document_packages');
-        if (!file_exists($tempDir)) {
+        if (! file_exists($tempDir)) {
             mkdir($tempDir, 0755, true);
         }
-        
-        $zipFileName = "convenio_{$agreementId}_documentos_" . date('Y-m-d_H-i-s') . '.zip';
-        $zipPath = $tempDir . '/' . $zipFileName;
-        
-        $zip = new ZipArchive();
-        if ($zip->open($zipPath, ZipArchive::CREATE) !== TRUE) {
+
+        $zipFileName = "convenio_{$agreementId}_documentos_".date('Y-m-d_H-i-s').'.zip';
+        $zipPath = $tempDir.'/'.$zipFileName;
+
+        $zip = new ZipArchive;
+        if ($zip->open($zipPath, ZipArchive::CREATE) !== true) {
             throw new \Exception('No se pudo crear el archivo ZIP');
         }
 
@@ -112,7 +112,7 @@ class DocumentService
         foreach ($agreement->documents as $document) {
             if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
                 $filePath = Storage::disk('public')->path($document->file_path);
-                $archiveName = $this->sanitizeFileName($document->getDocumentTypeLabel() . '_' . $document->file_name);
+                $archiveName = $this->sanitizeFileName($document->getDocumentTypeLabel().'_'.$document->file_name);
                 $zip->addFile($filePath, $archiveName);
             }
         }
@@ -132,16 +132,16 @@ class DocumentService
     public function extractDataFromDocument(DocumentManager $document): array
     {
         $extractedData = [];
-        
+
         try {
             // Simular extracción OCR (aquí se integraría con un servicio real de OCR)
             $extractedData = $this->performOCRExtraction($document);
-            
+
             // Guardar datos extraídos
             $document->updateExtractedData($extractedData);
-            
+
         } catch (\Exception $e) {
-            \Log::error("Error extracting data from document {$document->id}: " . $e->getMessage());
+            \Log::error("Error extracting data from document {$document->id}: ".$e->getMessage());
         }
 
         return $extractedData;
@@ -153,9 +153,9 @@ class DocumentService
     public function getDocumentChecklist(int $agreementId): array
     {
         $agreement = Agreement::with('documents')->findOrFail($agreementId);
-        
+
         $checklist = [];
-        
+
         // Documentos del titular
         $checklist['titular'] = [
             'titular_ine' => $this->getDocumentStatus($agreement, 'titular_ine'),
@@ -193,19 +193,19 @@ class DocumentService
     public function calculateDocumentCompleteness(int $agreementId): array
     {
         $checklist = $this->getDocumentChecklist($agreementId);
-        
+
         $totalRequired = 0;
         $totalUploaded = 0;
         $totalValid = 0;
-        
+
         foreach ($checklist as $category => $documents) {
             foreach ($documents as $documentType => $status) {
                 $totalRequired++;
-                
+
                 if ($status['uploaded']) {
                     $totalUploaded++;
                 }
-                
+
                 if ($status['valid']) {
                     $totalValid++;
                 }
@@ -227,10 +227,10 @@ class DocumentService
     public function deleteDocument(int $documentId): bool
     {
         $document = DocumentManager::findOrFail($documentId);
-        
+
         // Eliminar archivo físico
         $document->deleteFile();
-        
+
         // Eliminar registro de la base de datos
         return $document->delete();
     }
@@ -245,10 +245,10 @@ class DocumentService
             'image/png',
             'image/gif',
             'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ];
 
-        if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
+        if (! in_array($file->getMimeType(), $allowedMimeTypes)) {
             throw new \Exception('Tipo de archivo no permitido');
         }
 
@@ -275,7 +275,7 @@ class DocumentService
         $extension = $file->getClientOriginalExtension();
         $timestamp = now()->format('Y-m-d_H-i-s');
         $random = Str::random(8);
-        
+
         return "{$documentType}_{$agreementId}_{$timestamp}_{$random}.{$extension}";
     }
 
@@ -285,7 +285,7 @@ class DocumentService
         $isValid = true;
 
         // Validar que el archivo existe
-        if (!Storage::disk('public')->exists($document->file_path)) {
+        if (! Storage::disk('public')->exists($document->file_path)) {
             $notes[] = 'El archivo no existe en el sistema';
             $isValid = false;
         }
@@ -300,12 +300,12 @@ class DocumentService
         switch ($document->document_type) {
             case 'titular_ine':
             case 'conyuge_ine':
-                if (!in_array($document->mime_type, ['image/jpeg', 'image/png', 'application/pdf'])) {
+                if (! in_array($document->mime_type, ['image/jpeg', 'image/png', 'application/pdf'])) {
                     $notes[] = 'La INE debe ser una imagen o PDF';
                     $isValid = false;
                 }
                 break;
-                
+
             case 'titular_curp':
             case 'conyuge_curp':
                 // Validar que sea un documento reciente (mes corriente)
@@ -315,7 +315,7 @@ class DocumentService
 
         return [
             'is_valid' => $isValid,
-            'notes' => $notes
+            'notes' => $notes,
         ];
     }
 
@@ -323,9 +323,9 @@ class DocumentService
     {
         // Aquí se integraría con un servicio real de OCR como Tesseract, AWS Textract, etc.
         // Por ahora, retornamos datos simulados
-        
+
         $extractedData = [];
-        
+
         switch ($document->document_type) {
             case 'titular_ine':
             case 'conyuge_ine':
@@ -333,16 +333,16 @@ class DocumentService
                     'nombre' => 'Extraído por OCR',
                     'fecha_nacimiento' => null,
                     'curp' => null,
-                    'confidence' => 0.85
+                    'confidence' => 0.85,
                 ];
                 break;
-                
+
             case 'titular_curp':
             case 'conyuge_curp':
                 $extractedData = [
                     'curp' => 'Extraído por OCR',
                     'nombre' => 'Extraído por OCR',
-                    'confidence' => 0.90
+                    'confidence' => 0.90,
                 ];
                 break;
         }
@@ -353,7 +353,7 @@ class DocumentService
     private function getDocumentStatus(Agreement $agreement, string $documentType): array
     {
         $document = $agreement->documents->where('document_type', $documentType)->first();
-        
+
         return [
             'uploaded' => $document !== null,
             'valid' => $document && $document->validation_status === 'valid',
@@ -378,15 +378,15 @@ class DocumentService
         $summary .= "Estado: {$agreement->getStatusLabelAttribute()}\n";
         $summary .= "Fecha de Creación: {$agreement->created_at->format('d/m/Y H:i')}\n";
         $summary .= "Progreso: {$agreement->completion_percentage}%\n\n";
-        
+
         if ($agreement->valor_convenio) {
             $summary .= "DATOS FINANCIEROS\n";
             $summary .= "=================\n";
-            $summary .= "Valor del Convenio: $" . number_format($agreement->valor_convenio, 2) . "\n";
-            $summary .= "Precio Promoción: $" . number_format($agreement->precio_promocion, 2) . "\n";
-            $summary .= "Ganancia Final: $" . number_format($agreement->ganancia_final, 2) . "\n\n";
+            $summary .= 'Valor del Convenio: $'.number_format($agreement->valor_convenio, 2)."\n";
+            $summary .= 'Precio Promoción: $'.number_format($agreement->precio_promocion, 2)."\n";
+            $summary .= 'Ganancia Final: $'.number_format($agreement->ganancia_final, 2)."\n\n";
         }
-        
+
         return $summary;
     }
 

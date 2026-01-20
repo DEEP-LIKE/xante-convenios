@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('role', ['admin', 'asesor', 'viewer'])->default('asesor');
             $table->rememberToken();
             $table->timestamps();
-            
+
             // Índices
             $table->index('email');
             $table->index('role');

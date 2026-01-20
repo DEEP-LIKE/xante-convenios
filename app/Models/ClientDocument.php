@@ -70,18 +70,18 @@ class ClientDocument extends Model
      */
     public function getFormattedSizeAttribute(): string
     {
-        if (!$this->file_size) {
+        if (! $this->file_size) {
             return 'N/A';
         }
 
         $bytes = $this->file_size;
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 
     /**
@@ -89,7 +89,7 @@ class ClientDocument extends Model
      */
     public function getFormattedTypeAttribute(): string
     {
-        return match($this->document_type) {
+        return match ($this->document_type) {
             // Documentación Titular
             'titular_ine' => 'INE (A color, tamaño original, no fotos)',
             'titular_curp' => 'CURP (Mes corriente)',
@@ -99,13 +99,13 @@ class ClientDocument extends Model
             'titular_acta_nacimiento' => 'Acta Nacimiento',
             'titular_acta_matrimonio' => 'Acta Matrimonio (Si aplica)',
             'titular_estado_cuenta' => 'Carátula Estado de Cuenta Bancario',
-            
+
             // Documentación Propiedad
             'propiedad_instrumento_notarial' => 'Instrumento Notarial',
             'propiedad_recibo_predial' => 'Recibo predial (Mes corriente)',
             'propiedad_recibo_agua' => 'Recibo de Agua (Mes corriente)',
             'propiedad_recibo_cfe' => 'Recibo CFE con datos fiscales',
-            
+
             default => $this->document_type,
         };
     }
@@ -122,7 +122,7 @@ class ClientDocument extends Model
     /**
      * Marca el documento como validado
      */
-    public function markAsValidated(int $userId, string $notes = null): void
+    public function markAsValidated(int $userId, ?string $notes = null): void
     {
         $this->update([
             'is_validated' => true,
@@ -187,7 +187,7 @@ class ClientDocument extends Model
             'titular_acta_nacimiento' => 'Acta Nacimiento',
             'titular_acta_matrimonio' => 'Acta Matrimonio (Si aplica)', // Opcional
             'titular_estado_cuenta' => 'Carátula Estado de Cuenta Bancario',
-            
+
             // Documentación Propiedad
             'propiedad_instrumento_notarial' => 'Instrumento Notarial',
             'propiedad_recibo_predial' => 'Recibo predial (Mes corriente)',

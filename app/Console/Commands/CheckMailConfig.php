@@ -22,7 +22,7 @@ class CheckMailConfig extends Command
      */
     public function handle()
     {
-        $this->info("📧 Verificando configuración de correo...");
+        $this->info('📧 Verificando configuración de correo...');
         $this->newLine();
 
         // Configuración general
@@ -43,8 +43,8 @@ class CheckMailConfig extends Command
 
             // Detectar si es Mailtrap
             if (str_contains($host, 'mailtrap') || str_contains($host, 'sandbox.smtp.mailtrap.io')) {
-                $this->info("✅ Configuración detectada: Mailtrap");
-                $this->warn("⚠️  Recuerda que Mailtrap es solo para pruebas - los correos no se entregan realmente");
+                $this->info('✅ Configuración detectada: Mailtrap');
+                $this->warn('⚠️  Recuerda que Mailtrap es solo para pruebas - los correos no se entregan realmente');
             }
         }
 
@@ -57,15 +57,15 @@ class CheckMailConfig extends Command
         $this->newLine();
 
         // Verificar variables de entorno críticas
-        $this->info("🔍 Variables de entorno:");
+        $this->info('🔍 Variables de entorno:');
         $envVars = [
             'MAIL_MAILER',
-            'MAIL_HOST', 
+            'MAIL_HOST',
             'MAIL_PORT',
             'MAIL_USERNAME',
             'MAIL_PASSWORD',
             'MAIL_FROM_ADDRESS',
-            'MAIL_FROM_NAME'
+            'MAIL_FROM_NAME',
         ];
 
         foreach ($envVars as $var) {
@@ -83,16 +83,16 @@ class CheckMailConfig extends Command
         }
 
         $this->newLine();
-        
+
         // Sugerencias
-        $this->info("💡 Sugerencias:");
-        $this->line("  - Para Mailtrap: Usa sandbox.smtp.mailtrap.io:2525");
-        $this->line("  - Para Gmail: Usa smtp.gmail.com:587 con contraseña de aplicación");
+        $this->info('💡 Sugerencias:');
+        $this->line('  - Para Mailtrap: Usa sandbox.smtp.mailtrap.io:2525');
+        $this->line('  - Para Gmail: Usa smtp.gmail.com:587 con contraseña de aplicación');
         $this->line("  - Para pruebas locales: Usa 'log' como MAIL_MAILER");
-        
+
         $this->newLine();
-        $this->info("🧪 Para probar el envío de correos:");
-        $this->line("  php artisan test:email-sending {agreement_id} --email=tu@email.com");
+        $this->info('🧪 Para probar el envío de correos:');
+        $this->line('  php artisan test:email-sending {agreement_id} --email=tu@email.com');
 
         return 0;
     }

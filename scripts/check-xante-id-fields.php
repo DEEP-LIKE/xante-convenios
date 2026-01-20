@@ -1,10 +1,10 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
 use Illuminate\Support\Facades\Http;
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -23,17 +23,17 @@ echo "===============================================================\n\n";
 $response = Http::withHeaders([
     'Authorization' => "Bearer {$token}",
     'Content-Type' => 'application/json',
-])->post($baseUrl . '/crm/v3/objects/contacts/search', [
+])->post($baseUrl.'/crm/v3/objects/contacts/search', [
     'filterGroups' => [
         [
             'filters' => [
                 [
                     'propertyName' => 'email',
                     'operator' => 'EQ',
-                    'value' => $searchEmail
-                ]
-            ]
-        ]
+                    'value' => $searchEmail,
+                ],
+            ],
+        ],
     ],
     'properties' => [
         'email',
@@ -43,14 +43,14 @@ $response = Http::withHeaders([
         'xante_client_id',
         'id_xante',
         'client_xante_id',
-        'hs_object_id'
+        'hs_object_id',
     ],
-    'limit' => 1
+    'limit' => 1,
 ]);
 
-if (!$response->successful()) {
-    echo "❌ Error al buscar contacto: " . $response->status() . "\n";
-    echo $response->body() . "\n";
+if (! $response->successful()) {
+    echo '❌ Error al buscar contacto: '.$response->status()."\n";
+    echo $response->body()."\n";
     exit(1);
 }
 
@@ -66,9 +66,9 @@ $props = $contact['properties'] ?? [];
 
 echo "✅ CONTACTO ENCONTRADO\n";
 echo "------------------------------------------------\n";
-echo "HubSpot ID: " . ($contact['id'] ?? 'N/A') . "\n";
-echo "Nombre: " . ($props['firstname'] ?? '') . " " . ($props['lastname'] ?? '') . "\n";
-echo "Email: " . ($props['email'] ?? 'N/A') . "\n";
+echo 'HubSpot ID: '.($contact['id'] ?? 'N/A')."\n";
+echo 'Nombre: '.($props['firstname'] ?? '').' '.($props['lastname'] ?? '')."\n";
+echo 'Email: '.($props['email'] ?? 'N/A')."\n";
 echo "\n";
 
 echo "VALORES DE LOS CAMPOS XANTE_ID:\n";
@@ -78,15 +78,15 @@ $xanteFields = [
     'xante_id',
     'xante_client_id',
     'id_xante',
-    'client_xante_id'
+    'client_xante_id',
 ];
 
 foreach ($xanteFields as $field) {
     $value = $props[$field] ?? null;
     $status = $value ? '✅' : '❌';
     $displayValue = $value ?: '(vacío)';
-    
-    printf("%-25s %s %s\n", $field . ':', $status, $displayValue);
+
+    printf("%-25s %s %s\n", $field.':', $status, $displayValue);
 }
 
 echo "\n";
@@ -95,7 +95,7 @@ echo "\n";
 echo "TODAS LAS PROPIEDADES DEL CONTACTO:\n";
 echo "------------------------------------------------\n";
 foreach ($props as $key => $value) {
-    if (!empty($value)) {
+    if (! empty($value)) {
         printf("%-40s : %s\n", $key, substr($value, 0, 100));
     }
 }

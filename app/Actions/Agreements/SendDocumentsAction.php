@@ -13,9 +13,8 @@ class SendDocumentsAction
     /**
      * Ejecuta el envío de documentos al cliente.
      *
-     * @param Agreement $agreement
-     * @param User $advisor
      * @return int Número de documentos enviados
+     *
      * @throws \Exception
      */
     public function execute(Agreement $agreement, User $advisor): int
@@ -53,16 +52,16 @@ class SendDocumentsAction
                 ->send(new DocumentsReadyMail($agreement));
         } catch (\Exception $e) {
             Log::error('Error sending email via Mail facade', ['error' => $e->getMessage()]);
-            throw new \Exception('Error al enviar el correo electrónico: ' . $e->getMessage());
+            throw new \Exception('Error al enviar el correo electrónico: '.$e->getMessage());
         }
-            
+
         Log::info('Documents sent successfully via Action', [
             'agreement_id' => $agreement->id,
             'client_email' => $clientEmail,
             'advisor_email' => $advisor->email,
-            'documents_count' => $documentsWithFiles->count()
+            'documents_count' => $documentsWithFiles->count(),
         ]);
-        
+
         return $documentsWithFiles->count();
     }
 
@@ -71,7 +70,7 @@ class SendDocumentsAction
         $wizardData = $agreement->wizard_data ?? [];
         $holderEmail = $wizardData['holder_email'] ?? null;
 
-        if (!$holderEmail && $agreement->client) {
+        if (! $holderEmail && $agreement->client) {
             $holderEmail = $agreement->client->email;
         }
 

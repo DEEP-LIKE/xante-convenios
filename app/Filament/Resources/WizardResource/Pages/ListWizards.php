@@ -3,9 +3,8 @@
 namespace App\Filament\Resources\WizardResource\Pages;
 
 use App\Filament\Resources\WizardResource;
-use Filament\Actions;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Actions\Action;
+use Filament\Resources\Pages\ListRecords;
 
 class ListWizards extends ListRecords
 {
@@ -29,5 +28,4 @@ class ListWizards extends ListRecords
             // Aquí se pueden agregar widgets de estadísticas
         ];
     }
-
 }

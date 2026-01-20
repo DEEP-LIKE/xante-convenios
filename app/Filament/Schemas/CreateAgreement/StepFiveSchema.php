@@ -4,7 +4,6 @@ namespace App\Filament\Schemas\CreateAgreement;
 
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Section;
 use Illuminate\Support\HtmlString;
 
 class StepFiveSchema
@@ -23,9 +22,10 @@ class StepFiveSchema
                         $agreementId = $page->agreementId ?? request()->get('agreement');
                         $agreement = $agreementId ? \App\Models\Agreement::find($agreementId) : null;
                         $status = $agreement?->validation_status ?? 'not_required';
-                        
+
                         // Resolver el servicio directamente del contenedor
                         $renderer = app(\App\Services\WizardSummaryRenderer::class);
+
                         return new HtmlString(
                             $renderer->renderValidationStatus($status, $agreement?->currentValidation)
                         );

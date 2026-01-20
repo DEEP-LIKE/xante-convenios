@@ -3,9 +3,9 @@
 namespace App\Filament\Schemas\ManageDocuments;
 
 use App\Filament\Pages\ManageDocuments;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Placeholder;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Illuminate\Support\HtmlString;
 
 class StepOneSchema
@@ -23,36 +23,36 @@ class StepOneSchema
                             Placeholder::make('agreement_id')
                                 ->label('ID del Convenio')
                                 ->content($page->agreement->id),
-                                
+
                             Placeholder::make('client_name')
                                 ->label('Cliente Titular')
                                 ->content($page->getClientName()),
-                                
+
                             Placeholder::make('client_email')
                                 ->label('Email del Cliente')
                                 ->content($page->getClientEmail()),
-                                
+
                             Placeholder::make('client_phone')
                                 ->label('Teléfono del Cliente')
                                 ->content($page->getClientPhone()),
-                                
+
                             Placeholder::make('property_address')
                                 ->label('Domicilio de la Propiedad')
                                 ->content($page->getPropertyAddress()),
-                                
+
                             Placeholder::make('documents_count')
                                 ->label('Documentos Generados')
-                                ->content($page->agreement->generatedDocuments->count() . ' PDFs'),
-                        ])
+                                ->content($page->agreement->generatedDocuments->count().' PDFs'),
+                        ]),
                 ]),
-                
+
             Section::make('Documentos Disponibles')
                 ->description('Documentos PDF generados para este convenio')
                 ->icon('heroicon-o-document-text')
                 ->iconColor('success')
                 ->schema($page->getDocumentFields())
                 ->visible($page->agreement->generatedDocuments->isNotEmpty()),
-                
+
             Section::make('Sin Documentos')
                 ->description('No hay documentos generados')
                 ->icon('heroicon-o-exclamation-triangle')
@@ -63,7 +63,7 @@ class StepOneSchema
                         ->content('No se encontraron documentos generados para este convenio. Use el botón "Regenerar Documentos" en la parte superior.'),
                 ])
                 ->visible($page->agreement->generatedDocuments->isEmpty()),
-                
+
             Section::make('Enviar al Cliente')
                 ->description('Enviar documentos por correo electrónico')
                 ->icon('heroicon-o-paper-airplane')
@@ -78,40 +78,41 @@ class StepOneSchema
                                     $clientEmail = $page->getClientEmail();
                                     $docsCount = $page->agreement->generatedDocuments->count();
                                     $propertyAddress = $page->getPropertyAddress();
-                                    
+
                                     return new HtmlString("Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs<br>Propiedad: {$propertyAddress}");
                                 }),
-                                
+
                             Placeholder::make('agreement_summary')
                                 ->label('💰 Datos del Convenio')
                                 ->content(function () use ($page) {
                                     $agreementValue = $page->getAgreementValue();
                                     $community = $page->getPropertyCommunity();
                                     $createdDate = $page->agreement->created_at->format('d/m/Y');
-                                    
+
                                     $content = "Valor: {$agreementValue}<br>Comunidad: {$community}<br>Creado: {$createdDate}";
-                                    
+
                                     if ($page->agreement->documents_sent_at) {
                                         $sentDate = $page->agreement->documents_sent_at->format('Y-m-d H:i:s');
                                         $content .= "<br><span style='color: #10b981; font-weight: 600;'>📧 Enviado: {$sentDate}</span>";
                                     }
-                                    
+
                                     return new HtmlString($content);
                                 }),
                         ]),
-                        
-                        Placeholder::make('sent_info')
-                            ->label('✅ Documentos Enviados')
-                            ->content(function () use ($page) {
-                                $sentDate = $page->agreement->documents_sent_at ? 
-                                    $page->agreement->documents_sent_at->format('d/m/Y H:i') : 
-                                    'Fecha no disponible';
-                                return "Los documentos fueron enviados exitosamente el {$sentDate}";
-                            })
-                            ->visible(fn () => $page->agreement->status === 'documents_sent')
+
+                    Placeholder::make('sent_info')
+                        ->label('✅ Documentos Enviados')
+                        ->content(function () use ($page) {
+                            $sentDate = $page->agreement->documents_sent_at ?
+                                $page->agreement->documents_sent_at->format('d/m/Y H:i') :
+                                'Fecha no disponible';
+
+                            return "Los documentos fueron enviados exitosamente el {$sentDate}";
+                        })
+                        ->visible(fn () => $page->agreement->status === 'documents_sent'),
                 ])
                 ->visible($page->agreement->generatedDocuments->isNotEmpty() && $page->agreement->status !== 'documents_sent'),
-                
+
             Section::make('Documentos Enviados')
                 ->description('Los documentos han sido enviados al cliente exitosamente')
                 ->icon('heroicon-o-check-circle')
@@ -126,15 +127,15 @@ class StepOneSchema
                                     $clientName = $page->getClientName();
                                     $clientEmail = $page->getClientEmail();
                                     $docsCount = $page->agreement->generatedDocuments->count();
-                                    
+
                                     return new HtmlString("✅ Enviado exitosamente el {$sentDate}<br>Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs");
                                 }),
-                                
+
                             Placeholder::make('next_steps')
                                 ->label('📋 Próximos Pasos')
-                                ->content('El cliente debe revisar los documentos y enviar la documentación requerida. Proceda al siguiente paso para gestionar la recepción de documentos del cliente.')
+                                ->content('El cliente debe revisar los documentos y enviar la documentación requerida. Proceda al siguiente paso para gestionar la recepción de documentos del cliente.'),
                         ]),
-                        
+
                     Placeholder::make('resend_button')
                         ->label('')
                         ->content(function () {
@@ -164,7 +165,7 @@ class StepOneSchema
                                     🔄 Reenviar Documentos
                                 </button>
                             </div>');
-                        })
+                        }),
                 ])
                 ->visible($page->agreement->status === 'documents_sent'),
         ];

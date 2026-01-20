@@ -94,14 +94,14 @@ class Proposal extends Model
     {
         $valorConvenio = $this->valor_convenio;
         $gananciaFinal = $this->ganancia_final;
-        
-        if (!$valorConvenio) {
+
+        if (! $valorConvenio) {
             return 'Propuesta sin datos financieros';
         }
 
-        $valorFormateado = '$' . number_format($valorConvenio, 2);
-        $gananciaFormateada = '$' . number_format($gananciaFinal, 2);
-        
+        $valorFormateado = '$'.number_format($valorConvenio, 2);
+        $gananciaFormateada = '$'.number_format($gananciaFinal, 2);
+
         return "Convenio: {$valorFormateado} | Ganancia: {$gananciaFormateada}";
     }
 }

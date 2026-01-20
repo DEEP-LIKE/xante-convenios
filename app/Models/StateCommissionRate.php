@@ -29,6 +29,6 @@ class StateCommissionRate extends Model
      */
     public function getFormattedPercentageAttribute(): string
     {
-        return number_format($this->commission_percentage, 2) . '%';
+        return number_format($this->commission_percentage, 2).'%';
     }
 }

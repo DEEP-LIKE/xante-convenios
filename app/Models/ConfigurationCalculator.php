@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 class ConfigurationCalculator extends Model
 {
     protected $table = 'configurations';
-    
+
     protected $fillable = [
         'key',
         'description',
@@ -19,7 +19,7 @@ class ConfigurationCalculator extends Model
     // Método para obtener el valor parseado según el tipo
     public function getParsedValueAttribute()
     {
-        return match($this->type) {
+        return match ($this->type) {
             'number' => (int) $this->value,
             'decimal' => (float) $this->value,
             'boolean' => (bool) $this->value,
@@ -44,7 +44,7 @@ class ConfigurationCalculator extends Model
             ['key' => $key],
             ['value' => $value]
         );
-        
+
         Cache::forget("config.{$key}");
     }
 

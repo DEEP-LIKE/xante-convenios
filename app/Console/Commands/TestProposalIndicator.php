@@ -2,11 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
+use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\Proposal;
-use App\Models\Agreement;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Console\Command;
 
 class TestProposalIndicator extends Command
 {
@@ -34,6 +33,7 @@ class TestProposalIndicator extends Command
 
         if ($this->option('create-data')) {
             $this->createTestData();
+
             return;
         }
 
@@ -62,17 +62,17 @@ class TestProposalIndicator extends Command
         try {
             $proposalCount = Proposal::count();
             $linkedCount = Proposal::where('linked', true)->count();
-            
-            $this->line("  ✅ Tabla proposals existe");
+
+            $this->line('  ✅ Tabla proposals existe');
             $this->line("  📊 Total propuestas: {$proposalCount}");
             $this->line("  🔗 Propuestas enlazadas: {$linkedCount}");
-            
+
             if ($linkedCount === 0) {
-                $this->warn("  ⚠️ No hay propuestas enlazadas para probar");
-                $this->line("  💡 Ejecuta: php artisan test:proposal-indicator --create-data");
+                $this->warn('  ⚠️ No hay propuestas enlazadas para probar');
+                $this->line('  💡 Ejecuta: php artisan test:proposal-indicator --create-data');
             }
         } catch (\Exception $e) {
-            $this->error("  ❌ Error al verificar tabla proposals: " . $e->getMessage());
+            $this->error('  ❌ Error al verificar tabla proposals: '.$e->getMessage());
         }
         $this->newLine();
     }
@@ -87,22 +87,23 @@ class TestProposalIndicator extends Command
                 ->get();
 
             if ($proposals->isEmpty()) {
-                $this->warn("  ⚠️ No se encontraron propuestas enlazadas");
+                $this->warn('  ⚠️ No se encontraron propuestas enlazadas');
+
                 return;
             }
 
-            $this->line("  📋 Propuestas enlazadas encontradas:");
+            $this->line('  📋 Propuestas enlazadas encontradas:');
             foreach ($proposals as $proposal) {
                 $client = $proposal->client;
                 $valorConvenio = $proposal->valor_convenio ?? 0;
                 $ganancia = $proposal->ganancia_final ?? 0;
-                
+
                 $this->line("    • Cliente: {$client->name} (ID: {$proposal->idxante})");
-                $this->line("      Valor: $" . number_format($valorConvenio, 2) . " | Ganancia: $" . number_format($ganancia, 2));
-                $this->line("      Fecha: " . $proposal->created_at->format('d/m/Y H:i'));
+                $this->line('      Valor: $'.number_format($valorConvenio, 2).' | Ganancia: $'.number_format($ganancia, 2));
+                $this->line('      Fecha: '.$proposal->created_at->format('d/m/Y H:i'));
             }
         } catch (\Exception $e) {
-            $this->error("  ❌ Error al buscar propuestas: " . $e->getMessage());
+            $this->error('  ❌ Error al buscar propuestas: '.$e->getMessage());
         }
         $this->newLine();
     }
@@ -112,9 +113,10 @@ class TestProposalIndicator extends Command
         try {
             // Buscar un cliente con propuesta
             $proposal = Proposal::where('linked', true)->with('client')->first();
-            
-            if (!$proposal) {
-                $this->warn("  ⚠️ No hay propuestas para probar");
+
+            if (! $proposal) {
+                $this->warn('  ⚠️ No hay propuestas para probar');
+
                 return;
             }
 
@@ -123,29 +125,29 @@ class TestProposalIndicator extends Command
 
             // Simular datos del wizard
             $testData = ['client_id' => $client->id];
-            
+
             // Crear instancia temporal del wizard para probar
-            $wizardClass = new \App\Filament\Pages\CreateAgreementWizard();
+            $wizardClass = new \App\Filament\Pages\CreateAgreementWizard;
             $wizardClass->data = $testData;
-            
+
             // Usar reflexión para acceder al método protegido
             $reflection = new \ReflectionClass($wizardClass);
             $method = $reflection->getMethod('hasExistingProposal');
             $method->setAccessible(true);
-            
+
             $result = $method->invoke($wizardClass);
-            
+
             if ($result) {
-                $this->line("  ✅ Método hasExistingProposal() funciona correctamente");
-                $this->line("    📅 Fecha: " . $result['created_at']->format('d/m/Y H:i'));
-                $this->line("    💰 Valor: $" . number_format($result['valor_convenio'], 2));
-                $this->line("    💵 Ganancia: $" . number_format($result['ganancia_final'], 2));
+                $this->line('  ✅ Método hasExistingProposal() funciona correctamente');
+                $this->line('    📅 Fecha: '.$result['created_at']->format('d/m/Y H:i'));
+                $this->line('    💰 Valor: $'.number_format($result['valor_convenio'], 2));
+                $this->line('    💵 Ganancia: $'.number_format($result['ganancia_final'], 2));
             } else {
-                $this->error("  ❌ Método no detectó la propuesta existente");
+                $this->error('  ❌ Método no detectó la propuesta existente');
             }
-            
+
         } catch (\Exception $e) {
-            $this->error("  ❌ Error al probar método: " . $e->getMessage());
+            $this->error('  ❌ Error al probar método: '.$e->getMessage());
         }
         $this->newLine();
     }
@@ -153,22 +155,22 @@ class TestProposalIndicator extends Command
     private function checkWizardUrls()
     {
         try {
-            $this->line("  🌐 URLs importantes del sistema:");
-            $this->line("    • Calculadora Previa: /admin/quote-calculator");
-            $this->line("    • Crear Convenio: /admin/convenios/crear");
-            $this->line("    • Lista Convenios: /admin/wizard");
-            
+            $this->line('  🌐 URLs importantes del sistema:');
+            $this->line('    • Calculadora Previa: /admin/quote-calculator');
+            $this->line('    • Crear Convenio: /admin/convenios/crear');
+            $this->line('    • Lista Convenios: /admin/wizard');
+
             // Verificar si hay agreements para probar
             $agreementCount = Agreement::count();
             $this->line("  📊 Convenios existentes: {$agreementCount}");
-            
+
             if ($agreementCount > 0) {
                 $agreement = Agreement::latest()->first();
                 $this->line("    • Último convenio: /admin/convenios/crear?agreement={$agreement->id}");
             }
-            
+
         } catch (\Exception $e) {
-            $this->error("  ❌ Error al verificar URLs: " . $e->getMessage());
+            $this->error('  ❌ Error al verificar URLs: '.$e->getMessage());
         }
         $this->newLine();
     }
@@ -176,17 +178,17 @@ class TestProposalIndicator extends Command
     private function createTestData()
     {
         $this->info('🏗️ Creando datos de prueba...');
-        
+
         try {
             // Crear cliente de prueba
             $client = Client::firstOrCreate([
-                'xante_id' => 'TEST001'
+                'xante_id' => 'TEST001',
             ], [
                 'name' => 'Cliente Prueba Indicador',
                 'email' => 'test.indicador@example.com',
                 'phone' => '1234567890',
                 'holder_name' => 'Cliente Prueba',
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
             $this->line("  ✅ Cliente creado: {$client->name} (ID: {$client->xante_id})");
@@ -199,19 +201,19 @@ class TestProposalIndicator extends Command
                 'enganche' => 50000,
                 'financiamiento' => 450000,
                 'plazo_meses' => 24,
-                'mensualidad' => 18750
+                'mensualidad' => 18750,
             ];
 
             $proposal = Proposal::updateOrCreate([
                 'idxante' => $client->xante_id,
-                'linked' => true
+                'linked' => true,
             ], [
                 'client_id' => $client->id,
                 'data' => $proposalData,
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
-            $this->line("  ✅ Propuesta creada con valor: $" . number_format($proposalData['valor_convenio'], 2));
+            $this->line('  ✅ Propuesta creada con valor: $'.number_format($proposalData['valor_convenio'], 2));
 
             // Crear agreement de prueba
             $agreement = Agreement::create([
@@ -219,7 +221,7 @@ class TestProposalIndicator extends Command
                 'status' => 'draft',
                 'current_step' => 1,
                 'wizard_data' => ['client_id' => $client->id],
-                'created_by' => 1
+                'created_by' => 1,
             ]);
 
             $this->line("  ✅ Convenio de prueba creado (ID: {$agreement->id})");
@@ -228,11 +230,11 @@ class TestProposalIndicator extends Command
             $this->info('🎯 Datos de prueba creados exitosamente!');
             $this->info('📋 Para probar el indicador:');
             $this->line("  1. Ve a: /admin/convenios/crear?agreement={$agreement->id}");
-            $this->line("  2. Navega hasta el Paso 4 (Calculadora)");
-            $this->line("  3. Deberías ver el indicador amarillo con los datos precargados");
-            
+            $this->line('  2. Navega hasta el Paso 4 (Calculadora)');
+            $this->line('  3. Deberías ver el indicador amarillo con los datos precargados');
+
         } catch (\Exception $e) {
-            $this->error('❌ Error al crear datos de prueba: ' . $e->getMessage());
+            $this->error('❌ Error al crear datos de prueba: '.$e->getMessage());
         }
     }
 }

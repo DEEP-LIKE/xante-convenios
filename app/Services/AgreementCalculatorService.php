@@ -6,7 +6,7 @@ use App\Models\ConfigurationCalculator;
 
 /**
  * Servicio compartido para cálculos financieros de convenios y cotizaciones
- * 
+ *
  * Este servicio contiene toda la lógica de cálculo extraída del CreateAgreementWizard
  * para ser reutilizada tanto en el wizard como en la calculadora de cotizaciones.
  */
@@ -38,9 +38,9 @@ class AgreementCalculatorService
 
     /**
      * Calcula todos los valores financieros basados en el valor del convenio
-     * 
-     * @param float $valorConvenio Valor principal del convenio
-     * @param array $parameters Parámetros de cálculo (opcional, usa defaults si no se proporciona)
+     *
+     * @param  float  $valorConvenio  Valor principal del convenio
+     * @param  array  $parameters  Parámetros de cálculo (opcional, usa defaults si no se proporciona)
      * @return array Array con todos los valores calculados
      */
     public function calculateAllFinancials(float $valorConvenio, array $parameters = []): array
@@ -65,7 +65,7 @@ class AgreementCalculatorService
 
         // Realizar cálculos
         $calculations = [];
-        
+
         // 0. Valor Convenio (valor base)
         $calculations['valor_convenio'] = $valorConvenio;
 
@@ -104,8 +104,8 @@ class AgreementCalculatorService
 
     /**
      * Formatea los valores calculados para mostrar en la UI
-     * 
-     * @param array $calculations Resultado de calculateAllFinancials()
+     *
+     * @param  array  $calculations  Resultado de calculateAllFinancials()
      * @return array Array con valores formateados para mostrar
      */
     public function formatCalculationsForUI(array $calculations): array
@@ -143,9 +143,7 @@ class AgreementCalculatorService
 
     /**
      * Valida que los parámetros de entrada sean correctos
-     * 
-     * @param float $valorConvenio
-     * @param array $parameters
+     *
      * @return array Array con errores de validación (vacío si no hay errores)
      */
     public function validateParameters(float $valorConvenio, array $parameters = []): array
@@ -168,8 +166,8 @@ class AgreementCalculatorService
             }
         }
 
-        if (isset($parameters['porcentaje_comision_iva_incluido'])) {
-            $porcentaje = (float) $parameters['porcentaje_comision_iva_incluido'];
+        if (isset($parameters['iva_percentage'])) {
+            $porcentaje = (float) $parameters['iva_percentage'];
             if ($porcentaje < 0 || $porcentaje > 100) {
                 $errors[] = 'El porcentaje de comisión con IVA debe estar entre 0 y 100';
             }
@@ -208,8 +206,8 @@ class AgreementCalculatorService
 
     /**
      * Precarga una propuesta por IDxante del cliente
-     * 
-     * @param string $idxante ID Xante del cliente
+     *
+     * @param  string  $idxante  ID Xante del cliente
      * @return array|null Datos de la propuesta o null si no existe
      */
     public function preloadProposalByIdxante(string $idxante): ?array
@@ -224,8 +222,8 @@ class AgreementCalculatorService
 
     /**
      * Calcula el resumen financiero para mostrar en reportes
-     * 
-     * @param array $calculations Resultado de calculateAllFinancials()
+     *
+     * @param  array  $calculations  Resultado de calculateAllFinancials()
      * @return array Resumen formateado
      */
     public function getFinancialSummary(array $calculations): array
@@ -242,9 +240,9 @@ class AgreementCalculatorService
         $porcentajeGanancia = $valorConvenio > 0 ? ($gananciaFinal / $valorConvenio) * 100 : 0;
 
         return [
-            'valor_convenio_formatted' => '$' . number_format($valorConvenio, 2),
-            'ganancia_final_formatted' => '$' . number_format($gananciaFinal, 2),
-            'comision_total_formatted' => '$' . number_format($comisionTotal, 2),
+            'valor_convenio_formatted' => '$'.number_format($valorConvenio, 2),
+            'ganancia_final_formatted' => '$'.number_format($gananciaFinal, 2),
+            'comision_total_formatted' => '$'.number_format($comisionTotal, 2),
             'porcentaje_ganancia' => round($porcentajeGanancia, 2),
             'es_rentable' => $gananciaFinal > 0,
         ];

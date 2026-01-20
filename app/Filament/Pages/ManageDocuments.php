@@ -2,70 +2,93 @@
 
 namespace App\Filament\Pages;
 
-use Filament\Pages\Page;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Notifications\Notification;
-use Filament\Actions\Action;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
-use Filament\Schemas\Components\Wizard;
-use Filament\Schemas\Components\Wizard\Step;
+use App\Actions\Agreements\GenerateDocumentsZipAction;
+use App\Actions\Agreements\SaveDocumentStepAction;
+use App\Actions\Agreements\SendDocumentsAction;
+use App\Actions\Agreements\SyncClientToHubspotAction;
 use App\Models\Agreement;
-use App\Services\DocumentStateManager;
-use App\Services\DocumentUploadService;
+use App\Services\DocumentComparisonService;
 use App\Services\DocumentEmailService;
 use App\Services\DocumentFileManager;
 use App\Services\DocumentRenderer;
-use App\Services\DocumentComparisonService;
+use App\Services\DocumentStateManager;
+use App\Services\DocumentUploadService;
 use App\Services\PdfGenerationService;
-use App\Actions\Agreements\SendDocumentsAction;
-use App\Actions\Agreements\GenerateDocumentsZipAction;
-use App\Actions\Agreements\MarkAgreementCompletedAction;
-use App\Actions\Agreements\SaveDocumentStepAction;
-use App\Actions\Agreements\SyncClientToHubspotAction;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Wizard;
+use Filament\Schemas\Components\Wizard\Step;
 
-class ManageDocuments extends Page implements HasForms, HasActions
+class ManageDocuments extends Page implements HasActions, HasForms
 {
-    use InteractsWithForms;
     use InteractsWithActions;
+    use InteractsWithForms;
 
     protected $listeners = ['stepChanged' => 'handleStepChange'];
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-check';
+
     protected static ?string $navigationLabel = 'Gestión de Documentos';
+
     protected static ?string $title = 'Gestión de Documentos del Convenio';
+
     protected static ?string $slug = 'manage-documents/{agreement?}';
+
     protected static ?int $navigationSort = 5;
+
     protected static bool $shouldRegisterNavigation = false;
 
     public string $view = 'filament.pages.manage-documents';
 
     public ?Agreement $agreement = null;
+
     public array $data = [];
+
     public ?float $proposal_value = null;
+
     public ?float $final_price_value = null;
+
     public ?string $final_price_justification = null;
 
     // Propiedades para FileUpload con ->live()
     public array $holder_ine = [];
+
     public array $holder_curp = [];
+
     public array $holder_fiscal_status = [];
+
     public array $holder_proof_address_home = [];
+
     public array $holder_proof_address_titular = [];
+
     public array $holder_birth_certificate = [];
+
     public array $holder_marriage_certificate = [];
+
     public array $holder_bank_statement = [];
+
     public array $property_notarial_instrument = [];
+
     public array $property_tax_receipt = [];
+
     public array $property_water_receipt = [];
+
     public array $property_cfe_receipt = [];
-    
+
     public int $currentStep = 1;
+
     public int $totalSteps = 3;
+
     public array $processingDeletions = [];
+
     public bool $isDeletingDocuments = false;
+
     public bool $documents_validated = false;
 
     // ========================================
@@ -73,10 +96,15 @@ class ManageDocuments extends Page implements HasForms, HasActions
     // ========================================
 
     protected DocumentStateManager $stateManager;
+
     protected DocumentUploadService $uploadService;
+
     protected DocumentEmailService $emailService;
+
     protected DocumentFileManager $fileManager;
+
     protected DocumentRenderer $renderer;
+
     protected DocumentComparisonService $comparisonService;
 
     /**
@@ -127,23 +155,23 @@ class ManageDocuments extends Page implements HasForms, HasActions
 
         // Cargar documentos existentes
         $existingDocuments = $this->uploadService->loadDocuments($this->agreement);
-        
+
         if ($this->agreement->proposal_value) {
             $existingDocuments['proposal_value'] = $this->agreement->proposal_value;
             $this->proposal_value = $this->agreement->proposal_value;
         }
-        
-        if (!empty($existingDocuments)) {
+
+        if (! empty($existingDocuments)) {
             $this->form->fill($existingDocuments);
-            
+
             Notification::make()
                 ->title('Documentos Cargados')
-                ->body("Se han recuperado " . count($existingDocuments) . " documentos previamente subidos")
+                ->body('Se han recuperado '.count($existingDocuments).' documentos previamente subidos')
                 ->success()
                 ->duration(4000)
                 ->send();
         }
-        
+
         $this->documents_validated = $this->agreement->status === 'completed';
         $this->stateManager->showStatusNotification($this->agreement);
     }
@@ -184,9 +212,9 @@ class ManageDocuments extends Page implements HasForms, HasActions
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema($this->getStepOneSchema())
                         ->afterValidation(function () {
-                            if ($this->agreement->status !== 'documents_sent' && !$this->agreement->documents_sent_at) {
+                            if ($this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
                                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
-                                
+
                                 Notification::make()
                                     ->title('✅ Documentos Enviados')
                                     ->body('Los documentos han sido enviados exitosamente al cliente y al asesor.')
@@ -194,7 +222,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                     ->duration(5000)
                                     ->send();
                             }
-                            
+
                             // Sincronizar datos básicos del cliente (Wizard 1) con HubSpot
                             // Esto asegura que Nombre, Teléfono, Email, etc. se actualicen si se modificaron
                             try {
@@ -213,15 +241,15 @@ class ManageDocuments extends Page implements HasForms, HasActions
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema($this->getStepTwoSchema())
                         ->afterValidation(function () {
-                            if (!$this->agreement->documents_received_at) {
+                            if (! $this->agreement->documents_received_at) {
                                 $this->agreement->update([
                                     'status' => 'completed',
                                     'documents_received_at' => now(),
                                     'completion_percentage' => 100,
                                 ]);
-                                
+
                                 $this->emailService->sendDocumentsReceivedConfirmation($this->agreement);
-                                
+
                                 Notification::make()
                                     ->title('🎉 Convenio Completado')
                                     ->body('El convenio ha sido marcado como exitoso y se ha enviado la confirmación por correo.')
@@ -233,28 +261,28 @@ class ManageDocuments extends Page implements HasForms, HasActions
                                 try {
                                     $syncAction = app(SyncClientToHubspotAction::class);
                                     $syncAction->execute($this->agreement, $this->agreement->wizard_data ?? []);
-                                    
+
                                     // Sincronización Fase 2: Actualizar 'nombre_inmueble'
                                     if ($this->agreement->client && $this->agreement->client->hubspot_deal_id) {
                                         $hubspotDealId = $this->agreement->client->hubspot_deal_id;
                                         $xanteId = $this->agreement->client->xante_id;
-                                        
+
                                         if ($hubspotDealId && $xanteId) {
                                             // Lógica idempotente: Solo agregar XA- si no lo tiene
-                                            $nombreInmueble = str_starts_with($xanteId, 'XA-') 
-                                                ? $xanteId 
+                                            $nombreInmueble = str_starts_with($xanteId, 'XA-')
+                                                ? $xanteId
                                                 : $xanteId;
-                                            
+
                                             $hubspotService = app(\App\Services\HubspotSyncService::class);
-                                            
+
                                             // Actualizar Deal
                                             $hubspotService->updateHubspotDeal($hubspotDealId, [
-                                                'nombre_inmueble' => $nombreInmueble
+                                                'nombre_inmueble' => $nombreInmueble,
                                             ]);
-                                            
+
                                             \Log::info('Nombre inmueble actualizado en HubSpot', [
                                                 'deal_id' => $hubspotDealId,
-                                                'nombre_inmueble' => $nombreInmueble
+                                                'nombre_inmueble' => $nombreInmueble,
                                             ]);
                                         }
                                     }
@@ -276,11 +304,11 @@ class ManageDocuments extends Page implements HasForms, HasActions
                             $this->saveStepData(3);
                         }),
                 ])
-                ->nextAction(fn (Action $action) => $this->customizeNextActionForStep2($action))
-                ->previousAction(fn (Action $action) => $action->label('Anterior'))
-                ->startOnStep($this->currentStep)
-                ->skippable(false)
-                ->persistStepInQueryString(),
+                    ->nextAction(fn (Action $action) => $this->customizeNextActionForStep2($action))
+                    ->previousAction(fn (Action $action) => $action->label('Anterior'))
+                    ->startOnStep($this->currentStep)
+                    ->skippable(false)
+                    ->persistStepInQueryString(),
             ];
         }
 
@@ -295,7 +323,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
     {
         return \App\Filament\Schemas\ManageDocuments\StepOneSchema::make($this);
     }
-    
+
     private function getStepTwoSchema(): array
     {
         return \App\Filament\Schemas\ManageDocuments\StepTwoSchema::make($this);
@@ -306,7 +334,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         if ($this->agreement && $this->agreement->status !== 'completed') {
             $this->agreement->update([
                 'status' => 'completed',
-                'completed_at' => now()
+                'completed_at' => now(),
             ]);
         }
 
@@ -338,9 +366,10 @@ class ManageDocuments extends Page implements HasForms, HasActions
                             ->info()
                             ->duration(3000)
                             ->send();
+
                         return;
                     }
-                    
+
                     Notification::make()
                         ->title('📤 Enviando Confirmación...')
                         ->body('Enviando confirmación de documentos recibidos...')
@@ -349,7 +378,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                         ->send();
                 });
         }
-        
+
         return $action->label('Siguiente');
     }
 
@@ -358,14 +387,14 @@ class ManageDocuments extends Page implements HasForms, HasActions
         \Log::info('Step change detected', [
             'old_step' => $oldStep,
             'new_step' => $newStep,
-            'agreement_id' => $this->agreement->id
+            'agreement_id' => $this->agreement->id,
         ]);
-        
+
         // Paso 1 -> 2: Enviar documentos
-        if ($oldStep === 1 && $newStep === 2 && $this->agreement->status !== 'documents_sent' && !$this->agreement->documents_sent_at) {
+        if ($oldStep === 1 && $newStep === 2 && $this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
             try {
                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
-                
+
                 Notification::make()
                     ->title('✅ Documentos Enviados')
                     ->body('Los documentos han sido enviados exitosamente.')
@@ -375,24 +404,24 @@ class ManageDocuments extends Page implements HasForms, HasActions
             } catch (\Exception $e) {
                 Notification::make()
                     ->title('❌ Error al Enviar Documentos')
-                    ->body('Error: ' . $e->getMessage())
+                    ->body('Error: '.$e->getMessage())
                     ->danger()
                     ->duration(7000)
                     ->send();
             }
         }
-        
+
         // Paso 2 -> 3: Completar convenio
-        if ($oldStep === 2 && $newStep === 3 && !$this->agreement->documents_received_at) {
+        if ($oldStep === 2 && $newStep === 3 && ! $this->agreement->documents_received_at) {
             try {
                 $this->agreement->update([
                     'status' => 'completed',
                     'documents_received_at' => now(),
                     'completion_percentage' => 100,
                 ]);
-                
+
                 $this->emailService->sendDocumentsReceivedConfirmation($this->agreement);
-                
+
                 Notification::make()
                     ->title('🎉 Convenio Completado')
                     ->body('El convenio ha sido marcado como exitoso.')
@@ -402,7 +431,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
             } catch (\Exception $e) {
                 Notification::make()
                     ->title('❌ Error al Completar Convenio')
-                    ->body('Error: ' . $e->getMessage())
+                    ->body('Error: '.$e->getMessage())
                     ->danger()
                     ->duration(7000)
                     ->send();
@@ -413,7 +442,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public function saveStepData(int $step): void
     {
         try {
-            if (!$this->agreement) {
+            if (! $this->agreement) {
                 return;
             }
 
@@ -422,16 +451,16 @@ class ManageDocuments extends Page implements HasForms, HasActions
             } catch (\Exception $e) {
                 $formData = $this->data ?? [];
             }
-            
+
             $this->data = array_merge($this->data ?? [], $formData);
-            
-            $action = new SaveDocumentStepAction();
+
+            $action = new SaveDocumentStepAction;
             $action->execute($this->agreement, $step, $this->data);
 
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Error inesperado')
-                ->body('Error en saveStepData: ' . $e->getMessage())
+                ->body('Error en saveStepData: '.$e->getMessage())
                 ->danger()
                 ->duration(8000)
                 ->send();
@@ -466,10 +495,10 @@ class ManageDocuments extends Page implements HasForms, HasActions
         try {
             $advisor = auth()->user();
             $clientEmail = $this->emailService->getClientEmail($this->agreement);
-            
+
             Notification::make()
                 ->title('📤 Enviando Documentos...')
-                ->body("Iniciando proceso de envío...")
+                ->body('Iniciando proceso de envío...')
                 ->info()
                 ->duration(3000)
                 ->send();
@@ -488,7 +517,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         } catch (\Exception $e) {
             \Log::error('Error sending documents to client', [
                 'agreement_id' => $this->agreement->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             Notification::make()
@@ -545,7 +574,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         $wizardData = $this->agreement->wizard_data ?? [];
         $holderPhone = $wizardData['holder_phone'] ?? null;
 
-        if (!$holderPhone && $this->agreement->client) {
+        if (! $holderPhone && $this->agreement->client) {
             $holderPhone = $this->agreement->client->phone;
         }
 
@@ -555,12 +584,14 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public function getPropertyAddress(): string
     {
         $wizardData = $this->agreement->wizard_data ?? [];
+
         return $wizardData['domicilio_convenio'] ?? 'No disponible';
     }
 
     public function getPropertyCommunity(): string
     {
         $wizardData = $this->agreement->wizard_data ?? [];
+
         return $wizardData['comunidad'] ?? 'No disponible';
     }
 
@@ -570,7 +601,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         $value = $wizardData['valor_convenio'] ?? null;
 
         if ($value) {
-            return '$' . number_format($value, 2);
+            return '$'.number_format($value, 2);
         }
 
         return 'No disponible';
@@ -579,8 +610,6 @@ class ManageDocuments extends Page implements HasForms, HasActions
     // ========================================
     // ACTION METHODS
     // ========================================
-
-
 
     public function returnToHome()
     {
@@ -596,7 +625,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public function downloadUpdatedChecklist()
     {
         try {
-            if (!$this->agreement) {
+            if (! $this->agreement) {
                 throw new \Exception('No se encontró el convenio');
             }
 
@@ -607,7 +636,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
             $pdfService = app(PdfGenerationService::class);
             $pdf = $pdfService->generateChecklist($this->agreement, $uploadedDocuments, true);
 
-            $fileName = 'checklist_actualizado_' . $this->agreement->id . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+            $fileName = 'checklist_actualizado_'.$this->agreement->id.'_'.now()->format('Y-m-d_H-i-s').'.pdf';
 
             Notification::make()
                 ->title('📋 Lista Actualizada Generada')
@@ -617,7 +646,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->send();
 
             return response()->streamDownload(
-                fn() => print($pdf->output()),
+                fn () => print ($pdf->output()),
                 $fileName,
                 ['Content-Type' => 'application/pdf']
             );
@@ -625,7 +654,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         } catch (\Exception $e) {
             Notification::make()
                 ->title('❌ Error al Generar')
-                ->body('No se pudo generar el checklist: ' . $e->getMessage())
+                ->body('No se pudo generar el checklist: '.$e->getMessage())
                 ->danger()
                 ->duration(6000)
                 ->send();
@@ -636,7 +665,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
     {
         try {
             $proposalValue = $this->proposal_value;
-            
+
             if (is_null($proposalValue)) {
                 $formData = $this->form->getRawState();
                 $proposalValue = $formData['proposal_value'] ?? null;
@@ -648,6 +677,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     ->body('Debe ingresar un valor válido antes de guardar.')
                     ->danger()
                     ->send();
+
                 return;
             }
 
@@ -681,7 +711,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         } catch (\Exception $e) {
             Notification::make()
                 ->title('❌ Error al Guardar')
-                ->body('Ocurrió un error: ' . $e->getMessage())
+                ->body('Ocurrió un error: '.$e->getMessage())
                 ->danger()
                 ->duration(7000)
                 ->send();
@@ -698,6 +728,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     ->body('Debe ingresar un precio final válido.')
                     ->danger()
                     ->send();
+
                 return;
             }
 
@@ -708,6 +739,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     ->body('Debe proporcionar una justificación para el precio final.')
                     ->danger()
                     ->send();
+
                 return;
             }
 
@@ -722,6 +754,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     ->body('Ya existe una solicitud de autorización pendiente.')
                     ->warning()
                     ->send();
+
                 return;
             }
 
@@ -757,7 +790,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
         } catch (\Exception $e) {
             Notification::make()
                 ->title('❌ Error al Enviar Solicitud')
-                ->body('Ocurrió un error: ' . $e->getMessage())
+                ->body('Ocurrió un error: '.$e->getMessage())
                 ->danger()
                 ->duration(7000)
                 ->send();
@@ -767,7 +800,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
     public function getDocumentFields(): array
     {
         $documentComponents = [];
-        
+
         foreach ($this->agreement->generatedDocuments as $document) {
             $documentComponents[] = \Filament\Forms\Components\Placeholder::make("document_{$document->id}")
                 ->label($document->document_name ?? $document->document_type)
@@ -775,7 +808,7 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     $downloadUrl = route('documents.download', ['document' => $document->id]);
                     $fileName = $document->file_name ?? basename($document->file_path);
                     $fileSize = $document->formatted_size ?? 'N/A';
-                    
+
                     return new \Illuminate\Support\HtmlString("
                         <div style='display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; transition: background-color 0.2s;' onmouseover='this.style.background=\"#f3f4f6\"' onmouseout='this.style.background=\"#f9fafb\"'>
                             <div style='flex: 1; min-width: 0; padding-right: 16px;'>
@@ -796,11 +829,11 @@ class ManageDocuments extends Page implements HasForms, HasActions
                     ");
                 });
         }
-        
+
         // Envolver en un Grid de 2 columnas
         return [
             \Filament\Schemas\Components\Grid::make(2)
-                ->schema($documentComponents)
+                ->schema($documentComponents),
         ];
     }
 
@@ -816,47 +849,47 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->toArray();
 
             // Generar el PDF del checklist con los documentos marcados
-            $pdfService = new PdfGenerationService();
-            
+            $pdfService = new PdfGenerationService;
+
             // Preparar los datos para el template
             $wizardData = $this->agreement->wizard_data ?? [];
             $templateData = $pdfService->prepareTemplateData($this->agreement);
-            
+
             // Agregar información de documentos subidos
             $templateData['uploadedDocuments'] = $uploadedDocuments;
             $templateData['isUpdated'] = true; // Indica que es la versión actualizada
-            
+
             // Generar el PDF
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
                 'pdfs.templates.checklist_expediente',
                 $templateData
             );
-            
+
             $pdf->setPaper('letter', 'portrait');
-            
+
             // Nombre del archivo
-            $fileName = 'checklist_expediente_actualizado_' . $this->agreement->id . '_' . now()->format('Ymd') . '.pdf';
-            
+            $fileName = 'checklist_expediente_actualizado_'.$this->agreement->id.'_'.now()->format('Ymd').'.pdf';
+
             // Descargar el PDF
             return response()->streamDownload(function () use ($pdf) {
                 echo $pdf->output();
             }, $fileName, [
                 'Content-Type' => 'application/pdf',
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error generating updated checklist', [
                 'agreement_id' => $this->agreement->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             Notification::make()
                 ->title('Error al generar checklist')
-                ->body('No se pudo generar el checklist actualizado: ' . $e->getMessage())
+                ->body('No se pudo generar el checklist actualizado: '.$e->getMessage())
                 ->danger()
                 ->send();
-                
+
             return null;
         }
     }
@@ -873,13 +906,13 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->body('Preparando todos los documentos para descarga...')
                 ->info()
                 ->send();
-            
-            $zipAction = new GenerateDocumentsZipAction();
+
+            $zipAction = new GenerateDocumentsZipAction;
             $zipPath = $zipAction->execute($this->agreement);
-            
+
             // Nombre del archivo para descarga
-            $downloadName = 'convenio_' . $this->agreement->id . '_documentos_completos.zip';
-            
+            $downloadName = 'convenio_'.$this->agreement->id.'_documentos_completos.zip';
+
             // Notificar éxito
             Notification::make()
                 ->title('✅ ZIP Generado')
@@ -887,23 +920,23 @@ class ManageDocuments extends Page implements HasForms, HasActions
                 ->success()
                 ->duration(3000)
                 ->send();
-            
+
             // Descargar y luego eliminar el archivo temporal
             return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error downloading all documents', [
                 'agreement_id' => $this->agreement->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             Notification::make()
                 ->title('❌ Error al descargar documentos')
-                ->body('No se pudieron descargar los documentos: ' . $e->getMessage())
+                ->body('No se pudieron descargar los documentos: '.$e->getMessage())
                 ->danger()
                 ->send();
-                
+
             return null;
         }
     }

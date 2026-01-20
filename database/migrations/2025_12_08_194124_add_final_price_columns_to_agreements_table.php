@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('final_price_authorization_id')
                 ->nullable()
                 ->after('can_generate_documents');
-            
+
             $table->decimal('final_offer_price', 15, 2)
                 ->nullable()
                 ->after('final_price_authorization_id');

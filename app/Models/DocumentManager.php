@@ -53,7 +53,7 @@ class DocumentManager extends Model
         'titular_acta_nacimiento' => 'Acta de Nacimiento Titular',
         'titular_acta_matrimonio' => 'Acta de Matrimonio',
         'titular_estado_cuenta' => 'Estado de Cuenta Titular',
-        
+
         // Documentos del Cónyuge
         'conyuge_ine' => 'INE Cónyuge',
         'conyuge_curp' => 'CURP Cónyuge',
@@ -61,14 +61,14 @@ class DocumentManager extends Model
         'conyuge_comprobante_domicilio' => 'Comprobante Domicilio Cónyuge',
         'conyuge_acta_nacimiento' => 'Acta de Nacimiento Cónyuge',
         'conyuge_estado_cuenta' => 'Estado de Cuenta Cónyuge',
-        
+
         // Documentos de la Propiedad
         'propiedad_instrumento_notarial' => 'Instrumento Notarial',
         'propiedad_traslado_dominio' => 'Traslado de Dominio',
         'propiedad_recibo_predial' => 'Recibo Predial',
         'propiedad_recibo_agua' => 'Recibo de Agua',
         'propiedad_recibo_cfe' => 'Recibo CFE',
-        
+
         // Otros documentos
         'otros_referencias_comerciales' => 'Referencias Comerciales',
         'otros_referencias_personales' => 'Referencias Personales',
@@ -162,7 +162,7 @@ class DocumentManager extends Model
 
     public function getFileUrl(): ?string
     {
-        if (!$this->file_path) {
+        if (! $this->file_path) {
             return null;
         }
 
@@ -172,15 +172,15 @@ class DocumentManager extends Model
     public function getFileSizeFormatted(): string
     {
         $bytes = $this->file_size;
-        
+
         if ($bytes >= 1073741824) {
-            return number_format($bytes / 1073741824, 2) . ' GB';
+            return number_format($bytes / 1073741824, 2).' GB';
         } elseif ($bytes >= 1048576) {
-            return number_format($bytes / 1048576, 2) . ' MB';
+            return number_format($bytes / 1048576, 2).' MB';
         } elseif ($bytes >= 1024) {
-            return number_format($bytes / 1024, 2) . ' KB';
+            return number_format($bytes / 1024, 2).' KB';
         } else {
-            return $bytes . ' bytes';
+            return $bytes.' bytes';
         }
     }
 
@@ -226,7 +226,7 @@ class DocumentManager extends Model
         if ($this->file_path && Storage::exists($this->file_path)) {
             return Storage::delete($this->file_path);
         }
-        
+
         return true;
     }
 }

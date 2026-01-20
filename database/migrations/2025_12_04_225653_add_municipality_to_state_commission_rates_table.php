@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -26,14 +26,14 @@ return new class extends Migration
 
         // Crear nuevo unique constraint compuesto
         Schema::table('state_commission_rates', function (Blueprint $table) {
-            $table->unique(['state_code', 'municipality'], 'state_municipality_unique');
+            $table->unique(['state_code', 'municipality'], 'state_commission_rates_state_municipality_unique');
         });
     }
 
     public function down(): void
     {
         Schema::table('state_commission_rates', function (Blueprint $table) {
-            $table->dropUnique('state_municipality_unique');
+            $table->dropUnique('state_commission_rates_state_municipality_unique');
             $table->dropColumn('municipality');
             $table->unique('state_code');
         });

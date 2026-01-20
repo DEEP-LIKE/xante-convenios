@@ -8,23 +8,24 @@ use Illuminate\Support\Facades\Log;
 
 class SaveWizardStepAction
 {
-    public function execute(?int $agreementId, int $step, array $data, callable $updateClientData = null): array
+    public function execute(?int $agreementId, int $step, array $data, ?callable $updateClientData = null): array
     {
         try {
             // Si no hay agreementId, crear un nuevo Agreement
-            if (!$agreementId) {
+            if (! $agreementId) {
                 $clientId = $data['client_id'] ?? null;
-                
-                if (!$clientId) {
+
+                if (! $clientId) {
                     Notification::make()
                         ->title('Error de guardado')
                         ->body('Debe seleccionar un cliente antes de continuar.')
                         ->danger()
                         ->duration(5000)
                         ->send();
+
                     return ['success' => false, 'agreementId' => null];
                 }
-                
+
                 // Crear nuevo Agreement
                 $agreement = Agreement::create([
                     'client_id' => $clientId,
@@ -34,24 +35,25 @@ class SaveWizardStepAction
                     'wizard_data' => $data,
                     'created_by' => auth()->id() ?? 1,
                 ]);
-                
+
                 $agreementId = $agreement->id;
-                
+
                 Log::info('Nuevo Agreement creado desde wizard', [
                     'agreement_id' => $agreementId,
                     'client_id' => $clientId,
-                    'step' => $step
+                    'step' => $step,
                 ]);
             } else {
                 $agreement = Agreement::find($agreementId);
 
-                if (!$agreement) {
+                if (! $agreement) {
                     Notification::make()
                         ->title('Error de guardado')
                         ->body('No se encontró el convenio en la base de datos.')
                         ->danger()
                         ->duration(5000)
                         ->send();
+
                     return ['success' => false, 'agreementId' => null];
                 }
             }
@@ -66,20 +68,22 @@ class SaveWizardStepAction
             } catch (\Exception $e) {
                 Notification::make()
                     ->title('⚠️ Error de guardado')
-                    ->body('Error al guardar en BD: ' . $e->getMessage())
+                    ->body('Error al guardar en BD: '.$e->getMessage())
                     ->danger()
                     ->duration(8000)
                     ->send();
+
                 return ['success' => false, 'agreementId' => $agreementId];
             }
 
-            if (!$updated) {
+            if (! $updated) {
                 Notification::make()
                     ->title('Error de guardado')
                     ->body('No se pudieron guardar los datos. Por favor, intente nuevamente.')
                     ->danger()
                     ->duration(5000)
                     ->send();
+
                 return ['success' => false, 'agreementId' => $agreementId];
             }
 
@@ -101,7 +105,7 @@ class SaveWizardStepAction
                 $stepName = $stepNames[$completedStep] ?? "Paso #{$completedStep}";
 
                 Notification::make()
-                    ->title("Guardando")
+                    ->title('Guardando')
                     ->body("Se ha guardado el paso: {$stepName}")
                     ->icon('heroicon-o-server')
                     ->success()
@@ -119,10 +123,11 @@ class SaveWizardStepAction
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Error inesperado')
-                ->body('Ocurrió un error al guardar: ' . $e->getMessage())
+                ->body('Ocurrió un error al guardar: '.$e->getMessage())
                 ->danger()
                 ->duration(8000)
                 ->send();
+
             return ['success' => false, 'agreementId' => null];
         }
     }

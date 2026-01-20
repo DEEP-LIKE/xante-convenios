@@ -2,37 +2,59 @@
 
 namespace App\Services;
 
-use App\Models\Client;
+use App\Actions\Hubspot\Http\FetchDealsFromHubspot;
+use App\Actions\Hubspot\Sync\ProcessDealAction;
 use App\Models\Agreement;
+use App\Models\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 class HubspotSyncService
 {
     private string $token;
+
     private string $baseUrl;
+
     private array $config;
 
-    public function __construct()
-    {
+    public function __construct(
+        private FetchDealsFromHubspot $fetchDeals,
+        private ProcessDealAction $processDeal,
+    ) {
         $this->token = config('hubspot.token');
         $this->baseUrl = config('hubspot.api_base_url');
         $this->config = config('hubspot');
-        
-        if (!$this->token) {
+
+        if (! $this->token) {
             throw new \Exception('HubSpot token no configurado');
         }
     }
 
     /**
      * Sincronizar clientes desde HubSpot Deals
+     *
+     * Obtiene deals con estatus "Aceptado" desde HubSpot y sincroniza los clientes
+     * asociados en la base de datos local. Soporta paginación y límites de tiempo.
+     *
+     * @param  int|null  $maxPages  Número máximo de páginas a procesar (null = sin límite)
+     * @param  int|null  $timeLimit  Tiempo máximo de ejecución en segundos (null = sin límite)
+     * @return array{
+     *     total_deals: int,
+     *     new_clients: int,
+     *     updated_clients: int,
+     *     skipped: int,
+     *     errors: int,
+     *     processed_pages: int,
+     *     time_limited: bool,
+     *     max_pages_reached: bool
+     * } Estadísticas de la sincronización
+     *
+     * @throws \Exception Si el token de HubSpot no está configurado
      */
-    public function syncClients(int $maxPages = null, ?int $timeLimit = null): array
+    public function syncClients(?int $maxPages = null, ?int $timeLimit = null): array
     {
         Log::info('Iniciando sincronización de clientes desde Deals HubSpot');
-        
+
         $stats = [
             'total_deals' => 0,
             'new_clients' => 0,
@@ -49,14 +71,14 @@ class HubspotSyncService
         try {
             $hasMore = true;
             $after = null;
-            
+
             while ($hasMore) {
                 // Verificar límite de tiempo (si está configurado)
                 if ($timeLimit && (time() - $startTime) >= $timeLimit) {
                     $stats['time_limited'] = true;
                     Log::info('Sincronización detenida por límite de tiempo', [
                         'time_elapsed' => time() - $startTime,
-                        'time_limit' => $timeLimit
+                        'time_limit' => $timeLimit,
                     ]);
                     break;
                 }
@@ -66,51 +88,57 @@ class HubspotSyncService
                     $stats['max_pages_reached'] = true;
                     Log::info('Sincronización detenida por límite de páginas', [
                         'pages_processed' => $stats['processed_pages'],
-                        'max_pages' => $maxPages
+                        'max_pages' => $maxPages,
                     ]);
                     break;
                 }
 
-                $response = $this->fetchDeals($after);
-                
-                if (!$response['success']) {
+                $response = $this->fetchDeals->execute($after);
+
+                if (! $response['success']) {
                     Log::error('Error fetching deals from HubSpot', $response);
                     $stats['errors']++;
                     break;
                 }
-                
+
                 $data = $response['data'];
                 $deals = $data['results'] ?? [];
                 $stats['total_deals'] += count($deals);
                 $stats['processed_pages']++;
-                
+
                 foreach ($deals as $deal) {
-                    $result = $this->processDeal($deal);
+                    $result = $this->processDeal->execute($deal);
                     $stats[$result]++;
                 }
-                
+
                 // Paginación
                 $hasMore = isset($data['paging']['next']);
                 $after = $data['paging']['next']['after'] ?? null;
-                
+
                 // Rate limiting
                 usleep(100000); // 100ms delay between requests
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Error en sincronización de HubSpot', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             $stats['errors']++;
         }
 
         Log::info('Sincronización completada', $stats);
+
         return $stats;
     }
 
     /**
      * Sincronización rápida (solo primeras páginas)
+     *
+     * Ejecuta una sincronización limitada a 10 páginas y 30 segundos,
+     * útil para actualizaciones frecuentes sin sobrecargar el sistema.
+     *
+     * @return array Estadísticas de la sincronización (ver syncClients)
      */
     public function syncClientsQuick(): array
     {
@@ -119,1044 +147,178 @@ class HubspotSyncService
 
     /**
      * Sincronización por lotes (fragmentos pequeños)
+     *
+     * Ejecuta una sincronización en lotes pequeños para procesamiento gradual.
+     *
+     * @param  int  $batchSize  Número de páginas por lote (default: 5)
+     * @return array Estadísticas de la sincronización (ver syncClients)
      */
     public function syncClientsBatch(int $batchSize = 5): array
     {
         return $this->syncClients(maxPages: $batchSize, timeLimit: 40);
     }
 
+    // ========================================
+    // MÉTODOS DE SINCRONIZACIÓN A HUBSPOT
+    // (No refactorizados - mantienen funcionalidad legacy)
+    // ========================================
+
     /**
-     * Obtener Deals con estatus "Aceptado" desde HubSpot
+     * Sincronizar cliente local a HubSpot
      */
-    private function fetchDeals(?string $after = null): array
+    public function syncClientToHubspot(Client $client, ?Agreement $agreement = null): array
     {
         try {
-            $payload = [
-                'filterGroups' => $this->config['filters']['deal_accepted']['filterGroups'],
-                'properties' => $this->config['deal_sync']['properties'],
-                'limit' => $this->config['sync']['batch_size'],
-                'sorts' => [
-                    [
-                        'propertyName' => 'createdate',
-                        'direction' => 'DESCENDING'
-                    ]
-                ],
-            ];
-            
-            if ($after) {
-                $payload['after'] = $after;
+            // Verificar si el cliente ya tiene un Deal en HubSpot
+            if ($client->hubspot_deal_id) {
+                return $this->updateDealInHubspot($client, $agreement);
             }
 
-            $response = Http::timeout($this->config['sync']['timeout'])
-                ->withHeaders([
-                    'Authorization' => "Bearer {$this->token}",
-                    'Content-Type' => 'application/json',
-                ])
-                ->post($this->baseUrl . $this->config['endpoints']['deals_search'], $payload);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json()
-                ];
-            }
-
-            return [
-                'success' => false,
-                'error' => "HTTP {$response->status()}: {$response->body()}"
-            ];
+            // Crear nuevo Deal en HubSpot
+            return $this->createDealInHubspot($client, $agreement);
 
         } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Obtener contactos desde HubSpot (método legacy para compatibilidad)
-     */
-    private function fetchContacts(?string $after = null): array
-    {
-        try {
-            $params = [
-                'limit' => $this->config['sync']['batch_size'],
-                'properties' => $this->getContactProperties(),
-            ];
-            
-            if ($after) {
-                $params['after'] = $after;
-            }
-
-            $response = Http::timeout($this->config['sync']['timeout'])
-                ->withHeaders([
-                    'Authorization' => "Bearer {$this->token}",
-                    'Content-Type' => 'application/json',
-                ])
-                ->get($this->baseUrl . $this->config['endpoints']['contacts'], $params);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json()
-                ];
-            }
-
-            return [
-                'success' => false,
-                'error' => "HTTP {$response->status()}: {$response->body()}"
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Procesar un contacto individual
-     */
-    private function processContact(array $contact): string
-    {
-        try {
-            $hubspotId = $contact['id'] ?? null;
-            $properties = $contact['properties'] ?? [];
-            
-            if (!$hubspotId) {
-                Log::warning('Contacto sin ID de HubSpot', $contact);
-                return 'skipped';
-            }
-
-            // VALIDACIÓN CRÍTICA: Buscar xante_id en propiedades personalizadas
-            $xanteId = $this->extractXanteId($properties);
-            
-            // REGLA DE ORO: Sin xante_id válido = NO IMPORTAR
-            if (!$xanteId || empty(trim($xanteId))) {
-                Log::info("Contacto {$hubspotId} sin xante_id válido - OMITIDO", [
-                    'hubspot_id' => $hubspotId,
-                    'email' => $properties['email'] ?? null,
-                    'firstname' => $properties['firstname'] ?? null
-                ]);
-                return 'skipped';
-            }
-
-            // Verificar si ya existe el cliente (prioridad: hubspot_id, luego xante_id)
-            $existingClient = Client::where('hubspot_id', $hubspotId)
-                ->orWhere('xante_id', $xanteId)
-                ->first();
-            
-            if ($existingClient) {
-                // Actualizar cliente existente
-                $this->updateExistingClient($existingClient, $properties, $xanteId);
-                return 'updated_clients';
-            } else {
-                // Crear nuevo cliente (solo si tiene xante_id válido)
-                $this->createNewClient($hubspotId, $properties, $xanteId);
-                return 'new_clients';
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error procesando contacto', [
-                'contact' => $contact,
-                'error' => $e->getMessage()
-            ]);
-            return 'errors';
-        }
-    }
-
-    /**
-     * Procesar un Deal individual
-     */
-    private function processDeal(array $deal): string
-    {
-        try {
-            $dealId = $deal['id'];
-            $properties = $deal['properties'] ?? [];
-            
-            // Validar estatus
-            $estatus = $properties['estatus_de_convenio'] ?? null;
-            if ($estatus !== 'Aceptado') {
-                return 'skipped';
-            }
-
-            // Verificar si tiene contactos asociados
-            $numContacts = (int)($properties['num_associated_contacts'] ?? 0);
-            if ($numContacts === 0) {
-                Log::info("Deal {$dealId} sin contactos asociados - OMITIDO", [
-                    'dealname' => $properties['dealname'] ?? 'N/A',
-                    'estatus' => $estatus
-                ]);
-                return 'skipped';
-            }
-
-            // Obtener fecha de creación del Deal
-            $dealCreatedAt = $properties['createdate'] ?? null;
-
-            // Obtener Contact asociado
-            $contact = $this->getContactFromDeal($dealId);
-            if (!$contact) {
-                return 'skipped';
-            }
-
-            $contactProps = $contact['properties'] ?? [];
-            $contactId = $contact['id'] ?? null;
-            
-            // Extraer xante_id del Contact
-            $xanteId = $this->extractXanteId($contactProps);
-            if (!$xanteId) {
-                Log::info("Contact del Deal {$dealId} sin xante_id válido - OMITIDO", [
-                    'contact_id' => $contactId,
-                    'email' => $contactProps['email'] ?? 'N/A',
-                    'dealname' => $properties['dealname'] ?? 'N/A'
-                ]);
-                return 'skipped';
-            }
-
-            // Verificar si cliente existe
-            $existingClient = Client::where('xante_id', $xanteId)
-                ->orWhere('hubspot_id', $contactId)
-                ->first();
-            
-            if ($existingClient) {
-                $this->updateExistingClient($existingClient, $contactProps, $properties, $xanteId, $dealId, $dealCreatedAt);
-                Log::info("Cliente actualizado desde Deal {$dealId}", [
-                    'xante_id' => $xanteId,
-                    'client_id' => $existingClient->id
-                ]);
-                return 'updated_clients';
-            } else {
-                $this->createNewClient($contactId, $contactProps, $properties, $xanteId, $dealId, $dealCreatedAt);
-                Log::info("Cliente creado desde Deal {$dealId}", [
-                    'xante_id' => $xanteId,
-                    'dealname' => $properties['dealname'] ?? 'N/A'
-                ]);
-                return 'new_clients';
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Error procesando Deal', [
-                'deal' => $deal,
-                'error' => $e->getMessage()
-            ]);
-            return 'errors';
-        }
-    }
-
-    /**
-     * Obtener Contact asociado al Deal
-     */
-    private function getContactFromDeal(string $dealId): ?array
-    {
-        try {
-            // 1. Obtener asociaciones
-            $response = Http::timeout($this->config['sync']['timeout'])
-                ->withHeaders([
-                    'Authorization' => "Bearer {$this->token}",
-                ])
-                ->get($this->baseUrl . "/crm/v3/objects/deals/{$dealId}/associations/contacts");
-
-            if (!$response->successful()) {
-                Log::warning("No se pudieron obtener asociaciones del Deal {$dealId}");
-                return null;
-            }
-
-            $associations = $response->json()['results'] ?? [];
-            
-            if (empty($associations)) {
-                Log::info("Deal {$dealId} sin Contact asociado en API");
-                return null;
-            }
-
-            // 2. Obtener ID del primer Contact asociado
-            $contactId = $associations[0]['id'] ?? $associations[0]['toObjectId'] ?? null;
-            
-            if (!$contactId) {
-                Log::warning("Deal {$dealId} tiene asociación pero sin Contact ID válido");
-                return null;
-            }
-
-            // 3. Obtener datos del Contact
-            $contactResponse = Http::timeout($this->config['sync']['timeout'])
-                ->withHeaders([
-                    'Authorization' => "Bearer {$this->token}",
-                ])
-                ->get($this->baseUrl . "/crm/v3/objects/contacts/{$contactId}", [
-                    'properties' => implode(',', array_merge(
-                        ['firstname', 'lastname', 'email', 'phone'],
-                        $this->config['mapping']['custom_properties']
-                    ))
-                ]);
-
-            if ($contactResponse->successful()) {
-                return $contactResponse->json();
-            }
-
-            Log::error("Error obteniendo Contact {$contactId} del Deal {$dealId}");
-            return null;
-
-        } catch (\Exception $e) {
-            Log::error("Excepción obteniendo Contact del Deal {$dealId}", [
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Extraer xante_id de las propiedades (VALIDACIÓN CRÍTICA)
-     */
-    private function extractXanteId(array $properties): ?string
-    {
-        $possibleFields = $this->config['mapping']['custom_properties'];
-        
-        foreach ($possibleFields as $field) {
-            if (isset($properties[$field]) && !empty(trim($properties[$field]))) {
-                $xanteId = trim($properties[$field]);
-                
-                // Validación adicional: debe ser numérico y mayor a 0
-                if (is_numeric($xanteId) && (int)$xanteId > 0) {
-                    return $xanteId;
-                }
-                
-                Log::warning("xante_id inválido encontrado", [
-                    'field' => $field,
-                    'value' => $xanteId,
-                    'hubspot_properties' => array_keys($properties)
-                ]);
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * Crear nuevo cliente
-     */
-    private function createNewClient(string $hubspotId, array $contactProps, array $dealProps, string $xanteId, string $dealId, ?string $dealCreatedAt = null): void
-    {
-        // 1. Mapear datos del Contact
-        $clientData = $this->mapHubspotToClient($contactProps);
-        
-        // 2. Agregar IDs
-        $clientData['hubspot_id'] = $hubspotId;
-        $clientData['hubspot_deal_id'] = $dealId;
-        $clientData['xante_id'] = $xanteId;
-        $clientData['hubspot_synced_at'] = now();
-
-        // 3. Asignar fecha de registro desde el Deal si existe
-        if ($dealCreatedAt) {
-            try {
-                if (is_numeric($dealCreatedAt)) {
-                    $clientData['fecha_registro'] = Carbon::createFromTimestampMs($dealCreatedAt);
-                } else {
-                    $clientData['fecha_registro'] = Carbon::parse($dealCreatedAt);
-                }
-            } catch (\Exception $e) {
-                Log::warning("Error parseando fecha de creación del Deal: {$dealCreatedAt}");
-            }
-        }
-
-        // 4. Mapear datos adicionales del Deal
-        $clientData = array_merge($clientData, $this->mapDealToClient($dealProps));
-
-        $client = Client::create($clientData);
-        
-        // 5. Sincronizar datos del cónyuge si existen
-        $this->syncSpouseData($client, $dealProps);
-        
-        Log::info('Cliente creado desde HubSpot', [
-            'xante_id' => $xanteId,
-            'hubspot_id' => $hubspotId,
-            'deal_id' => $dealId,
-            'mapped_fields' => array_keys($clientData)
-        ]);
-
-        // 6. Sincronizar datos del convenio (Propiedad y Financieros)
-        // DESHABILITADO POR SOLICITUD DEL USUARIO: Solo sincronizar clientes
-        // $this->syncAgreementData($client, $dealProps);
-    }
-
-    /**
-     * Actualizar cliente existente
-     */
-    private function updateExistingClient(Client $client, array $contactProps, array $dealProps, string $xanteId, string $dealId, ?string $dealCreatedAt = null): void
-    {
-        // --- PROTECCIÓN CONTRA RACE CONDITIONS ---
-        // Verificar fecha de modificación para evitar sobrescribir datos locales más recientes
-        $hsLastModified = $contactProps['lastmodifieddate'] ?? null;
-        
-        if ($hsLastModified && $client->updated_at) {
-            try {
-                // HubSpot devuelve timestamp en milisegundos o ISO8601
-                $hsDate = is_numeric($hsLastModified) 
-                    ? Carbon::createFromTimestampMs($hsLastModified) 
-                    : Carbon::parse($hsLastModified);
-
-                // Si la modificación local es más reciente que la de HubSpot (con margen de 2 min por relojes)
-                // ENTONCES: No sobrescribimos datos del cliente (nombre, email, etc.)
-                if ($client->updated_at->gt($hsDate->addMinutes(2))) {
-                    Log::info("Ignorando actualización de cliente {$client->id} desde HubSpot: Datos locales más recientes", [
-                        'local_updated_at' => $client->updated_at->toIso8601String(),
-                        'hs_lastmodifieddate' => $hsDate->toIso8601String()
-                    ]);
-                    
-                    // AUN ASÍ, debemos asegurar que los IDs de conexión estén correctos
-                    $updates = [];
-                    if (!$client->hubspot_id) $updates['hubspot_id'] = $contactProps['hs_object_id'] ?? null;
-                    if (!$client->hubspot_deal_id) $updates['hubspot_deal_id'] = $dealId;
-                    
-                    if (!empty($updates)) {
-                        $client->update($updates);
-                    }
-                    
-                    // Intentamos sincronizar el convenio (que tiene su propia lógica de protección)
-                    // DESHABILITADO POR SOLICITUD DEL USUARIO
-                    // $this->syncAgreementData($client, $dealProps);
-                    
-                    return; // SALIR TEMPRANO
-                }
-            } catch (\Exception $e) {
-                Log::warning("Error comparando fechas de modificación: " . $e->getMessage());
-            }
-        }
-
-        // 1. Mapear datos del Contact
-        $clientData = $this->mapHubspotToClient($contactProps);
-        
-        // 2. ASEGURAR IDs CRÍTICOS: xante_id, hubspot_id y hubspot_deal_id siempre correctos
-        $clientData['xante_id'] = $xanteId;
-        $clientData['hubspot_deal_id'] = $dealId;
-        $clientData['hubspot_synced_at'] = now();
-        
-        // 3. Actualizar fecha de registro si viene del Deal
-        if ($dealCreatedAt) {
-            try {
-                if (is_numeric($dealCreatedAt)) {
-                    $clientData['fecha_registro'] = Carbon::createFromTimestampMs($dealCreatedAt);
-                } else {
-                    $clientData['fecha_registro'] = Carbon::parse($dealCreatedAt);
-                }
-            } catch (\Exception $e) {
-                Log::warning("Error parseando fecha de creación del Deal: {$dealCreatedAt}");
-            }
-        }
-        
-        // 4. Si el cliente no tenía hubspot_id, asignarlo ahora
-        if (empty($client->hubspot_id)) {
-            $hubspotId = $contactProps['hs_object_id'] ?? null;
-            if ($hubspotId) {
-                $clientData['hubspot_id'] = $hubspotId;
-                Log::info('Asignando hubspot_id faltante', [
-                    'client_id' => $client->id,
-                    'xante_id' => $xanteId,
-                    'hubspot_id' => $hubspotId
-                ]);
-            }
-        }
-
-        // 5. Mapear datos adicionales del Deal
-        $clientData = array_merge($clientData, $this->mapDealToClient($dealProps));
-
-        $client->update($clientData);
-        
-        // 6. Sincronizar datos del cónyuge si existen
-        $this->syncSpouseData($client, $dealProps);
-        
-        Log::info('Cliente actualizado desde HubSpot', [
-            'client_id' => $client->id,
-            'xante_id' => $xanteId,
-            'hubspot_id' => $client->hubspot_id,
-            'deal_id' => $dealId,
-            'updated_fields' => array_keys($clientData)
-        ]);
-
-        // 7. Sincronizar datos del convenio (Propiedad y Financieros)
-        // DESHABILITADO POR SOLICITUD DEL USUARIO: Solo sincronizar clientes
-        // $this->syncAgreementData($client, $dealProps);
-    }
-
-    /**
-     * Sincronizar datos del convenio (Propiedad y Financieros) en la tabla agreements
-     */
-    private function syncAgreementData(Client $client, array $dealProps): void
-    {
-        try {
-            // Buscar si ya existe un convenio asociado a este cliente
-            // Priorizamos convenios que NO estén completados, firmados o EN PROCESO avanzado
-            // Solo actualizamos borradores o convenios sin iniciar para evitar sobrescribir trabajo manual
-            $agreement = \App\Models\Agreement::where('client_id', $client->id)
-                ->whereNotIn('status', [
-                    'completed', 
-                    'convenio_firmado', 
-                    'in_progress', 
-                    'documents_generated', 
-                    'documents_sent', 
-                    'awaiting_client_docs', 
-                    'documents_complete'
-                ])
-                ->latest()
-                ->first();
-
-            // Si no existe, creamos uno nuevo en estado 'sin_convenio' (o el equivalente inicial)
-            if (!$agreement) {
-                $agreement = \App\Models\Agreement::create([
-                    'client_id' => $client->id,
-                    'status' => 'sin_convenio', // Estado inicial
-                    'current_step' => 1,
-                    'created_by' => 1, // Usuario sistema o default
-                    'client_xante_id' => $client->xante_id,
-                ]);
-                Log::info('Convenio creado automáticamente desde sincronización HubSpot', ['client_id' => $client->id]);
-            }
-
-            // Preparar datos para wizard_data
-            $wizardData = $agreement->wizard_data ?? [];
-
-            // --- Paso 3: Propiedad ---
-            $propertyMap = [
-                'domicilio_convenio' => 'property_address', // Ajustar según nombre real en wizard
-                'comunidad' => 'community',
-                'tipo_vivienda' => 'housing_type',
-                'prototipo' => 'prototype',
-                'lote' => 'lot',
-                'manzana' => 'block',
-                'etapa' => 'stage',
-                'municipio_propiedad' => 'property_municipality',
-                'estado_propiedad' => 'property_state',
-            ];
-
-            foreach ($propertyMap as $hubspotField => $wizardField) {
-                if (!empty($dealProps[$hubspotField])) {
-                    $wizardData[$wizardField] = $dealProps[$hubspotField];
-                }
-            }
-
-            // --- Paso 4: Financieros ---
-            $financialMap = [
-                'valor_convenio' => 'agreement_value',
-                'precio_promocion' => 'promotion_price',
-                'comision_total_pagar' => 'total_commission',
-                'ganancia_final' => 'final_profit',
-            ];
-
-            foreach ($financialMap as $hubspotField => $wizardField) {
-                if (!empty($dealProps[$hubspotField])) {
-                    $wizardData[$wizardField] = $dealProps[$hubspotField];
-                }
-            }
-
-            // Guardar datos actualizados
-            $agreement->update([
-                'wizard_data' => $wizardData,
-                'updated_at' => now()
-            ]);
-
-            Log::info('Datos de convenio sincronizados desde HubSpot', [
-                'agreement_id' => $agreement->id,
-                'client_id' => $client->id
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error sincronizando datos de convenio: ' . $e->getMessage(), ['client_id' => $client->id]);
-        }
-    }
-
-    /**
-     * Mapear datos de HubSpot a estructura de Cliente
-     */
-    private function mapHubspotToClient(array $properties): array
-    {
-        $mapping = $this->config['mapping']['contact_fields'];
-        $clientData = [];
-
-        foreach ($mapping as $hubspotField => $clientField) {
-            if (isset($properties[$hubspotField]) && !empty($properties[$hubspotField])) {
-                $value = $properties[$hubspotField];
-                
-                // Procesar fechas de HubSpot (vienen en milisegundos)
-                if (in_array($clientField, ['fecha_registro', 'updated_at']) && is_numeric($value)) {
-                    $value = Carbon::createFromTimestampMs($value);
-                }
-                
-                // Procesar fecha de nacimiento
-                if ($clientField === 'birthdate') {
-                    try {
-                        if (is_numeric($value)) {
-                            $value = Carbon::createFromTimestampMs($value)->format('Y-m-d');
-                        } else {
-                            $value = Carbon::parse($value)->format('Y-m-d');
-                        }
-                    } catch (\Exception $e) {
-                        Log::warning("Error parseando fecha de nacimiento: {$value}");
-                        $value = null;
-                    }
-                }
-                
-                $clientData[$clientField] = $value;
-            }
-        }
-
-        // Mapeos específicos
-        if (isset($properties['firstname']) && isset($properties['lastname'])) {
-            $clientData['name'] = trim(($properties['firstname'] ?? '') . ' ' . ($properties['lastname'] ?? ''));
-        } elseif (isset($properties['firstname'])) {
-            $clientData['name'] = $properties['firstname'];
-        }
-
-        return $clientData;
-    }
-
-    /**
-     * Mapear datos del Deal a estructura de Cliente
-     */
-    private function mapDealToClient(array $dealProps): array
-    {
-        $clientData = [];
-
-        // Datos del titular desde el Deal
-        if (!empty($dealProps['nombre_completo'])) {
-            $clientData['name'] = $dealProps['nombre_completo'];
-        }
-        
-        if (!empty($dealProps['email'])) {
-            $clientData['email'] = $dealProps['email'];
-        }
-        
-        if (!empty($dealProps['phone'])) {
-            $clientData['phone'] = $dealProps['phone'];
-        }
-        
-        if (!empty($dealProps['mobilephone'])) {
-            $clientData['phone'] = $dealProps['mobilephone'];
-        }
-        
-        if (!empty($dealProps['telefono_oficina'])) {
-            $clientData['office_phone'] = $dealProps['telefono_oficina'];
-        }
-        
-        if (!empty($dealProps['curp'])) {
-            $clientData['curp'] = $dealProps['curp'];
-        }
-        
-        if (!empty($dealProps['rfc'])) {
-            $clientData['rfc'] = $dealProps['rfc'];
-        }
-        
-        if (!empty($dealProps['estado_civil'])) {
-            $clientData['civil_status'] = $dealProps['estado_civil'];
-        }
-        
-        if (!empty($dealProps['ocupacion'])) {
-            $clientData['occupation'] = $dealProps['ocupacion'];
-        }
-
-        // Domicilio del titular desde el Deal
-        if (!empty($dealProps['domicilio_actual'])) {
-            $address = $dealProps['domicilio_actual'];
-            if (!empty($dealProps['numero_casa'])) {
-                $address .= ' #' . $dealProps['numero_casa'];
-            }
-            $clientData['current_address'] = $address;
-        }
-        
-        if (!empty($dealProps['colonia'])) {
-            $clientData['neighborhood'] = $dealProps['colonia'];
-        }
-        
-        if (!empty($dealProps['codigo_postal'])) {
-            $clientData['postal_code'] = $dealProps['codigo_postal'];
-        }
-        
-        if (!empty($dealProps['municipio'])) {
-            $clientData['municipality'] = $dealProps['municipio'];
-        }
-        
-        if (!empty($dealProps['estado'])) {
-            $clientData['state'] = $dealProps['estado'];
-        }
-
-        // Nuevos campos para optimización de rendimiento
-        if (!empty($dealProps['amount'])) {
-            $clientData['hubspot_amount'] = $dealProps['amount'];
-        }
-        
-        if (!empty($dealProps['estatus_de_convenio'])) {
-            $clientData['hubspot_status'] = $dealProps['estatus_de_convenio'];
-        }
-
-        return $clientData;
-    }
-
-    /**
-     * Sincronizar datos del cónyuge desde el Deal
-     */
-    private function syncSpouseData(Client $client, array $dealProps): void
-    {
-        // Verificar si hay datos del cónyuge en el deal
-        if (empty($dealProps['nombre_completo_conyuge'])) {
-            // Si no hay nombre de cónyuge, eliminar registro si existe
-            if ($client->spouse) {
-                $client->spouse->delete();
-                Log::info('Cónyuge eliminado (no hay datos en Deal)', [
-                    'client_id' => $client->id
-                ]);
-            }
-            return;
-        }
-
-        $spouseData = [
-            'name' => $dealProps['nombre_completo_conyuge'],
-            'email' => $dealProps['email_conyuge'] ?? null,
-            'phone' => $dealProps['telefono_movil_conyuge'] ?? null,
-            'curp' => $dealProps['curp_conyuge'] ?? null,
-        ];
-
-        // Domicilio del cónyuge
-        if (!empty($dealProps['domicilio_actual_conyuge'])) {
-            $address = $dealProps['domicilio_actual_conyuge'];
-            if (!empty($dealProps['numero_casa_conyuge'])) {
-                $address .= ' #' . $dealProps['numero_casa_conyuge'];
-            }
-            $spouseData['current_address'] = $address;
-        }
-
-        $spouseData['neighborhood'] = $dealProps['colonia_conyuge'] ?? null;
-        $spouseData['postal_code'] = $dealProps['codigo_postal_conyuge'] ?? null;
-        $spouseData['municipality'] = $dealProps['municipio_conyuge'] ?? null;
-        $spouseData['state'] = $dealProps['estado_conyuge'] ?? null;
-
-        // Crear o actualizar cónyuge
-        if ($client->spouse) {
-            $client->spouse->update($spouseData);
-            Log::info('Cónyuge actualizado desde Deal', [
+            Log::error('Error sincronizando cliente a HubSpot', [
                 'client_id' => $client->id,
-                'spouse_id' => $client->spouse->id
+                'error' => $e->getMessage(),
             ]);
-        } else {
-            $client->spouse()->create($spouseData);
-            Log::info('Cónyuge creado desde Deal', [
-                'client_id' => $client->id
-            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
         }
     }
 
     /**
-     * Obtener propiedades de contacto a solicitar
+     * Crear Deal en HubSpot
      */
-    private function getContactProperties(): string
-    {
-        $standardProperties = array_keys($this->config['mapping']['contact_fields']);
-        $customProperties = $this->config['mapping']['custom_properties'];
-        
-        $allProperties = array_merge($standardProperties, $customProperties, [
-            'firstname', 'lastname', 'hs_object_id', 'lastmodifieddate'
-        ]);
-
-        return implode(',', array_unique($allProperties));
-    }
-
-    /**
-     * Obtener estadísticas de sincronización
-     */
-    public function getSyncStats(): array
-    {
-        return [
-            'total_clients' => Client::count(),
-            'clients_with_hubspot_id' => Client::whereNotNull('hubspot_id')->count(),
-            'clients_without_hubspot_id' => Client::whereNull('hubspot_id')->count(),
-            'last_sync' => Client::whereNotNull('hubspot_synced_at')
-                ->orderBy('hubspot_synced_at', 'desc')
-                ->first()?->hubspot_synced_at,
-        ];
-    }
-
-    /**
-     * Verificar conectividad con HubSpot
-     */
-    public function testConnection(): array
+    private function createDealInHubspot(Client $client, ?Agreement $agreement = null): array
     {
         try {
+            $dealData = $this->mapClientToHubspotDeal($client, $agreement);
+
             $response = Http::timeout(10)
                 ->withHeaders([
                     'Authorization' => "Bearer {$this->token}",
                     'Content-Type' => 'application/json',
                 ])
-                ->get($this->baseUrl . $this->config['endpoints']['contacts'], [
-                    'limit' => 1
+                ->post($this->baseUrl.'/crm/v3/objects/deals', [
+                    'properties' => $dealData,
                 ]);
 
             if ($response->successful()) {
+                $dealId = $response->json()['id'] ?? null;
+                $client->update(['hubspot_deal_id' => $dealId]);
+
+                Log::info('Deal creado en HubSpot', [
+                    'client_id' => $client->id,
+                    'deal_id' => $dealId,
+                ]);
+
                 return [
                     'success' => true,
-                    'message' => 'Conexión exitosa con HubSpot',
-                    'status_code' => $response->status()
+                    'deal_id' => $dealId,
                 ];
             }
 
             return [
                 'success' => false,
-                'message' => 'Error de conexión con HubSpot',
-                'status_code' => $response->status(),
-                'error' => $response->body()
+                'error' => "HTTP {$response->status()}: {$response->body()}",
             ];
 
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Excepción al conectar con HubSpot',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
+
     /**
-     * Actualizar un contacto en HubSpot
+     * Actualizar Deal en HubSpot
      */
-    public function updateHubspotContact(string $hubspotId, array $properties): array
+    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null): array
     {
         try {
+            $dealData = $this->mapClientToHubspotDeal($client, $agreement);
+
             $response = Http::timeout($this->config['sync']['timeout'])
                 ->withHeaders([
                     'Authorization' => "Bearer {$this->token}",
                     'Content-Type' => 'application/json',
                 ])
-                ->patch($this->baseUrl . "/crm/v3/objects/contacts/{$hubspotId}", [
-                    'properties' => $properties
+                ->patch($this->baseUrl."/crm/v3/objects/deals/{$client->hubspot_deal_id}", [
+                    'properties' => $dealData,
                 ]);
 
             if ($response->successful()) {
+                Log::info('Deal actualizado en HubSpot', [
+                    'client_id' => $client->id,
+                    'deal_id' => $client->hubspot_deal_id,
+                ]);
+
                 return [
                     'success' => true,
-                    'data' => $response->json()
+                    'deal_id' => $client->hubspot_deal_id,
                 ];
             }
 
-            Log::error("Error actualizando contacto HubSpot {$hubspotId}", [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'properties' => $properties
-            ]);
-
             return [
                 'success' => false,
-                'error' => "HTTP {$response->status()}: {$response->body()}"
+                'error' => "HTTP {$response->status()}: {$response->body()}",
             ];
 
         } catch (\Exception $e) {
-            Log::error("Excepción actualizando contacto HubSpot {$hubspotId}", [
-                'error' => $e->getMessage()
-            ]);
-
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Actualizar un Deal en HubSpot
+     * Mapear datos de cliente a formato de Deal de HubSpot
      */
-    public function updateHubspotDeal(string $dealId, array $properties): array
+    private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null): array
     {
-        try {
-            $response = Http::timeout($this->config['sync']['timeout'])
-                ->withHeaders([
-                    'Authorization' => "Bearer {$this->token}",
-                    'Content-Type' => 'application/json',
-                ])
-                ->patch($this->baseUrl . "/crm/v3/objects/deals/{$dealId}", [
-                    'properties' => $properties
-                ]);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json()
-                ];
-            }
-
-            Log::error("Error actualizando Deal HubSpot {$dealId}", [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'properties' => $properties
-            ]);
-
-            return [
-                'success' => false,
-                'error' => "HTTP {$response->status()}: {$response->body()}"
-            ];
-
-        } catch (\Exception $e) {
-            Log::error("Excepción actualizando Deal HubSpot {$dealId}", [
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Enviar datos del cliente local a HubSpot (Push)
-     */
-    public function pushClientToHubspot(Client $client, ?Agreement $agreement = null): array
-    {
-        $results = [
-            'deal_updated' => false,
-            'contact_updated' => false,
-            'errors' => []
+        $dealData = [
+            'dealname' => $client->name ?? 'Sin nombre',
+            'xante_id' => $client->xante_id,
+            'nombre_completo' => $client->name,
+            'email' => $client->email,
+            'phone' => $client->phone,
+            'curp' => $client->curp,
+            'rfc' => $client->rfc,
+            'estado_civil' => $client->civil_status,
+            'ocupacion' => $client->occupation,
         ];
 
-        // 1. Actualizar Deal (Prioridad)
-        if ($client->hubspot_deal_id) {
-            $dealProps = $this->mapClientToHubspotDeal($client, $agreement);
-            $dealResult = $this->updateHubspotDeal($client->hubspot_deal_id, $dealProps);
-            
-            if ($dealResult['success']) {
-                $results['deal_updated'] = true;
-                Log::info("Deal {$client->hubspot_deal_id} actualizado desde local", [
-                    'client_id' => $client->id
-                ]);
-            } else {
-                $results['errors'][] = "Error actualizando Deal: " . ($dealResult['error'] ?? 'Desconocido');
-            }
-        } else {
-            $results['errors'][] = "Cliente sin hubspot_deal_id";
+        // Agregar datos del convenio si existe
+        if ($agreement) {
+            $dealData = array_merge($dealData, [
+                'valor_convenio' => $agreement->wizard_data['agreement_value'] ?? null,
+                'comision_total_pagar' => $agreement->wizard_data['total_commission'] ?? null,
+                'ganancia_final' => $agreement->wizard_data['final_profit'] ?? null,
+            ]);
         }
 
-        // 2. Actualizar Contacto (Secundario)
-        if ($client->hubspot_id) {
-            $contactProps = $this->mapClientToHubspotContact($client);
-            $contactResult = $this->updateHubspotContact($client->hubspot_id, $contactProps);
-            
-            if ($contactResult['success']) {
-                $results['contact_updated'] = true;
-                Log::info("Contacto {$client->hubspot_id} actualizado desde local", [
-                    'client_id' => $client->id
-                ]);
-            } else {
-                $results['errors'][] = "Error actualizando Contacto: " . ($contactResult['error'] ?? 'Desconocido');
-            }
-        }
-
-        return $results;
+        return $dealData;
     }
 
     /**
- * Mapear Cliente Local -> Propiedades HubSpot Deal
- */
-private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null): array
-{
-    $props = [];
-
-    // Datos del Titular - Campos que SÍ EXISTEN en HubSpot Deals
-    if ($client->name) $props['nombre_del_titular'] = $client->name;
-    
-    // Domicilio del Titular - Campos que SÍ EXISTEN en HubSpot Deals
-    if ($client->current_address) {
-        $props['calle_o_privada_'] = $client->current_address;
-    }
-    if ($client->neighborhood) $props['colonia'] = $client->neighborhood;
-    if ($client->state) $props['estado'] = $client->state;
-    
-    // Campos que NO EXISTEN en HubSpot Deals (comentados - solicitar al cliente)
-    // if ($client->curp) $props['curp'] = $client->curp; // ← FALTA CREAR
-    // if ($client->rfc) $props['rfc'] = $client->rfc; // ← FALTA CREAR
-    // if ($client->civil_status) $props['estado_civil'] = $client->civil_status; // ← FALTA CREAR
-    // if ($client->occupation) $props['ocupacion'] = $client->occupation; // ← FALTA CREAR
-    // if ($client->postal_code) $props['codigo_postal'] = $client->postal_code; // ← FALTA CREAR
-    // if ($client->municipality) $props['municipio'] = $client->municipality; // ← FALTA CREAR
-    // if ($client->email) $props['email'] = $client->email; // ← FALTA CREAR (o usar Contact)
-    // if ($client->phone) $props['telefono'] = $client->phone; // ← FALTA CREAR (o usar Contact)
-
-    // Datos del Cónyuge (No encontrados en diagnóstico, se comentan por seguridad)
-    /*
-    if ($client->spouse) {
-        $spouse = $client->spouse;
-        if ($spouse->name) $props['nombre_completo_conyuge'] = $spouse->name;
-        // ... resto de propiedades de cónyuge
-    }
-    */
-
-    // Mapeo de Estatus de Convenio desde Agreement
-    if ($agreement) {
-        // Mapear status local a opciones de HubSpot
-        $statusMap = [
-            'draft' => 'En Proceso',
-            'in_progress' => 'En Proceso',
-            'completed' => 'Aceptado',
-            'cancelled' => 'Rechazado'
+     * Mapear datos de cliente a formato de Contact de HubSpot
+     */
+    private function mapClientToHubspotContact(Client $client): array
+    {
+        return [
+            'firstname' => $client->name ? explode(' ', $client->name)[0] : '',
+            'lastname' => $client->name ? implode(' ', array_slice(explode(' ', $client->name), 1)) : '',
+            'email' => $client->email,
+            'phone' => $client->phone,
+            'xante_id' => $client->xante_id,
         ];
-        
-        if (isset($statusMap[$agreement->status])) {
-            $props['estatus_de_convenio'] = $statusMap[$agreement->status];
-        }
-        
-        // Si hay valor de propuesta, también podríamos enviarlo si existe el campo en HubSpot
-        if ($agreement->proposal_value) {
-            $props['amount'] = $agreement->proposal_value;
-        }
-
-        // Mapeo de Valor CompraVenta Original -> Precio comercial supervisor
-        $wizardData = $agreement->wizard_data ?? [];
-        $precioOriginal = $wizardData['valor_compraventa'] ?? $wizardData['valor_convenio'] ?? null;
-        
-        if ($precioOriginal) {
-            // Limpiar formato de moneda si viene con $ o comas
-            $precioClean = (float) str_replace(['$', ','], '', $precioOriginal);
-            $props['precio_comercial'] = $precioClean;
-        }
     }
-
-    return $props;
-}
-
-    /**
- * Mapear Cliente Local -> Propiedades HubSpot Contact
- */
-private function mapClientToHubspotContact(Client $client): array
-{
-    $props = [];
-
-    // Mapeo básico
-    if ($client->email) $props['email'] = $client->email;
-    if ($client->phone) {
-        $props['phone'] = $client->phone;
-        $props['mobilephone'] = $client->phone; // También en mobilephone
-    }
-    
-    // Separar nombre y apellido si es posible
-    if ($client->name) {
-        $parts = explode(' ', $client->name);
-        if (count($parts) > 1) {
-            $props['firstname'] = array_shift($parts);
-            $props['lastname'] = implode(' ', $parts);
-        } else {
-            $props['firstname'] = $client->name;
-        }
-    }
-
-    // Campos adicionales que EXISTEN en HubSpot Contacts
-    if ($client->current_address) $props['address'] = $client->current_address;
-    if ($client->municipality) $props['city'] = $client->municipality;
-    if ($client->state) $props['state'] = $client->state;
-    if ($client->postal_code) $props['zip'] = $client->postal_code;
-    if ($client->neighborhood) $props['colonia'] = $client->neighborhood; // ← AGREGADO
-    if ($client->occupation) $props['jobtitle'] = $client->occupation;
-    
-    // Campos que NO EXISTEN en HubSpot (comentados - solicitar al cliente)
-    // if ($client->curp) $props['curp'] = $client->curp; // ← FALTA CREAR
-    // if ($client->rfc) $props['rfc'] = $client->rfc; // ← FALTA CREAR
-    // if ($client->civil_status) $props['estado_civil'] = $client->civil_status; // ← FALTA CREAR
-    // if ($client->birthdate) $props['fecha_nacimiento'] = $client->birthdate->format('Y-m-d'); // ← FALTA CREAR
-
-    return $props;
-}
 
     /**
      * Obtener detalles ligeros del Deal para visualización rápida
@@ -1168,8 +330,8 @@ private function mapClientToHubspotContact(Client $client): array
                 ->withHeaders([
                     'Authorization' => "Bearer {$this->token}",
                 ])
-                ->get($this->baseUrl . "/crm/v3/objects/deals/{$dealId}", [
-                    'properties' => 'dealname,amount,estatus_de_convenio,dealstage,hs_lastmodifieddate'
+                ->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}", [
+                    'properties' => 'dealname,amount,estatus_de_convenio,dealstage,hs_lastmodifieddate',
                 ]);
 
             if ($response->successful()) {
@@ -1178,8 +340,70 @@ private function mapClientToHubspotContact(Client $client): array
 
             return null;
         } catch (\Exception $e) {
-            Log::error("Error obteniendo detalles del Deal {$dealId}: " . $e->getMessage());
+            Log::error("Error obteniendo detalles del Deal {$dealId}: ".$e->getMessage());
+
             return null;
         }
+    }
+
+    /**
+     * Probar conexión con HubSpot
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function testConnection(): array
+    {
+        try {
+            $response = Http::timeout(5)
+                ->withHeaders([
+                    'Authorization' => "Bearer {$this->token}",
+                ])
+                ->get($this->baseUrl.'/crm/v3/objects/contacts', [
+                    'limit' => 1,
+                ]);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'Conexión exitosa con HubSpot',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => "HTTP {$response->status()}: {$response->body()}",
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Obtener estadísticas de sincronización
+     *
+     * @return array{
+     *     total_clients: int,
+     *     clients_with_hubspot_id: int,
+     *     clients_without_hubspot_id: int,
+     *     last_sync: ?\Carbon\Carbon
+     * }
+     */
+    public function getSyncStats(): array
+    {
+        $totalClients = Client::count();
+        $withHubspotId = Client::whereNotNull('hubspot_id')->count();
+        $lastSync = Client::whereNotNull('hubspot_synced_at')
+            ->orderBy('hubspot_synced_at', 'desc')
+            ->value('hubspot_synced_at');
+
+        return [
+            'total_clients' => $totalClients,
+            'clients_with_hubspot_id' => $withHubspotId,
+            'clients_without_hubspot_id' => $totalClients - $withHubspotId,
+            'last_sync' => $lastSync ? Carbon::parse($lastSync) : null,
+        ];
     }
 }

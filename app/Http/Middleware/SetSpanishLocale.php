@@ -16,7 +16,7 @@ class SetSpanishLocale
     {
         // Forzar idioma español para toda la aplicación
         App::setLocale('es');
-        
+
         return $next($request);
     }
 }

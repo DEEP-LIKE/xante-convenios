@@ -25,7 +25,7 @@ class SaveDocumentStepAction
 
             if ($updated && $step >= 1) {
                 Notification::make()
-                    ->title("Guardando")
+                    ->title('Guardando')
                     ->body("Se ha guardado el paso #{$step}")
                     ->icon('heroicon-o-server')
                     ->success()
@@ -39,12 +39,12 @@ class SaveDocumentStepAction
             \Log::error('Error saving document step data', [
                 'agreement_id' => $agreement->id,
                 'step' => $step,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             Notification::make()
                 ->title('⚠️ Error de guardado')
-                ->body('Error al guardar en BD: ' . $e->getMessage())
+                ->body('Error al guardar en BD: '.$e->getMessage())
                 ->danger()
                 ->duration(8000)
                 ->send();

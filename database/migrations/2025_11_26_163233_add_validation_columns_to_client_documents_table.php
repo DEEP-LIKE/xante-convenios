@@ -10,21 +10,21 @@ return new class extends Migration
     {
         Schema::table('client_documents', function (Blueprint $table) {
             // Add validation columns if they don't exist
-            if (!Schema::hasColumn('client_documents', 'is_validated')) {
+            if (! Schema::hasColumn('client_documents', 'is_validated')) {
                 $table->boolean('is_validated')->default(false);
             }
-            if (!Schema::hasColumn('client_documents', 'validated_by')) {
+            if (! Schema::hasColumn('client_documents', 'validated_by')) {
                 $table->foreignId('validated_by')->nullable()->constrained('users')->onDelete('set null');
             }
-            if (!Schema::hasColumn('client_documents', 'validated_at')) {
+            if (! Schema::hasColumn('client_documents', 'validated_at')) {
                 $table->timestamp('validated_at')->nullable();
             }
-            if (!Schema::hasColumn('client_documents', 'validation_notes')) {
+            if (! Schema::hasColumn('client_documents', 'validation_notes')) {
                 $table->text('validation_notes')->nullable();
             }
-            
+
             // Add document_category if it doesn't exist (might be using 'category' instead)
-            if (!Schema::hasColumn('client_documents', 'document_category')) {
+            if (! Schema::hasColumn('client_documents', 'document_category')) {
                 $table->string('document_category')->nullable();
             }
         });

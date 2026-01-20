@@ -22,7 +22,7 @@ return new class extends Migration
             $table->timestamp('reviewed_at')->nullable();
             $table->text('rejection_reason')->nullable();
             $table->timestamps();
-            
+
             // Índices para mejorar rendimiento
             $table->index('agreement_id');
             $table->index('status');

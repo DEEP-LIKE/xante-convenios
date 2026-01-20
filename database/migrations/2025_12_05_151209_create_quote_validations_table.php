@@ -22,7 +22,7 @@ return new class extends Migration
             $table->timestamp('validated_at')->nullable();
             $table->integer('revision_number')->default(1); // Para tracking de revisiones
             $table->timestamps();
-            
+
             // Índices para mejorar performance
             $table->index(['agreement_id', 'status']);
             $table->index('requested_by');

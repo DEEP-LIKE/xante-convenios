@@ -4,12 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\FinalPriceAuthorizationResource\Pages;
 use App\Models\FinalPriceAuthorization;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
-use BackedEnum;
 use UnitEnum;
 
 class FinalPriceAuthorizationResource extends Resource
@@ -85,9 +85,8 @@ class FinalPriceAuthorizationResource extends Resource
                     ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('previous_price')
                     ->label('Precio Anterior')
-                    ->state(fn (FinalPriceAuthorization $record): ?string => 
-                        $record->agreement->wizard_data['valor_compraventa'] 
-                        ?? $record->agreement->wizard_data['valor_convenio'] 
+                    ->state(fn (FinalPriceAuthorization $record): ?string => $record->agreement->wizard_data['valor_compraventa']
+                        ?? $record->agreement->wizard_data['valor_convenio']
                         ?? null
                     )
                     ->money('MXN')
@@ -131,11 +130,10 @@ class FinalPriceAuthorizationResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Aprobar Precio Final')
                     ->modalDescription('¿Está seguro de que desea aprobar este precio final?')
-                    ->visible(fn (FinalPriceAuthorization $record): bool => 
-                        $record->status === 'pending' && auth()->user()->can('approve', $record))
+                    ->visible(fn (FinalPriceAuthorization $record): bool => $record->status === 'pending' && auth()->user()->can('approve', $record))
                     ->action(function (FinalPriceAuthorization $record) {
                         $record->approve(auth()->user());
-                        
+
                         // Notificar al ejecutivo
                         $record->requester->notify(
                             new \App\Notifications\FinalPriceAuthorizationApprovedNotification($record->id)
@@ -146,23 +144,23 @@ class FinalPriceAuthorizationResource extends Resource
                             try {
                                 $hubspotService = app(\App\Services\HubspotSyncService::class);
                                 $hubspotService->updateHubspotDeal($record->agreement->client->hubspot_deal_id, [
-                                    'precio_comercial' => $record->final_price
+                                    'precio_comercial' => $record->final_price,
                                 ]);
                                 \Log::info('Precio comercial actualizado en HubSpot tras aprobación', [
                                     'deal_id' => $record->agreement->client->hubspot_deal_id,
-                                    'price' => $record->final_price
+                                    'price' => $record->final_price,
                                 ]);
                             } catch (\Exception $e) {
                                 \Log::error('Error actualizando precio comercial en HubSpot', ['error' => $e->getMessage()]);
                             }
                         }
-                        
+
                         Notification::make()
                             ->title('Precio Final Aprobado')
                             ->success()
                             ->send();
                     }),
-                
+
                 Action::make('reject')
                     ->label('Rechazar')
                     ->icon('heroicon-o-x-circle')
@@ -175,16 +173,15 @@ class FinalPriceAuthorizationResource extends Resource
                             ->required()
                             ->rows(3),
                     ])
-                    ->visible(fn (FinalPriceAuthorization $record): bool => 
-                        $record->status === 'pending' && auth()->user()->can('reject', $record))
+                    ->visible(fn (FinalPriceAuthorization $record): bool => $record->status === 'pending' && auth()->user()->can('reject', $record))
                     ->action(function (FinalPriceAuthorization $record, array $data) {
                         $record->reject(auth()->user(), $data['rejection_reason']);
-                        
+
                         // Notificar al ejecutivo
                         $record->requester->notify(
                             new \App\Notifications\FinalPriceAuthorizationRejectedNotification($record->id)
                         );
-                        
+
                         Notification::make()
                             ->title('Precio Final Rechazado')
                             ->danger()

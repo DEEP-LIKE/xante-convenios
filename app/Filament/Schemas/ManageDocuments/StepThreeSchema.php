@@ -3,10 +3,10 @@
 namespace App\Filament\Schemas\ManageDocuments;
 
 use App\Filament\Pages\ManageDocuments;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Illuminate\Support\HtmlString;
 
 class StepThreeSchema
@@ -43,24 +43,24 @@ class StepThreeSchema
                         '))
                         ->hiddenLabel()
                         ->columnSpanFull(),
-                        
+
                     // Información del convenio
                     Grid::make(3)
                         ->schema([
                             Placeholder::make('completion_date')
                                 ->label('📅 Fecha de Finalización')
                                 ->content($agreement->completed_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i')),
-                                
+
                             Placeholder::make('total_documents')
                                 ->label('📄 Documentos Generados')
-                                ->content($documents->count() . ' PDFs'),
-                                
+                                ->content($documents->count().' PDFs'),
+
                             Placeholder::make('final_status')
                                 ->label('✅ Estado Final')
-                                ->content(new HtmlString('<span style="color: #10b981; font-weight: 600;">Completado</span>'))
+                                ->content(new HtmlString('<span style="color: #10b981; font-weight: 600;">Completado</span>')),
                         ]),
                 ]),
-                
+
             // AUTORIZACIÓN DE PRECIO FINAL
             Section::make('🔐 Autorización de Precio Final')
                 ->icon('heroicon-o-shield-check')
@@ -71,34 +71,34 @@ class StepThreeSchema
                     $latestAuth = $agreement->finalPriceAuthorizations()
                         ->latest()
                         ->first();
-                    
+
                     $baseSchema = [
                         // Valores de Referencia Original
                         Grid::make(3)
                             ->schema([
                                 Placeholder::make('original_valor_compraventa')
                                     ->label('📋 Valor CompraVenta Original')
-                                    ->content(fn() => new HtmlString($page->getOriginalValorCompraventa())),
-                                    
+                                    ->content(fn () => new HtmlString($page->getOriginalValorCompraventa())),
+
                                 Placeholder::make('original_comision_total')
                                     ->label('💰 Comisión Total Original')
-                                    ->content(fn() => new HtmlString($page->getOriginalComisionTotal())),
-                                    
+                                    ->content(fn () => new HtmlString($page->getOriginalComisionTotal())),
+
                                 Placeholder::make('original_ganancia_final')
                                     ->label('💵 Ganancia Final Original')
-                                    ->content(fn() => new HtmlString($page->getOriginalGananciaFinal())),
+                                    ->content(fn () => new HtmlString($page->getOriginalGananciaFinal())),
                             ])
                             ->columnSpanFull(),
-                            
+
                         // Separador visual
                         Placeholder::make('separator')
                             ->label(' ')
                             ->content(new HtmlString('<hr style="border: 1px solid #e5e7eb; margin: 16px 0;">'))
                             ->columnSpanFull(),
                     ];
-                    
+
                     // Si no hay autorización o fue rechazada, mostrar formulario
-                    if (!$latestAuth || $latestAuth->status === 'rejected') {
+                    if (! $latestAuth || $latestAuth->status === 'rejected') {
                         return array_merge($baseSchema, [
                             Placeholder::make('auth_info')
                                 ->content(new HtmlString('
@@ -120,7 +120,7 @@ class StepThreeSchema
                                 '))
                                 ->hiddenLabel()
                                 ->columnSpanFull(),
-                            
+
                             Grid::make(2)
                                 ->schema([
                                     TextInput::make('final_price_value')
@@ -132,7 +132,7 @@ class StepThreeSchema
                                         ->helperText('Ingrese el precio final acordado con el cliente')
                                         ->required()
                                         ->statePath('final_price_value'),
-                                    
+
                                     \Filament\Forms\Components\Textarea::make('final_price_justification')
                                         ->label('📝 Justificación')
                                         ->placeholder('Explique el motivo del precio final acordado...')
@@ -141,21 +141,21 @@ class StepThreeSchema
                                         ->rows(4)
                                         ->statePath('final_price_justification'),
                                 ]),
-                            
+
                             Placeholder::make('request_button')
                                 ->label('📤 Solicitar Autorización')
-                                ->content(fn() => view('components.action-button', [
+                                ->content(fn () => view('components.action-button', [
                                     'icon' => 'heroicon-o-paper-airplane',
                                     'label' => 'Enviar Solicitud',
                                     'sublabel' => 'de Autorización',
                                     'color' => 'primary',
                                     'action' => 'requestFinalPriceAuthorization',
                                     'confirm' => '¿Desea enviar la solicitud de autorización al administrador?',
-                                    'prevent' => false
+                                    'prevent' => false,
                                 ])),
                         ]);
                     }
-                    
+
                     // Si está pendiente
                     if ($latestAuth->status === 'pending') {
                         return array_merge($baseSchema, [
@@ -176,10 +176,10 @@ class StepThreeSchema
                                             </p>
                                             <div style="background: white; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.75rem;">
                                                 <p style="font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem;">
-                                                    <strong>Precio Solicitado:</strong> $' . number_format($latestAuth->final_price, 2) . '
+                                                    <strong>Precio Solicitado:</strong> $'.number_format($latestAuth->final_price, 2).'
                                                 </p>
                                                 <p style="font-size: 0.875rem; color: #374151;">
-                                                    <strong>Justificación:</strong> ' . e($latestAuth->justification) . '
+                                                    <strong>Justificación:</strong> '.e($latestAuth->justification).'
                                                 </p>
                                             </div>
                                         </div>
@@ -189,7 +189,7 @@ class StepThreeSchema
                                 ->columnSpanFull(),
                         ]);
                     }
-                    
+
                     // Si fue aprobado
                     if ($latestAuth->status === 'approved') {
                         return array_merge($baseSchema, [
@@ -210,13 +210,13 @@ class StepThreeSchema
                                             </p>
                                             <div style="background: white; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.75rem;">
                                                 <p style="font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem;">
-                                                    <strong>Precio Autorizado:</strong> $' . number_format($latestAuth->final_price, 2) . '
+                                                    <strong>Precio Autorizado:</strong> $'.number_format($latestAuth->final_price, 2).'
                                                 </p>
                                                 <p style="font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem;">
-                                                    <strong>Autorizado por:</strong> ' . ($latestAuth->reviewer->name ?? 'N/A') . '
+                                                    <strong>Autorizado por:</strong> '.($latestAuth->reviewer->name ?? 'N/A').'
                                                 </p>
                                                 <p style="font-size: 0.875rem; color: #374151;">
-                                                    <strong>Fecha:</strong> ' . ($latestAuth->reviewed_at ? $latestAuth->reviewed_at->format('d/m/Y H:i') : 'N/A') . '
+                                                    <strong>Fecha:</strong> '.($latestAuth->reviewed_at ? $latestAuth->reviewed_at->format('d/m/Y H:i') : 'N/A').'
                                                 </p>
                                             </div>
                                         </div>
@@ -226,10 +226,10 @@ class StepThreeSchema
                                 ->columnSpanFull(),
                         ]);
                     }
-                    
+
                     return $baseSchema;
                 }),
-                
+
             // ACCIONES DISPONIBLES
             Section::make('🎯 Acciones Disponibles')
                 ->icon('heroicon-o-wrench-screwdriver')
@@ -241,23 +241,23 @@ class StepThreeSchema
                             // Card: Descargar Todos los Documentos
                             Placeholder::make('action_download')
                                 ->label('📥 Descargar Documentos')
-                                ->content(fn() => view('components.action-link-button', [
+                                ->content(fn () => view('components.action-link-button', [
                                     'icon' => 'heroicon-o-arrow-down-tray',
                                     'label' => 'Descargar Todos',
                                     'sublabel' => 'los Documentos PDF',
                                     'url' => route('documents.download-all', ['agreement' => $agreement->id]),
-                                    'color' => 'success'
+                                    'color' => 'success',
                                 ])),
-                                
+
                             // Card: Regresar a Inicio
                             Placeholder::make('action_home')
                                 ->label('🏠 Regresar al Dashboard')
-                                ->content(fn() => view('components.action-link-button', [
+                                ->content(fn () => view('components.action-link-button', [
                                     'icon' => 'heroicon-o-home',
                                     'label' => 'Volver al Inicio',
                                     'sublabel' => 'Dashboard Principal',
                                     'url' => '/admin',
-                                    'color' => 'primary'
+                                    'color' => 'primary',
                                 ])),
                         ]),
                 ]),

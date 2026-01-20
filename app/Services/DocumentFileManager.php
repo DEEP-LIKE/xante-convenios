@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Servicio para gestionar archivos físicos de documentos
- * 
+ *
  * Responsabilidades:
  * - Limpiar archivos huérfanos
  * - Verificar existencia de archivos
@@ -24,8 +24,8 @@ class DocumentFileManager
     {
         try {
             $clientDocumentPaths = [
-                'client_documents/' . $agreement->id . '/titular',
-                'client_documents/' . $agreement->id . '/propiedad'
+                'client_documents/'.$agreement->id.'/titular',
+                'client_documents/'.$agreement->id.'/propiedad',
             ];
 
             // Obtener todos los file_path de la BD para este convenio
@@ -36,10 +36,10 @@ class DocumentFileManager
             foreach ($clientDocumentPaths as $path) {
                 if (Storage::disk('private')->exists($path)) {
                     $files = Storage::disk('private')->files($path);
-                    
+
                     foreach ($files as $file) {
                         // Si el archivo no está en la BD, eliminarlo
-                        if (!in_array($file, $dbFilePaths)) {
+                        if (! in_array($file, $dbFilePaths)) {
                             Storage::disk('private')->delete($file);
                         }
                     }
@@ -49,7 +49,7 @@ class DocumentFileManager
             // Silencioso - no queremos interrumpir el flujo por limpieza
             \Log::warning('Error cleaning orphan files', [
                 'agreement_id' => $agreement->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -71,12 +71,14 @@ class DocumentFileManager
             if ($this->fileExists($path)) {
                 return Storage::disk('private')->delete($path);
             }
+
             return false;
         } catch (\Exception $e) {
             \Log::error('Error deleting file', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -90,12 +92,14 @@ class DocumentFileManager
             if ($this->fileExists($path)) {
                 return Storage::disk('private')->size($path);
             }
+
             return null;
         } catch (\Exception $e) {
             \Log::error('Error getting file size', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -109,12 +113,14 @@ class DocumentFileManager
             if ($this->fileExists($path)) {
                 return Storage::disk('private')->url($path);
             }
+
             return null;
         } catch (\Exception $e) {
             \Log::error('Error getting download URL', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }

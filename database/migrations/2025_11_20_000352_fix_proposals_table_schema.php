@@ -16,10 +16,15 @@ return new class extends Migration
             if (Schema::hasColumn('proposals', 'calculation_data')) {
                 $table->renameColumn('calculation_data', 'data');
             }
-            
+
             // Agregar columna linked si no existe
-            if (!Schema::hasColumn('proposals', 'linked')) {
+            if (! Schema::hasColumn('proposals', 'linked')) {
                 $table->boolean('linked')->default(false)->after('client_id');
+            }
+
+            // Agregar created_by si no existe
+            if (! Schema::hasColumn('proposals', 'created_by')) {
+                $table->foreignId('created_by')->nullable()->constrained('users');
             }
         });
     }
@@ -33,7 +38,7 @@ return new class extends Migration
             if (Schema::hasColumn('proposals', 'data')) {
                 $table->renameColumn('data', 'calculation_data');
             }
-            
+
             if (Schema::hasColumn('proposals', 'linked')) {
                 $table->dropColumn('linked');
             }

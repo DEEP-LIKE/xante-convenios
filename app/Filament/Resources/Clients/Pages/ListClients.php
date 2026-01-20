@@ -6,10 +6,10 @@ use App\Filament\Resources\Clients\ClientResource;
 use App\Jobs\SyncHubspotClientsJob;
 use App\Services\HubspotSyncService;
 use Filament\Actions\Action;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Cache;
+use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class ListClients extends ListRecords
 {
@@ -27,7 +27,7 @@ class ListClients extends ListRecords
                 ->modalHeading('Sincronización desde Deals de HubSpot')
                 ->modalDescription('Sincroniza clientes desde Deals de HubSpot con estatus "Aceptado". Solo procesa deals que tengan un contacto asociado con xante_id válido.')
                 ->modalSubmitActionLabel('Iniciar Sincronización')
-                ->disabled(fn() => Cache::get('hubspot_sync_in_progress', false))
+                ->disabled(fn () => Cache::get('hubspot_sync_in_progress', false))
                 ->action(function () {
                     try {
                         // Verificar si ya hay una sincronización en progreso
@@ -38,21 +38,23 @@ class ListClients extends ListRecords
                                 ->warning()
                                 ->icon('heroicon-o-clock')
                                 ->send();
+
                             return;
                         }
 
                         // Verificar conexión con HubSpot
-                        $syncService = new HubspotSyncService();
+                        $syncService = app(HubspotSyncService::class);
                         $connectionTest = $syncService->testConnection();
-                        
-                        if (!$connectionTest['success']) {
+
+                        if (! $connectionTest['success']) {
                             Notification::make()
                                 ->title('Error de Conexión')
-                                ->body('No se pudo conectar con HubSpot: ' . $connectionTest['message'])
+                                ->body('No se pudo conectar con HubSpot: '.$connectionTest['message'])
                                 ->danger()
                                 ->icon('heroicon-o-exclamation-triangle')
                                 ->duration(10000)
                                 ->send();
+
                             return;
                         }
 
@@ -70,7 +72,7 @@ class ListClients extends ListRecords
                     } catch (\Exception $e) {
                         Notification::make()
                             ->title('Error al Iniciar Sincronización')
-                            ->body('Ocurrió un error: ' . $e->getMessage())
+                            ->body('Ocurrió un error: '.$e->getMessage())
                             ->danger()
                             ->icon('heroicon-o-exclamation-triangle')
                             ->duration(10000)

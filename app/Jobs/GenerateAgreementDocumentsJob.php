@@ -4,19 +4,20 @@ namespace App\Jobs;
 
 use App\Models\Agreement;
 use App\Services\PdfGenerationService;
+use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Filament\Notifications\Notification;
 
 class GenerateAgreementDocumentsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300; // 5 minutos timeout
+
     public $tries = 3; // Máximo 3 intentos
 
     public function __construct(
@@ -31,14 +32,14 @@ class GenerateAgreementDocumentsJob implements ShouldQueue
 
             // Actualizar estado a "generando"
             $this->agreement->update([
-                'status' => 'documents_generating'
+                'status' => 'documents_generating',
             ]);
 
             // Generar todos los documentos
             $documents = $pdfService->generateAllDocuments($this->agreement);
 
             // Verificar que todos los documentos se generaron correctamente
-            if (!$pdfService->verifyDocumentsGenerated($this->agreement)) {
+            if (! $pdfService->verifyDocumentsGenerated($this->agreement)) {
                 throw new \Exception('No todos los documentos fueron generados correctamente');
             }
 
@@ -53,18 +54,18 @@ class GenerateAgreementDocumentsJob implements ShouldQueue
 
             Log::info("Documentos generados exitosamente para Agreement #{$this->agreement->id}", [
                 'documents_count' => count($documents),
-                'total_size' => $pdfService->getTotalDocumentsSize($this->agreement)
+                'total_size' => $pdfService->getTotalDocumentsSize($this->agreement),
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Error generando documentos para Agreement #{$this->agreement->id}: " . $e->getMessage(), [
+            Log::error("Error generando documentos para Agreement #{$this->agreement->id}: ".$e->getMessage(), [
                 'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Actualizar estado a error
             $this->agreement->update([
-                'status' => 'error_generating_documents'
+                'status' => 'error_generating_documents',
             ]);
 
             // Enviar notificación de error al usuario si está especificado
@@ -75,7 +76,7 @@ class GenerateAgreementDocumentsJob implements ShouldQueue
                     ->danger()
                     ->sendToDatabase(\App\Models\User::find($this->userId));
             }
-            
+
             throw $e;
         }
     }
@@ -84,12 +85,12 @@ class GenerateAgreementDocumentsJob implements ShouldQueue
     {
         Log::error("Job de generación de documentos falló definitivamente para Agreement #{$this->agreement->id}", [
             'exception' => $exception->getMessage(),
-            'attempts' => $this->attempts()
+            'attempts' => $this->attempts(),
         ]);
 
         // Marcar como error definitivo
         $this->agreement->update([
-            'status' => 'error_generating_documents'
+            'status' => 'error_generating_documents',
         ]);
 
         // Limpiar documentos parcialmente generados

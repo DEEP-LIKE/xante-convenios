@@ -2,18 +2,17 @@
 
 namespace App\Filament\Schemas\CreateAgreement;
 
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Radio;
-use Filament\Forms\Components\ToggleButtons;
 use Filament\Actions\Action;
-use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\HtmlString;
@@ -160,9 +159,8 @@ class StepTwoSchema
                 Section::make('DATOS DEL CÓNYUGE')
                     ->description('Información requerida por el estado civil Casado')
                     ->icon('heroicon-o-heart')
-                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => 
-                        $get('holder_civil_status') === 'casado' && 
-                        ($get('holder_marital_regime') === 'bienes_mancomunados' || 
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('holder_civil_status') === 'casado' &&
+                        ($get('holder_marital_regime') === 'bienes_mancomunados' ||
                         ($get('has_co_borrower') && $get('co_borrower_relationship') === 'cónyuge'))
                     )
                     ->headerActions([
@@ -270,8 +268,7 @@ class StepTwoSchema
                                 'cónyuge' => 'heroicon-o-heart',
                                 'coacreditado' => 'heroicon-o-user-plus',
                             ])
-                            ->disableOptionWhen(fn (string $value, \Filament\Schemas\Components\Utilities\Get $get) => 
-                                $value === 'cónyuge' && $get('holder_civil_status') !== 'casado'
+                            ->disableOptionWhen(fn (string $value, \Filament\Schemas\Components\Utilities\Get $get) => $value === 'cónyuge' && $get('holder_civil_status') !== 'casado'
                             )
                             ->inline()
                             ->required()

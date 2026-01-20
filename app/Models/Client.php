@@ -22,7 +22,7 @@ class Client extends Model
         'fecha_registro',
         'email',
         'phone',
-        
+
         // Datos personales titular
         'birthdate',
         'curp',
@@ -38,7 +38,6 @@ class Client extends Model
         'postal_code',
         'municipality',
         'state',
-        
 
         // Contacto AC y/o Presidente de Privada
         'ac_name',
@@ -67,7 +66,7 @@ class Client extends Model
     {
         return $this->hasMany(Agreement::class);
     }
-    
+
     public function latestAgreement()
     {
         return $this->hasOne(Agreement::class)

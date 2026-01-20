@@ -24,29 +24,29 @@ class ValidationApprovedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return (new MailMessage)
                 ->subject('Validación no disponible')
                 ->line('La validación solicitada ya no está disponible.');
         }
 
         return (new MailMessage)
-            ->subject('✓ Validación Aprobada - Convenio #' . $validation->agreement_id)
-            ->greeting('¡Excelente noticia, ' . $notifiable->name . '!')
+            ->subject('✓ Validación Aprobada - Convenio #'.$validation->agreement_id)
+            ->greeting('¡Excelente noticia, '.$notifiable->name.'!')
             ->line('Tu calculadora ha sido **aprobada** por el Coordinador FI.')
-            ->line('**Convenio ID:** #' . $validation->agreement_id)
-            ->line('**Aprobado por:** ' . $validation->validatedBy->name)
-            ->line('**Fecha:** ' . $validation->validated_at->format('d/m/Y H:i'))
-            ->action('Continuar con el Convenio', url('/wizard/' . $validation->agreement_id))
+            ->line('**Convenio ID:** #'.$validation->agreement_id)
+            ->line('**Aprobado por:** '.$validation->validatedBy->name)
+            ->line('**Fecha:** '.$validation->validated_at->format('d/m/Y H:i'))
+            ->action('Continuar con el Convenio', url('/wizard/'.$validation->agreement_id))
             ->line('Ya puedes continuar con la generación de documentos.');
     }
 
     public function toDatabase(object $notifiable): array
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return \Filament\Notifications\Notification::make()
                 ->title('Validación no disponible')
                 ->body('La validación solicitada ya no está disponible.')
@@ -61,7 +61,7 @@ class ValidationApprovedNotification extends Notification implements ShouldQueue
             ->actions([
                 \Filament\Notifications\Actions\Action::make('view')
                     ->label('Ver Convenio')
-                    ->url(url('/admin/convenios/crear?agreement=' . $validation->agreement_id), shouldOpenInNewTab: true),
+                    ->url(url('/admin/convenios/crear?agreement='.$validation->agreement_id), shouldOpenInNewTab: true),
             ])
             ->getDatabaseMessage();
     }
@@ -69,8 +69,8 @@ class ValidationApprovedNotification extends Notification implements ShouldQueue
     public function toArray(object $notifiable): array
     {
         $validation = QuoteValidation::find($this->validationId);
-        
-        if (!$validation) {
+
+        if (! $validation) {
             return [
                 'validation_id' => $this->validationId,
                 'type' => 'validation_approved',

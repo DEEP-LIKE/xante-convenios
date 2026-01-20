@@ -2,14 +2,14 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Client;
 use App\Models\Agreement;
-use Illuminate\Support\Facades\DB;
+use App\Models\Client;
+use Illuminate\Console\Command;
 
 class SyncClientAgreementRelations extends Command
 {
     protected $signature = 'sync:client-agreements';
+
     protected $description = 'Sincroniza las relaciones entre clientes y convenios basándose en los datos del wizard';
 
     public function handle()
@@ -28,17 +28,17 @@ class SyncClientAgreementRelations extends Command
 
         foreach ($agreementsWithoutClient as $agreement) {
             $wizardData = $agreement->wizard_data;
-            
-            if (!$wizardData || !isset($wizardData['xante_id'])) {
+
+            if (! $wizardData || ! isset($wizardData['xante_id'])) {
                 continue;
             }
 
             $xanteId = $wizardData['xante_id'];
-            
+
             // Buscar cliente existente
             $client = Client::where('xante_id', $xanteId)->first();
-            
-            if (!$client) {
+
+            if (! $client) {
                 // Crear cliente si no existe
                 $client = $this->createClientFromWizardData($wizardData, $agreement);
                 if ($client) {
@@ -64,7 +64,7 @@ class SyncClientAgreementRelations extends Command
 
         foreach ($orphanedAgreements as $agreement) {
             $wizardData = $agreement->wizard_data;
-            
+
             if ($wizardData) {
                 $client = $this->createClientFromWizardData($wizardData, $agreement);
                 if ($client) {
@@ -74,7 +74,7 @@ class SyncClientAgreementRelations extends Command
             }
         }
 
-        $this->info("Sincronización completada:");
+        $this->info('Sincronización completada:');
         $this->info("- Relaciones sincronizadas: {$synced}");
         $this->info("- Clientes creados: {$created}");
 
@@ -102,19 +102,20 @@ class SyncClientAgreementRelations extends Command
             ];
 
             // Filtrar valores nulos
-            $clientData = array_filter($clientData, function($value) {
+            $clientData = array_filter($clientData, function ($value) {
                 return $value !== null && $value !== '';
             });
 
             // Asegurar campos requeridos
-            if (!isset($clientData['xante_id'])) {
+            if (! isset($clientData['xante_id'])) {
                 return null;
             }
 
             return Client::create($clientData);
 
         } catch (\Exception $e) {
-            $this->error("Error creando cliente: " . $e->getMessage());
+            $this->error('Error creando cliente: '.$e->getMessage());
+
             return null;
         }
     }

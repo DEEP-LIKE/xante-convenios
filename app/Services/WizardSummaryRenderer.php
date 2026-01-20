@@ -261,6 +261,7 @@ class WizardSummaryRenderer
             </div>
         ', ['message' => $message]);
     }
+
     /**
      * Renderiza el estado de validación con el mismo diseño que los otros cards
      */
@@ -270,7 +271,7 @@ class WizardSummaryRenderer
         if ($status === 'approved') {
             $aprobadoPor = $currentValidation?->validatedBy?->name ?? 'Coordinador FI';
             $fecha = $currentValidation?->validated_at->format('d/m/Y H:i') ?? '';
-            
+
             return Blade::render('
                 <x-wizard.summary-card title="Validación Aprobada" icon="heroicon-s-check-circle" color="success">
                     <p style="font-size: 15px; color: #047857; margin-bottom: 20px; line-height: 1.6;">
@@ -303,13 +304,13 @@ class WizardSummaryRenderer
                 </x-wizard.summary-card>
             ', ['aprobadoPor' => $aprobadoPor, 'fecha' => $fecha]);
         }
-        
+
         // Estado: Con Observaciones
         if ($status === 'with_observations') {
             $validadoPor = $currentValidation?->validatedBy?->name ?? 'Coordinador FI';
             $fecha = $currentValidation?->validated_at->format('d/m/Y H:i') ?? '';
             $observaciones = $currentValidation?->observations ?? 'Sin observaciones registradas.';
-            
+
             return Blade::render('
                 <x-wizard.summary-card title="Requiere Cambios" icon="heroicon-o-exclamation-triangle" color="warning">
                     <p style="font-size: 15px; color: #9a3412; margin-bottom: 20px; line-height: 1.6;">
@@ -346,7 +347,7 @@ class WizardSummaryRenderer
             $validadoPor = $currentValidation?->validatedBy?->name ?? 'Coordinador FI';
             $fecha = $currentValidation?->validated_at->format('d/m/Y H:i') ?? '';
             $observaciones = $currentValidation?->observations ?? 'Sin motivo especificado.';
-            
+
             return Blade::render('
                 <x-wizard.summary-card title="Solicitud Rechazada" icon="heroicon-o-x-circle" color="danger">
                     <p style="font-size: 15px; color: #991b1b; margin-bottom: 20px; line-height: 1.6;">
@@ -373,7 +374,7 @@ class WizardSummaryRenderer
         if ($status === 'pending') {
             $fecha = $currentValidation?->created_at->format('d/m/Y H:i') ?? '';
             $revision = $currentValidation?->revision_number ?? 1;
-            
+
             return Blade::render('
                 <x-wizard.summary-card title="En Proceso de Validación" icon="heroicon-o-clock" color="warning">
                     <p style="font-size: 15px; color: #B45309; margin-bottom: 20px; line-height: 1.6;">
@@ -415,7 +416,7 @@ class WizardSummaryRenderer
                 </x-wizard.summary-card>
             ', ['fecha' => $fecha, 'revision' => $revision]);
         }
-        
+
         return $this->renderEmptyState('Esperando inicio de validación...');
     }
 }
