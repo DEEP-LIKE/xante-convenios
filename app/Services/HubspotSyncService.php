@@ -160,11 +160,57 @@ class HubspotSyncService
 
     // ========================================
     // MÉTODOS DE SINCRONIZACIÓN A HUBSPOT
-    // (No refactorizados - mantienen funcionalidad legacy)
     // ========================================
 
     /**
-     * Sincronizar cliente local a HubSpot
+     * Empuja los datos del cliente y su convenio a HubSpot (Contact y Deal)
+     * Este es el método principal usado por el Wizard.
+     */
+    public function pushClientToHubspot(Client $client, ?Agreement $agreement = null): array
+    {
+        $result = [
+            'deal_updated' => false,
+            'contact_updated' => false,
+            'errors' => [],
+        ];
+
+        try {
+            // 1. Actualizar Contacto
+            if ($client->hubspot_id) {
+                $contactUpdate = $this->updateContactInHubspot($client);
+                if ($contactUpdate['success']) {
+                    $result['contact_updated'] = true;
+                } else {
+                    $result['errors'][] = "Error Contacto: " . $contactUpdate['error'];
+                }
+            }
+
+            // 2. Actualizar Deal
+            if ($client->hubspot_deal_id) {
+                $dealUpdate = $this->updateDealInHubspot($client, $agreement);
+                if ($dealUpdate['success']) {
+                    $result['deal_updated'] = true;
+                } else {
+                    $result['errors'][] = "Error Deal: " . $dealUpdate['error'];
+                }
+            }
+
+            // 3. Si no hay Deal ID pero sí Client, podríamos intentar crear el Deal
+            // (Opcional, según flujo actual del wizard)
+
+        } catch (\Exception $e) {
+            Log::error('Excepción en pushClientToHubspot', [
+                'client_id' => $client->id,
+                'error' => $e->getMessage()
+            ]);
+            $result['errors'][] = "Excepción: " . $e->getMessage();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Sincronizar cliente local a HubSpot (Legacy/Simple)
      */
     public function syncClientToHubspot(Client $client, ?Agreement $agreement = null): array
     {
@@ -236,32 +282,27 @@ class HubspotSyncService
     }
 
     /**
-     * Actualizar Deal en HubSpot
+     * Actualiza un Deal en HubSpot con propiedades específicas
      */
-    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null): array
+    public function updateHubspotDeal(string $dealId, array $properties): array
     {
         try {
-            $dealData = $this->mapClientToHubspotDeal($client, $agreement);
-
-            $response = Http::timeout($this->config['sync']['timeout'])
+            $response = Http::timeout($this->config['sync']['timeout'] ?? 30)
                 ->withHeaders([
                     'Authorization' => "Bearer {$this->token}",
                     'Content-Type' => 'application/json',
                 ])
-                ->patch($this->baseUrl."/crm/v3/objects/deals/{$client->hubspot_deal_id}", [
-                    'properties' => $dealData,
+                ->patch($this->baseUrl."/crm/v3/objects/deals/{$dealId}", [
+                    'properties' => $properties,
                 ]);
 
             if ($response->successful()) {
-                Log::info('Deal actualizado en HubSpot', [
-                    'client_id' => $client->id,
-                    'deal_id' => $client->hubspot_deal_id,
+                Log::info('Deal actualizado en HubSpot (genérico)', [
+                    'deal_id' => $dealId,
+                    'properties' => array_keys($properties),
                 ]);
 
-                return [
-                    'success' => true,
-                    'deal_id' => $client->hubspot_deal_id,
-                ];
+                return ['success' => true];
             }
 
             return [
@@ -275,6 +316,55 @@ class HubspotSyncService
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Actualizar Contacto en HubSpot
+     */
+    private function updateContactInHubspot(Client $client): array
+    {
+        try {
+            $contactData = $this->mapClientToHubspotContact($client);
+
+            $response = Http::timeout($this->config['sync']['timeout'] ?? 30)
+                ->withHeaders([
+                    'Authorization' => "Bearer {$this->token}",
+                    'Content-Type' => 'application/json',
+                ])
+                ->patch($this->baseUrl."/crm/v3/objects/contacts/{$client->hubspot_id}", [
+                    'properties' => $contactData,
+                ]);
+
+            if ($response->successful()) {
+                Log::info('Contacto actualizado en HubSpot', [
+                    'client_id' => $client->id,
+                    'contact_id' => $client->hubspot_id,
+                ]);
+
+                return ['success' => true];
+            }
+
+            return [
+                'success' => false,
+                'error' => "HTTP {$response->status()}: {$response->body()}",
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Actualizar Deal en HubSpot
+     */
+    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null): array
+    {
+        $dealData = $this->mapClientToHubspotDeal($client, $agreement);
+
+        return $this->updateHubspotDeal($client->hubspot_deal_id, $dealData);
     }
 
     /**
@@ -292,14 +382,49 @@ class HubspotSyncService
             'rfc' => $client->rfc,
             'estado_civil' => $client->civil_status,
             'ocupacion' => $client->occupation,
+            // Domicilio titular
+            'domicilio_actual' => $client->current_address,
+            'colonia' => $client->neighborhood,
+            'codigo_postal' => $client->postal_code,
+            'municipio' => $client->municipality,
+            'estado' => $client->state,
         ];
 
-        // Agregar datos del convenio si existe
+        // Cónyuge si existe
+        if ($client->spouse) {
+            $spouse = $client->spouse;
+            $dealData = array_merge($dealData, [
+                'nombre_completo_conyuge' => $spouse->name,
+                'email_conyuge' => $spouse->email,
+                'telefono_movil_conyuge' => $spouse->phone,
+                'curp_conyuge' => $spouse->curp,
+                'domicilio_actual_conyuge' => $spouse->current_address,
+                'colonia_conyuge' => $spouse->neighborhood,
+                'codigo_postal_conyuge' => $spouse->postal_code,
+                'municipio_conyuge' => $spouse->municipality,
+                'estado_conyuge' => $spouse->state,
+            ]);
+        }
+
+        // Agregar datos del convenio si existe o si el cliente los tiene (por si el wizard los guarda directamente en Agreement)
         if ($agreement) {
             $dealData = array_merge($dealData, [
-                'valor_convenio' => $agreement->wizard_data['agreement_value'] ?? null,
-                'comision_total_pagar' => $agreement->wizard_data['total_commission'] ?? null,
-                'ganancia_final' => $agreement->wizard_data['final_profit'] ?? null,
+                // Datos de la propiedad
+                'domicilio_convenio' => $agreement->domicilio_convenio ?? $agreement->wizard_data['domicilio_convenio'] ?? null,
+                'comunidad' => $agreement->comunidad ?? $agreement->wizard_data['comunidad'] ?? null,
+                'tipo_vivienda' => $agreement->tipo_vivienda ?? $agreement->wizard_data['tipo_vivienda'] ?? null,
+                'prototipo' => $agreement->prototipo ?? $agreement->wizard_data['prototipo'] ?? null,
+                'lote' => $agreement->wizard_data['lote'] ?? null,
+                'manzana' => $agreement->wizard_data['manzana'] ?? null,
+                'etapa' => $agreement->wizard_data['etapa'] ?? null,
+                'municipio_propiedad' => $agreement->wizard_data['municipio_propiedad'] ?? null,
+                'estado_propiedad' => $agreement->wizard_data['estado_propiedad'] ?? null,
+
+                // Datos financieros
+                'valor_convenio' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
+                'precio_promocion' => $agreement->precio_promocion ?? $agreement->wizard_data['precio_promocion'] ?? null,
+                'comision_total_pagar' => $agreement->comision_total_pagar ?? $agreement->wizard_data['comision_total_pagar'] ?? null,
+                'ganancia_final' => $agreement->ganancia_final ?? $agreement->wizard_data['ganancia_final'] ?? null,
             ]);
         }
 
@@ -313,10 +438,17 @@ class HubspotSyncService
     {
         return [
             'firstname' => $client->name ? explode(' ', $client->name)[0] : '',
-            'lastname' => $client->name ? implode(' ', array_slice(explode(' ', $client->name), 1)) : '',
+            'lastname' => $client->name ? implode(' ', array_slice(explode(' ', $client->name), 1)) : ($client->name ?: ''),
             'email' => $client->email,
             'phone' => $client->phone,
             'xante_id' => $client->xante_id,
+            'address' => $client->current_address,
+            'city' => $client->municipality,
+            'state' => $client->state,
+            'zip' => $client->postal_code,
+            'colonia' => $client->neighborhood,
+            'date_of_birth' => $client->birthdate ? $client->birthdate->format('Y-m-d') : null,
+            'jobtitle' => $client->occupation,
         ];
     }
 
