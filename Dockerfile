@@ -88,7 +88,11 @@ COPY --from=vendor-builder /app/vendor ./vendor
 COPY --from=node-builder /app/public/build ./public/build
 
 # FINALIZAR CONFIGURACIÓN DE PHP/LARAVEL
-RUN composer dump-autoload --optimize --classmap-authoritative \
+# Agregamos excepción de git para evitar error de ownership
+# Y nos aseguramos de que no haya caches previos antes del dump
+RUN git config --global --add safe.directory /var/www/html \
+    && rm -f bootstrap/cache/*.php \
+    && composer dump-autoload --optimize --classmap-authoritative \
     && php artisan filament:assets --no-interaction \
     && php artisan config:cache \
     && php artisan route:cache \
@@ -107,6 +111,7 @@ RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # PERMISOS
+# Es importante que storage y bootstrap/cache tengan permisos de escritura para www-data
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 

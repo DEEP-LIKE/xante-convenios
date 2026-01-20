@@ -1,0 +1,15 @@
+.git
+.env
+/vendor
+/node_modules
+/public/build
+/storage/*.key
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*.php
+/bootstrap/cache/*.php
+.phpunit.result.cache
+Dockerfile
+.dockerignore
+deploy.sh
+auth.json
