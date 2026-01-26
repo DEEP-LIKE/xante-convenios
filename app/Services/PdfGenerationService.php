@@ -152,7 +152,19 @@ class PdfGenerationService
 
         // Copiar archivo original
         $fileContent = file_get_contents($originalPath);
-        Storage::disk('s3')->put($filePath, $fileContent);
+        
+        try {
+            Storage::disk('s3')->put($filePath, $fileContent);
+            Log::info('Documento original subido exitosamente a S3', ['path' => $filePath]);
+        } catch (\Exception $e) {
+            Log::error('Error crítico subiendo archivo original a S3', [
+                'agreement_id' => $agreement->id,
+                'path' => $filePath,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
 
         // Registrar en base de datos
         return GeneratedDocument::create([
@@ -232,7 +244,20 @@ class PdfGenerationService
 
         // Generar y guardar PDF
         $pdfOutput = $pdf->output();
-        Storage::disk('s3')->put($filePath, $pdfOutput);
+
+        try {
+            Storage::disk('s3')->put($filePath, $pdfOutput);
+            Log::info('PDF subido exitosamente a S3', ['path' => $filePath]);
+        } catch (\Exception $e) {
+            Log::error('Error crítico escribiendo PDF en S3', [
+                'agreement_id' => $agreement->id,
+                'path' => $filePath,
+                'error' => $e->getMessage(),
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
 
         // Registrar en base de datos
         return GeneratedDocument::create([

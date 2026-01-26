@@ -59,9 +59,9 @@ class GenerateAgreementDocumentsAction
 
             Notification::make()
                 ->title('❌ Error al Generar Documentos')
-                ->body('Error: '.$e->getMessage())
+                ->body('Error ('.get_class($e).'): '.$e->getMessage().'. Por favor, revisa los logs de Laravel para más detalles.')
                 ->danger()
-                ->duration(8000)
+                ->duration(12000)
                 ->send();
 
             return null;
