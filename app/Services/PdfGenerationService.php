@@ -147,8 +147,8 @@ class PdfGenerationService
         $directory = "convenios/{$agreement->id}/generated";
         $filePath = "{$directory}/{$fileName}";
 
-        // Asegurar que el directorio existe
-        Storage::disk('s3')->makeDirectory($directory);
+        // S3 no requiere makeDirectory para carpetas (se crean mediante prefijos al subir archivos)
+        Log::info('Subiendo documento original a S3', ['path' => $filePath]);
 
         // Copiar archivo original
         $fileContent = file_get_contents($originalPath);
@@ -227,8 +227,8 @@ class PdfGenerationService
         $directory = "convenios/{$agreement->id}/generated";
         $filePath = "{$directory}/{$fileName}";
 
-        // Asegurar que el directorio existe
-        Storage::disk('s3')->makeDirectory($directory);
+        // S3 no requiere makeDirectory para carpetas
+        Log::info('Subiendo PDF generado a S3', ['path' => $filePath]);
 
         // Generar y guardar PDF
         $pdfOutput = $pdf->output();
