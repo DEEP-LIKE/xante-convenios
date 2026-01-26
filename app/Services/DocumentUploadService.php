@@ -94,22 +94,22 @@ class DocumentUploadService
             if (is_string($filePath) && ! empty($filePath)) {
                 $finalFilePath = $filePath;
                 $fileName = basename($filePath);
-                if (Storage::disk('private')->exists($filePath)) {
-                    $fileSize = Storage::disk('private')->size($filePath);
+                if (Storage::disk('s3')->exists($filePath)) {
+                    $fileSize = Storage::disk('s3')->size($filePath);
                 }
             } elseif (is_array($filePath) && ! empty($filePath)) {
                 $firstFile = $filePath[0];
                 if (! empty($firstFile)) {
                     $finalFilePath = $firstFile;
                     $fileName = basename($firstFile);
-                    if (Storage::disk('private')->exists($firstFile)) {
-                        $fileSize = Storage::disk('private')->size($firstFile);
+                    if (Storage::disk('s3')->exists($firstFile)) {
+                        $fileSize = Storage::disk('s3')->size($firstFile);
                     }
                 }
             } elseif (is_object($filePath)) {
                 if (method_exists($filePath, 'getClientOriginalName')) {
                     $fileName = $filePath->getClientOriginalName();
-                    $finalFilePath = $filePath->store('convenios/'.$agreement->id.'/client_documents/'.$category, 'private');
+                    $finalFilePath = $filePath->store('convenios/'.$agreement->id.'/client_documents/'.$category, 's3');
                     $fileSize = $filePath->getSize();
                 }
             }
@@ -130,8 +130,8 @@ class DocumentUploadService
 
             if ($existingDocument) {
                 // Eliminar el archivo anterior
-                if (! empty($existingDocument->file_path) && Storage::disk('private')->exists($existingDocument->file_path)) {
-                    Storage::disk('private')->delete($existingDocument->file_path);
+                if (! empty($existingDocument->file_path) && Storage::disk('s3')->exists($existingDocument->file_path)) {
+                    Storage::disk('s3')->delete($existingDocument->file_path);
                 }
 
                 // Actualizar el registro existente
@@ -182,8 +182,8 @@ class DocumentUploadService
                 $documentName = $clientDocument->document_name;
 
                 // Eliminar el archivo físico
-                if (! empty($clientDocument->file_path) && Storage::disk('private')->exists($clientDocument->file_path)) {
-                    Storage::disk('private')->delete($clientDocument->file_path);
+                if (! empty($clientDocument->file_path) && Storage::disk('s3')->exists($clientDocument->file_path)) {
+                    Storage::disk('s3')->delete($clientDocument->file_path);
                 }
 
                 // Eliminar el registro
@@ -228,7 +228,7 @@ class DocumentUploadService
             $fieldName = $fieldMap[$document->document_type] ?? null;
             if ($fieldName && ! empty($document->file_path)) {
                 // Verificar que el archivo existe físicamente
-                if (Storage::disk('private')->exists($document->file_path)) {
+                if (Storage::disk('s3')->exists($document->file_path)) {
                     $documents[$fieldName] = [$document->file_path];
                 } else {
                     // Marcar para eliminar de BD

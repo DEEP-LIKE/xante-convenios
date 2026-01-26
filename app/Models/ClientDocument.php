@@ -51,7 +51,7 @@ class ClientDocument extends Model
      */
     public function getDownloadUrl(): string
     {
-        return Storage::disk('private')->temporaryUrl(
+        return Storage::disk('s3')->temporaryUrl(
             $this->file_path,
             now()->addHours(1)
         );
@@ -62,7 +62,7 @@ class ClientDocument extends Model
      */
     public function fileExists(): bool
     {
-        return Storage::disk('private')->exists($this->file_path);
+        return Storage::disk('s3')->exists($this->file_path);
     }
 
     /**

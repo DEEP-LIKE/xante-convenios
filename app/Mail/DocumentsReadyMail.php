@@ -59,7 +59,7 @@ class DocumentsReadyMail extends Mailable
 
             foreach ($this->agreement->generatedDocuments as $document) {
                 if ($document->fileExists()) {
-                    $fileSize = \Storage::disk('private')->size($document->file_path);
+                    $fileSize = \Storage::disk('s3')->size($document->file_path);
 
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
                     if ($fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {

@@ -34,13 +34,13 @@ class DocumentFileManager
                 ->toArray();
 
             foreach ($clientDocumentPaths as $path) {
-                if (Storage::disk('private')->exists($path)) {
-                    $files = Storage::disk('private')->files($path);
+                if (Storage::disk('s3')->exists($path)) {
+                    $files = Storage::disk('s3')->files($path);
 
                     foreach ($files as $file) {
                         // Si el archivo no está en la BD, eliminarlo
                         if (! in_array($file, $dbFilePaths)) {
-                            Storage::disk('private')->delete($file);
+                            Storage::disk('s3')->delete($file);
                         }
                     }
                 }
@@ -59,7 +59,7 @@ class DocumentFileManager
      */
     public function fileExists(string $path): bool
     {
-        return Storage::disk('private')->exists($path);
+        return Storage::disk('s3')->exists($path);
     }
 
     /**
@@ -69,7 +69,7 @@ class DocumentFileManager
     {
         try {
             if ($this->fileExists($path)) {
-                return Storage::disk('private')->delete($path);
+                return Storage::disk('s3')->delete($path);
             }
 
             return false;
@@ -90,7 +90,7 @@ class DocumentFileManager
     {
         try {
             if ($this->fileExists($path)) {
-                return Storage::disk('private')->size($path);
+                return Storage::disk('s3')->size($path);
             }
 
             return null;
@@ -111,7 +111,7 @@ class DocumentFileManager
     {
         try {
             if ($this->fileExists($path)) {
-                return Storage::disk('private')->url($path);
+                return Storage::disk('s3')->url($path);
             }
 
             return null;

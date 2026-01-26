@@ -69,7 +69,7 @@ filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.esm.j
   (*!
    * FilePondPluginFileValidateType 1.2.9
    * Licensed under MIT, https://opensource.org/licenses/MIT/
-   * Please visit https://pqina.nl/filepond/ for de.
+   * Please visit https://pqina.nl/filepond/ for details.
    *)
 
 filepond-plugin-image-crop/dist/filepond-plugin-image-crop.esm.js:

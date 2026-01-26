@@ -22,7 +22,7 @@ class DocumentDownloadController extends Controller
         $filePath = $document->file_path;
         $fileName = basename($filePath);
 
-        return Storage::disk('private')->download($filePath, $fileName, [
+        return Storage::disk('s3')->download($filePath, $fileName, [
             'Content-Type' => 'application/pdf',
         ]);
     }

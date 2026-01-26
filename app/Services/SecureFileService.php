@@ -35,7 +35,7 @@ class SecureFileService
         $secureFileName = self::generateSecureFileName($file->getClientOriginalName());
         $secureDirectory = self::generateSecureDirectory($agreementId)."/{$category}";
 
-        $filePath = $file->storeAs($secureDirectory, $secureFileName, 'private');
+        $filePath = $file->storeAs($secureDirectory, $secureFileName, 's3');
 
         return [
             'file_path' => $filePath,

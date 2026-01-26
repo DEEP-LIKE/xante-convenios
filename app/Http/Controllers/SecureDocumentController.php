@@ -28,12 +28,12 @@ class SecureDocumentController extends Controller
         }
 
         // Verificar que el archivo existe
-        if (! Storage::disk('private')->exists($document->file_path)) {
-            abort(404, 'Documento no encontrado');
+        if (! Storage::disk('s3')->exists($document->file_path)) {
+            abort(404, 'Archivo no encontrado');
         }
 
-        // Servir el archivo con headers de seguridad
-        return Storage::disk('private')->response($document->file_path, null, [
+        // Servir el archivo
+        return Storage::disk('s3')->response($document->file_path, null, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.basename($document->file_path).'"',
             'X-Content-Type-Options' => 'nosniff',
@@ -54,15 +54,15 @@ class SecureDocumentController extends Controller
         }
 
         // Verificar que el archivo existe
-        if (! Storage::disk('private')->exists($document->file_path)) {
-            abort(404, 'Documento no encontrado');
+        if (! Storage::disk('s3')->exists($document->file_path)) {
+            abort(404, 'Archivo no encontrado');
         }
 
-        // Determinar el tipo de contenido
-        $mimeType = Storage::disk('private')->mimeType($document->file_path);
+        // Obtener el tipo MIME
+        $mimeType = Storage::disk('s3')->mimeType($document->file_path);
 
-        // Servir el archivo con headers de seguridad
-        return Storage::disk('private')->response($document->file_path, null, [
+        // Descargar el archivo
+        return Storage::disk('s3')->response($document->file_path, null, [
             'Content-Type' => $mimeType,
             'Content-Disposition' => 'inline; filename="'.$document->file_name.'"',
             'X-Content-Type-Options' => 'nosniff',
