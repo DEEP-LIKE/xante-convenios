@@ -57,11 +57,16 @@ class GenerateAgreementDocumentsAction
             // Si hay error, actualizar estado y mostrar error
             $agreement->update(['status' => 'error_generating_documents']);
 
+            $errorMessage = $e->getMessage();
+            if ($e->getPrevious()) {
+                $errorMessage .= ' Base error: ' . $e->getPrevious()->getMessage();
+            }
+
             Notification::make()
                 ->title('❌ Error al Generar Documentos')
-                ->body('Error ('.get_class($e).'): '.$e->getMessage().'. Por favor, revisa los logs de Laravel para más detalles.')
+                ->body('Error (' . get_class($e) . '): ' . $errorMessage . '. Revisa los logs para el trace completo.')
                 ->danger()
-                ->duration(12000)
+                ->duration(15000)
                 ->send();
 
             return null;

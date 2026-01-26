@@ -249,13 +249,23 @@ class PdfGenerationService
             Storage::disk('s3')->put($filePath, $pdfOutput);
             Log::info('PDF subido exitosamente a S3', ['path' => $filePath]);
         } catch (\Exception $e) {
-            Log::error('Error crítico escribiendo PDF en S3', [
+            $extraData = [
                 'agreement_id' => $agreement->id,
                 'path' => $filePath,
                 'error' => $e->getMessage(),
                 'exception_class' => get_class($e),
-                'trace' => $e->getTraceAsString()
-            ]);
+            ];
+
+            // Intentar extraer el error real de AWS S3
+            $previous = $e->getPrevious();
+            if ($previous instanceof \Aws\S3\Exception\S3Exception) {
+                $extraData['aws_error_code'] = $previous->getAwsErrorCode();
+                $extraData['aws_error_message'] = $previous->getAwsErrorMessage();
+                $extraData['aws_type'] = $previous->getAwsErrorType();
+                $extraData['aws_request_id'] = $previous->getAwsRequestId();
+            }
+
+            Log::error('Error crítico escribiendo PDF en S3 (AWS Detallado)', $extraData);
             throw $e;
         }
 
