@@ -127,6 +127,23 @@ class ManageDocuments extends Page implements HasActions, HasForms
     }
 
     // ========================================
+    // HEADER ACTIONS
+    // ========================================
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('regenerateHeader')
+                ->label('Regenerar Documentos')
+                ->icon('heroicon-o-arrow-path')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->action('regenerateDocuments')
+                ->visible(fn () => $this->agreement->generatedDocuments->isEmpty()),
+        ];
+    }
+
+    // ========================================
     // LIFECYCLE METHODS
     // ========================================
 
@@ -938,6 +955,55 @@ class ManageDocuments extends Page implements HasActions, HasForms
                 ->send();
 
             return null;
+        }
+    }
+
+    public function regenerateDocuments()
+    {
+        try {
+            if (! $this->agreement) {
+                return;
+            }
+
+            Notification::make()
+                ->title('🔄 Regenerando Documentos')
+                ->body('Iniciando proceso de generación de documentos PDF...')
+                ->info()
+                ->send();
+
+            $action = app(\App\Actions\Agreements\GenerateAgreementDocumentsAction::class);
+            $action->execute(
+                $this->agreement->id,
+                $this->agreement->wizard_data ?? [],
+                true
+            );
+
+            // Recargar datos
+            $this->agreement->refresh();
+            $this->agreement->load(['generatedDocuments']);
+            
+            // Forzar actualización de la UI de Livewire
+            $this->form->fill($this->uploadService->loadDocuments($this->agreement));
+
+            Notification::make()
+                ->title('✅ Documentos Regenerados')
+                ->body('Los documentos se han regenerado y guardado en S3 exitosamente.')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+        } catch (\Exception $e) {
+            \Log::error('Error regenerating documents', [
+                'agreement_id' => $this->agreement->id,
+                'error' => $e->getMessage()
+            ]);
+
+            Notification::make()
+                ->title('❌ Error al Regenerar')
+                ->body($e->getMessage())
+                ->danger()
+                ->duration(8000)
+                ->send();
         }
     }
 }
