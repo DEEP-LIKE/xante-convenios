@@ -40,14 +40,11 @@ COPY --from=vendor-builder /app/vendor ./vendor
 RUN npm run build
 
 # ----------------------------------------------------------------------
-# STAGE 3: PRODUCTION IMAGE (PHP + APACHE)
+# STAGE 3: PRODUCTION IMAGE (PHP-FPM + NGINX)
 # ----------------------------------------------------------------------
-FROM php:8.3-apache
+FROM php:8.3-fpm
 
 WORKDIR /var/www/html
-
-# Activar módulos necesarios de Apache
-RUN a2enmod rewrite headers
 
 # INSTALACIÓN DE HERRAMIENTAS Y LIBRERÍAS
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -60,6 +57,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libonig-dev \
     libfreetype6-dev \
     supervisor \
+    nginx \
     cron \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -88,8 +86,6 @@ COPY --from=vendor-builder /app/vendor ./vendor
 COPY --from=node-builder /app/public/build ./public/build
 
 # FINALIZAR CONFIGURACIÓN DE PHP/LARAVEL
-# Agregamos excepción de git para evitar error de ownership
-# Y nos aseguramos de que no haya caches previos antes del dump
 RUN git config --global --add safe.directory /var/www/html \
     && rm -f bootstrap/cache/*.php \
     && composer dump-autoload --optimize --classmap-authoritative --no-dev \
@@ -98,20 +94,14 @@ RUN git config --global --add safe.directory /var/www/html \
     && php artisan route:cache \
     && php artisan view:cache
 
-# CONFIGURACIÓN DE APACHE
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
-    && echo '<Directory /var/www/html/public>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' >> /etc/apache2/sites-available/000-default.conf \
-    && echo 'SetEnvIf X-Forwarded-Proto https HTTPS=on' >> /etc/apache2/apache2.conf
+# CONFIGURACIÓN DE NGINX
+COPY docker/nginx.conf /etc/nginx/sites-available/default
+RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # CONFIGURACIÓN DE SUPERVISOR
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # PERMISOS
-# Es importante que storage y bootstrap/cache tengan permisos de escritura para www-data
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
@@ -120,6 +110,5 @@ COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # FINALIZACIÓN
-RUN update-rc.d apache2 disable
 EXPOSE 80
 CMD ["/usr/local/bin/start.sh"]
