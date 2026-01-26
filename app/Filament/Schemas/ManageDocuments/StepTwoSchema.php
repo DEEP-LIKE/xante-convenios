@@ -46,7 +46,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->placeholder('📄 Arrastra tu archivo aquí o haz clic para seleccionar')
@@ -66,7 +66,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
@@ -85,7 +85,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -102,7 +102,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
@@ -121,7 +121,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
@@ -140,7 +140,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -156,7 +156,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -173,7 +173,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -198,7 +198,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -215,7 +215,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
@@ -234,7 +234,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
@@ -253,7 +253,7 @@ class StepTwoSchema
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
-                                    ->disk('private')
+                                    ->disk('s3')
                                     ->image()
                                     ->imageEditor()
                                     ->getUploadedFileNameForStorageUsing(function ($file) {

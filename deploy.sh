@@ -36,8 +36,8 @@ echo "⚙️ Ejecutando tareas de Laravel..."
 
 # Verificamos si el contenedor sigue corriendo antes de ejecutar comandos internos
 if [ "$(docker inspect -f '{{.State.Running}}' xante-container)" = "true" ]; then
-    docker exec xante-container php artisan migrate --force
-    docker exec xante-container php artisan optimize
+    docker exec --user www-data xante-container php artisan migrate --force
+    docker exec --user www-data xante-container php artisan optimize
     echo "✅ ¡XANTE actualizado con éxito!"
 else
     echo "❌ ERROR: El contenedor no inició correctamente. Revisa 'docker logs xante-container'"

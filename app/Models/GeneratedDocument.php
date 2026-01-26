@@ -48,7 +48,7 @@ class GeneratedDocument extends Model
      */
     public function fileExists(): bool
     {
-        return Storage::disk('private')->exists($this->file_path);
+        return Storage::disk('s3')->exists($this->file_path);
     }
 
     /**
@@ -60,7 +60,7 @@ class GeneratedDocument extends Model
             return 'N/A';
         }
 
-        $bytes = Storage::disk('private')->size($this->file_path);
+        $bytes = Storage::disk('s3')->size($this->file_path);
         $units = ['B', 'KB', 'MB', 'GB'];
 
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {

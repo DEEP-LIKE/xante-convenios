@@ -148,11 +148,11 @@ class PdfGenerationService
         $filePath = "{$directory}/{$fileName}";
 
         // Asegurar que el directorio existe
-        Storage::disk('private')->makeDirectory($directory);
+        Storage::disk('s3')->makeDirectory($directory);
 
         // Copiar archivo original
         $fileContent = file_get_contents($originalPath);
-        Storage::disk('private')->put($filePath, $fileContent);
+        Storage::disk('s3')->put($filePath, $fileContent);
 
         // Registrar en base de datos
         return GeneratedDocument::create([
@@ -228,11 +228,11 @@ class PdfGenerationService
         $filePath = "{$directory}/{$fileName}";
 
         // Asegurar que el directorio existe
-        Storage::disk('private')->makeDirectory($directory);
+        Storage::disk('s3')->makeDirectory($directory);
 
         // Generar y guardar PDF
         $pdfOutput = $pdf->output();
-        Storage::disk('private')->put($filePath, $pdfOutput);
+        Storage::disk('s3')->put($filePath, $pdfOutput);
 
         // Registrar en base de datos
         return GeneratedDocument::create([
@@ -825,9 +825,8 @@ class PdfGenerationService
         $documents = $agreement->generatedDocuments;
 
         foreach ($documents as $document) {
-            // Eliminar archivo físico
-            if (Storage::disk('private')->exists($document->file_path)) {
-                Storage::disk('private')->delete($document->file_path);
+            if (Storage::disk('s3')->exists($document->file_path)) {
+                Storage::disk('s3')->delete($document->file_path);
             }
 
             // Eliminar registro de BD

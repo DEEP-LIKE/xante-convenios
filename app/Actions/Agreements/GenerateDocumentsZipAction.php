@@ -53,48 +53,50 @@ class GenerateDocumentsZipAction
 
         // Agregar documentos generados (PDFs del sistema)
         foreach ($generatedDocuments as $document) {
-            $filePath = Storage::disk('private')->path($document->file_path);
-
-            if (file_exists($filePath)) {
+            if (Storage::disk('s3')->exists($document->file_path)) {
                 $documentName = $document->document_name ?? 'documento_generado_'.$document->id;
                 $cleanDocumentName = $this->cleanFileName($documentName);
                 $zipEntryName = 'generados/'.$cleanDocumentName.'.pdf';
 
                 try {
-                    $zip->addFile($filePath, $zipEntryName);
-                    $addedFiles++;
+                    $fileContent = Storage::disk('s3')->get($document->file_path);
+                    if ($fileContent !== false) {
+                        $zip->addFromString($zipEntryName, $fileContent);
+                        $addedFiles++;
+                    }
                 } catch (\Exception $e) {
                     Log::error('Error adding generated file to ZIP', [
                         'error' => $e->getMessage(),
-                        'file' => $filePath,
+                        'file' => $document->file_path,
                     ]);
                 }
             } else {
-                Log::warning('Generated document file not found', ['path' => $filePath]);
+                Log::warning('Generated document file not found on S3', ['path' => $document->file_path]);
             }
         }
 
         // Agregar documentos del cliente (subidos en paso 2)
         foreach ($clientDocuments as $document) {
-            $filePath = Storage::disk('private')->path($document->file_path);
-
-            if (file_exists($filePath)) {
+            if (Storage::disk('s3')->exists($document->file_path)) {
                 $documentName = $document->document_name ?? 'documento_cliente_'.$document->id;
                 $cleanDocumentName = $this->cleanFileName($documentName);
-                $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+                $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
                 $zipEntryName = 'cliente/'.$cleanDocumentName.'.'.$extension;
 
                 try {
-                    $zip->addFile($filePath, $zipEntryName);
-                    $addedFiles++;
+                    $fileContent = Storage::disk('s3')->get($document->file_path);
+                    if ($fileContent !== false) {
+                        $zip->addFromString($zipEntryName, $fileContent);
+                        $addedFiles++;
+                    }
                 } catch (\Exception $e) {
                     Log::error('Error adding client file to ZIP', [
                         'error' => $e->getMessage(),
-                        'file' => $filePath,
+                        'file' => $document->file_path,
                     ]);
                 }
             } else {
-                Log::warning('Client document file not found', ['path' => $filePath]);
+                Log::warning('Client document file not found on S3', ['path' => $document->file_path]);
             }
         }
 

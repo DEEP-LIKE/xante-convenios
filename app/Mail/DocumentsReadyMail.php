@@ -63,7 +63,7 @@ class DocumentsReadyMail extends Mailable
 
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
                     if ($fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
-                        $attachments[] = Attachment::fromStorageDisk('private', $document->file_path)
+                        $attachments[] = Attachment::fromStorageDisk('s3', $document->file_path)
                             ->as($document->document_name.'.pdf')
                             ->withMime('application/pdf');
                         $totalSize += $fileSize;
