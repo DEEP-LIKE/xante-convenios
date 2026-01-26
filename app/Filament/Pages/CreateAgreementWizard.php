@@ -375,12 +375,14 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
             $stateCommission = 9.0; // Valor default historial
         }
 
+        /*
         \Illuminate\Support\Facades\Log::info('Recalculating Financials', [
             'valor_convenio' => $valorConvenio,
             'state_commission_raw' => $rawStateCommission,
             'state_commission_sanitized' => $stateCommission,
             'multiplier_calculated' => (1 + ($stateCommission / 100)),
         ]);
+        */
 
         if ($valorConvenio <= 0) {
             $this->clearCalculatedFields($set);
