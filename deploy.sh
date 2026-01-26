@@ -21,7 +21,7 @@ docker rm xante-container || true
 # 4. Lanzar nuevo contenedor con el .env vinculado
 # Usamos $(pwd)/.env para asegurar la ruta absoluta del archivo en el host
 docker run -d \
-    -p 80:80 \
+    -p 8080:80 \
     --name xante-container \
     --restart unless-stopped \
     -v "$(pwd)/.env:/var/www/html/.env" \
