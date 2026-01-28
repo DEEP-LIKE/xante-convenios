@@ -204,7 +204,15 @@
                         <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clip-rule="evenodd"/>
                     </svg>
                     {{ $document->formatted_type }}
-                    @if(\Storage::disk('private')->size($document->file_path) > 4 * 1024 * 1024)
+                    @php 
+                        $tooLarge = false;
+                        try {
+                            $tooLarge = \Storage::disk('s3')->size($document->file_path) > 4 * 1024 * 1024;
+                        } catch (\Exception $e) {
+                            \Log::warning('Error checking file size in email view', ['path' => $document->file_path, 'error' => $e->getMessage()]);
+                        }
+                    @endphp
+                    @if($tooLarge)
                         <span style="color: #dc3545; font-size: 12px; margin-left: 10px;">(Archivo grande - disponible por descarga directa)</span>
                     @endif
                 </li>

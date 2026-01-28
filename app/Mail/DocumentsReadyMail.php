@@ -59,19 +59,29 @@ class DocumentsReadyMail extends Mailable
 
             foreach ($this->agreement->generatedDocuments as $document) {
                 if ($document->fileExists()) {
-                    $fileSize = \Storage::disk('s3')->size($document->file_path);
+                    $fileSize = 0;
+                    try {
+                        $fileSize = \Storage::disk('s3')->size($document->file_path);
+                    } catch (\Exception $e) {
+                        \Log::warning('Error checking file size for attachment in email', [
+                            'path' => $document->file_path,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Fallback to 0 to avoid crash, effectively skipping attachment if size cannot be determined
+                    }
 
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
-                    if ($fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
+                    if ($fileSize > 0 && $fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
                         $attachments[] = Attachment::fromStorageDisk('s3', $document->file_path)
                             ->as($document->document_name.'.pdf')
                             ->withMime('application/pdf');
                         $totalSize += $fileSize;
                     } else {
-                        \Log::info('Skipping large file attachment', [
+                        \Log::info('Skipping large or unreadable file attachment for email', [
                             'document' => $document->document_name,
                             'size' => $fileSize,
                             'max_size' => $maxFileSize,
+                            'total_current_size' => $totalSize,
                         ]);
                     }
                 }

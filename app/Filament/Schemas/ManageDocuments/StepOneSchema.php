@@ -63,7 +63,7 @@ class StepOneSchema
                         ->content('No se encontraron documentos generados para este convenio. Use el botón "Regenerar Documentos" a continuación para intentar de nuevo.'),
 
                     Placeholder::make('regenerate_button')
-                        ->label('')
+                        ->hiddenLabel()
                         ->content(function () {
                             return new HtmlString('
                                 <div style="display: flex; justify-content: center; width: 100%; margin-top: 16px;">
