@@ -96,36 +96,6 @@ class StepOneSchema
                             ');
                         }),
 
-                    Placeholder::make('test_s3_button')
-                        ->label('')
-                        ->content(function () {
-                            return new HtmlString('
-                                <div style="display: flex; justify-content: center; width: 100%; margin-top: 8px;">
-                                    <button wire:click="testS3Connection" 
-                                            style="
-                                                display: inline-flex; 
-                                                align-items: center; 
-                                                padding: 8px 16px; 
-                                                background: #4B5563; 
-                                                color: white; 
-                                                font-weight: 500; 
-                                                border-radius: 8px; 
-                                                border: none; 
-                                                cursor: pointer; 
-                                                transition: all 0.2s; 
-                                                font-size: 12px;
-                                                opacity: 0.8;
-                                            "
-                                            onmouseover="this.style.opacity=\'1\'; this.style.background=\'#374151\';"
-                                            onmouseout="this.style.opacity=\'0.8\'; this.style.background=\'#4B5563\';">
-                                        <svg style="width: 14px; height: 14px; margin-right: 6px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
-                                        </svg>
-                                        Probar Conexión S3 (Diagnóstico)
-                                    </button>
-                                </div>
-                            ');
-                        }),
                 ])
                 ->visible($page->agreement->generatedDocuments->isEmpty()),
 

@@ -994,38 +994,4 @@ class ManageDocuments extends Page implements HasActions, HasForms
                 ->send();
         }
     }
-
-    public function testS3Connection()
-    {
-        try {
-            $disk = Storage::disk('s3');
-            $testPath = 'connectivity_test_' . time() . '.txt';
-            $disk->put($testPath, 'Test connection from Xante App at ' . now()->toDateTimeString());
-            
-            if ($disk->exists($testPath)) {
-                $disk->delete($testPath);
-                Notification::make()
-                    ->title('✅ Conexión S3 Exitosa')
-                    ->body('Se pudo escribir y leer del bucket de S3 correctamente.')
-                    ->success()
-                    ->persistent()
-                    ->send();
-            } else {
-                throw new \Exception('El archivo se escribió pero no se pudo verificar su existencia.');
-            }
-        } catch (\Exception $e) {
-            $errorMessage = $e->getMessage();
-            $previous = $e->getPrevious();
-            if ($previous instanceof \Aws\S3\Exception\S3Exception) {
-                $errorMessage .= ' [AWS Error: ' . $previous->getAwsErrorCode() . ' - ' . $previous->getAwsErrorMessage() . ']';
-            }
-
-            Notification::make()
-                ->title('❌ Error de Conexión S3')
-                ->body($errorMessage)
-                ->danger()
-                ->persistent()
-                ->send();
-        }
-    }
 }
