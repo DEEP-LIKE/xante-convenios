@@ -33,7 +33,7 @@ class StepThreeSchema
                                 </div>
                                 <div>
                                     <h3 style="font-size: 1.125rem; font-weight: 700; color: #047857; margin-bottom: 0.5rem;">
-                                        ✅ Proceso Completado
+                                        Proceso Completado
                                     </h3>
                                     <p style="font-size: 0.875rem; color: #065f46; line-height: 1.5;">
                                         El convenio se ha completado exitosamente. Todos los documentos han sido procesados y están listos para su descarga.
@@ -48,21 +48,21 @@ class StepThreeSchema
                     Grid::make(3)
                         ->schema([
                             Placeholder::make('completion_date')
-                                ->label('📅 Fecha de Finalización')
+                                ->label('Fecha de Finalización')
                                 ->content($agreement->completed_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i')),
 
                             Placeholder::make('total_documents')
-                                ->label('📄 Documentos Generados')
+                                ->label('Documentos Generados')
                                 ->content($documents->count().' PDFs'),
 
                             Placeholder::make('final_status')
-                                ->label('✅ Estado Final')
+                                ->label('Estado Final')
                                 ->content(new HtmlString('<span style="color: #10b981; font-weight: 600;">Completado</span>')),
                         ]),
                 ]),
 
             // AUTORIZACIÓN DE PRECIO FINAL
-            Section::make('🔐 Autorización de Precio Final')
+            Section::make('Autorización de Precio Final')
                 ->icon('heroicon-o-shield-check')
                 ->iconColor('info')
                 ->description('Solicitar autorización administrativa para precio final acordado')
@@ -77,15 +77,15 @@ class StepThreeSchema
                         Grid::make(3)
                             ->schema([
                                 Placeholder::make('original_valor_compraventa')
-                                    ->label('📋 Valor CompraVenta Original')
+                                    ->label('Valor CompraVenta Original')
                                     ->content(fn () => new HtmlString($page->getOriginalValorCompraventa())),
 
                                 Placeholder::make('original_comision_total')
-                                    ->label('💰 Comisión Total Original')
+                                    ->label('Comisión Total Original')
                                     ->content(fn () => new HtmlString($page->getOriginalComisionTotal())),
 
                                 Placeholder::make('original_ganancia_final')
-                                    ->label('💵 Ganancia Final Original')
+                                    ->label('Ganancia Final Original')
                                     ->content(fn () => new HtmlString($page->getOriginalGananciaFinal())),
                             ])
                             ->columnSpanFull(),
@@ -124,7 +124,7 @@ class StepThreeSchema
                             Grid::make(2)
                                 ->schema([
                                     TextInput::make('final_price_value')
-                                        ->label('💰 Precio Final Acordado')
+                                        ->label('Precio Final Acordado')
                                         ->numeric()
                                         ->prefix('$')
                                         ->step(0.01)
@@ -134,7 +134,7 @@ class StepThreeSchema
                                         ->statePath('final_price_value'),
 
                                     \Filament\Forms\Components\Textarea::make('final_price_justification')
-                                        ->label('📝 Justificación')
+                                        ->label('Justificación')
                                         ->placeholder('Explique el motivo del precio final acordado...')
                                         ->helperText('Proporcione una justificación detallada para la autorización')
                                         ->required()
@@ -143,7 +143,7 @@ class StepThreeSchema
                                 ]),
 
                             Placeholder::make('request_button')
-                                ->label('📤 Solicitar Autorización')
+                                ->label('Solicitar Autorización')
                                 ->content(fn () => view('components.action-button', [
                                     'icon' => 'heroicon-o-paper-airplane',
                                     'label' => 'Enviar Solicitud',
@@ -169,7 +169,7 @@ class StepThreeSchema
                                         </div>
                                         <div>
                                             <h3 style="font-size: 1.125rem; font-weight: 700; color: #92400e; margin-bottom: 0.5rem;">
-                                                ⏳ Solicitud Pendiente de Aprobación
+                                                Solicitud Pendiente de Aprobación
                                             </h3>
                                             <p style="font-size: 0.875rem; color: #78350f; margin-bottom: 0.75rem;">
                                                 La solicitud de autorización ha sido enviada y está pendiente de revisión por el administrador.
@@ -203,7 +203,7 @@ class StepThreeSchema
                                         </div>
                                         <div>
                                             <h3 style="font-size: 1.125rem; font-weight: 700; color: #047857; margin-bottom: 0.5rem;">
-                                                ✅ Precio Final Autorizado
+                                                Precio Final Autorizado
                                             </h3>
                                             <p style="font-size: 0.875rem; color: #065f46; margin-bottom: 0.75rem;">
                                                 El precio final ha sido aprobado por el administrador.
@@ -231,7 +231,7 @@ class StepThreeSchema
                 }),
 
             // ACCIONES DISPONIBLES
-            Section::make('🎯 Acciones Disponibles')
+            Section::make('Acciones Disponibles')
                 ->icon('heroicon-o-wrench-screwdriver')
                 ->iconColor('primary')
                 ->description('Opciones para gestionar el convenio completado')
@@ -240,7 +240,7 @@ class StepThreeSchema
                         ->schema([
                             // Card: Descargar Todos los Documentos
                             Placeholder::make('action_download')
-                                ->label('📥 Descargar Documentos')
+                                ->label('Descargar Documentos')
                                 ->content(fn () => view('components.action-link-button', [
                                     'icon' => 'heroicon-o-arrow-down-tray',
                                     'label' => 'Descargar Todos',
@@ -251,7 +251,7 @@ class StepThreeSchema
 
                             // Card: Regresar a Inicio
                             Placeholder::make('action_home')
-                                ->label('🏠 Regresar al Dashboard')
+                                ->label('Regresar al Dashboard')
                                 ->content(fn () => view('components.action-link-button', [
                                     'icon' => 'heroicon-o-home',
                                     'label' => 'Volver al Inicio',

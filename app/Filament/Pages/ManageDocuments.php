@@ -362,7 +362,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
     {
         if ($this->currentStep === 2) {
             return $action
-                ->label('📧 Enviar Confirmación y Continuar')
+                ->label('Enviar Confirmación y Continuar')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('primary')
                 ->size('lg')
@@ -627,7 +627,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
     public function returnToHome()
     {
         Notification::make()
-            ->title('🏠 Regresando al Inicio')
+            ->title('Regresando al Inicio')
             ->body('Redirigiendo al dashboard principal...')
             ->success()
             ->send();
@@ -652,7 +652,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
             $fileName = 'checklist_actualizado_'.$this->agreement->id.'_'.now()->format('Y-m-d_H-i-s').'.pdf';
 
             Notification::make()
-                ->title('📋 Lista Actualizada Generada')
+                ->title('Lista Actualizada Generada')
                 ->body('El checklist con documentos marcados ha sido generado exitosamente')
                 ->success()
                 ->duration(4000)
