@@ -37,8 +37,8 @@ class SecureDocumentController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.basename($document->file_path).'"',
             'X-Content-Type-Options' => 'nosniff',
-            'X-Frame-Options' => 'DENY',
-            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Cache-Control' => 'private, max-age=3600',
         ]);
     }
 
@@ -61,13 +61,16 @@ class SecureDocumentController extends Controller
         // Obtener el tipo MIME
         $mimeType = Storage::disk('s3')->mimeType($document->file_path);
 
-        // Descargar el archivo
+        // Determinar disposición (inline vs attachment)
+        $disposition = request()->has('download') ? 'attachment' : 'inline';
+        
+        // Servir el archivo
         return Storage::disk('s3')->response($document->file_path, null, [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => 'inline; filename="'.$document->file_name.'"',
+            'Content-Disposition' => $disposition.'; filename="'.$document->file_name.'"',
             'X-Content-Type-Options' => 'nosniff',
-            'X-Frame-Options' => 'DENY',
-            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Cache-Control' => 'private, max-age=3600',
         ]);
     }
 
