@@ -90,29 +90,48 @@ class DocumentUploadService
             $fileName = null;
             $finalFilePath = null;
 
-            // Procesar diferentes tipos de entrada de archivo
             if (is_string($filePath) && ! empty($filePath)) {
                 $finalFilePath = $filePath;
                 $fileName = basename($filePath);
-                if (Storage::disk('s3')->exists($filePath)) {
-                    $fileSize = Storage::disk('s3')->size($filePath);
+                
+                // Si la ruta contiene 'livewire-tmp', el archivo está en el disco local
+                if (str_contains($filePath, 'livewire-tmp')) {
+                    if (Storage::disk('local')->exists($filePath)) {
+                        $fileSize = Storage::disk('local')->size($filePath);
+                    }
+                } else {
+                    if (Storage::disk('s3')->exists($filePath)) {
+                        $fileSize = Storage::disk('s3')->size($filePath);
+                    }
                 }
             } elseif (is_array($filePath) && ! empty($filePath)) {
                 $firstFile = $filePath[0];
                 if (! empty($firstFile)) {
                     $finalFilePath = $firstFile;
                     $fileName = basename($firstFile);
-                    if (Storage::disk('s3')->exists($firstFile)) {
-                        $fileSize = Storage::disk('s3')->size($firstFile);
+                    if (str_contains($firstFile, 'livewire-tmp')) {
+                        if (Storage::disk('local')->exists($firstFile)) {
+                            $fileSize = Storage::disk('local')->size($firstFile);
+                        }
+                    } else {
+                        if (Storage::disk('s3')->exists($firstFile)) {
+                            $fileSize = Storage::disk('s3')->size($firstFile);
+                        }
                     }
                 }
             } elseif (is_object($filePath)) {
                 if (method_exists($filePath, 'getClientOriginalName')) {
                     $fileName = $filePath->getClientOriginalName();
-                    // Usar la misma estructura que en el Schema para consistencia
-                    $directory = 'client_documents/'.$agreement->id.'/'.$category;
-                    $finalFilePath = $filePath->store($directory, 's3');
                     $fileSize = $filePath->getSize();
+                    
+                    // Limpiar el nombre para que sea seguro y predecible
+                    $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+                    $safeName = \Illuminate\Support\Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) . '_' . time() . '.' . $extension;
+                    
+                    $directory = 'client_documents/'.$agreement->id.'/'.$category;
+                    
+                    // USAR storeAs para evitar los hashes largos de Livewire
+                    $finalFilePath = $filePath->storeAs($directory, $safeName, 's3');
                 }
             }
 
@@ -229,13 +248,10 @@ class DocumentUploadService
         foreach ($clientDocuments as $document) {
             $fieldName = $fieldMap[$document->document_type] ?? null;
             if ($fieldName && ! empty($document->file_path)) {
-                // Verificar que el archivo existe físicamente
-                if (Storage::disk('s3')->exists($document->file_path)) {
-                    $documents[$fieldName] = [$document->file_path];
-                } else {
-                    // Marcar para eliminar de BD
-                    $documentsToDelete[] = $document->id;
-                }
+                // Eliminamos el check de exists() aquí para mejorar el rendimiento y evitar hangs
+                // Confiamos en la BD para la carga inicial. Si el archivo no existiera, 
+                // el usuario verá el error al intentar abrirlo/descargarlo.
+                $documents[$fieldName] = [$document->file_path];
             }
         }
 
