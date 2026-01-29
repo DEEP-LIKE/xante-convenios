@@ -54,6 +54,7 @@ class StepTwoSchema
                                         return 'ine_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_ine', 'titular', $state);
                                     }),
@@ -71,6 +72,7 @@ class StepTwoSchema
                                         return 'curp_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_curp', 'titular', $state);
                                     }),
@@ -88,6 +90,7 @@ class StepTwoSchema
                                         return 'constancia_fiscal_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_fiscal_status', 'titular', $state);
                                     }),
@@ -105,6 +108,7 @@ class StepTwoSchema
                                         return 'comprobante_domicilio_vivienda_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_proof_address_home', 'titular', $state);
                                     }),
@@ -122,6 +126,7 @@ class StepTwoSchema
                                         return 'comprobante_domicilio_titular_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_proof_address_titular', 'titular', $state);
                                     }),
@@ -139,6 +144,7 @@ class StepTwoSchema
                                         return 'acta_nacimiento_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_birth_certificate', 'titular', $state);
                                     }),
@@ -155,6 +161,7 @@ class StepTwoSchema
                                         return 'acta_matrimonio_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_marriage_certificate', 'titular', $state);
                                     }),
@@ -172,6 +179,7 @@ class StepTwoSchema
                                         return 'estado_cuenta_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_bank_statement', 'titular', $state);
                                     }),
@@ -197,6 +205,7 @@ class StepTwoSchema
                                         return 'instrumento_notarial_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_notarial_instrument', 'propiedad', $state);
                                     }),
@@ -214,6 +223,7 @@ class StepTwoSchema
                                         return 'recibo_predial_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_tax_receipt', 'propiedad', $state);
                                     }),
@@ -231,6 +241,7 @@ class StepTwoSchema
                                         return 'recibo_agua_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_water_receipt', 'propiedad', $state);
                                     }),
@@ -248,6 +259,7 @@ class StepTwoSchema
                                         return 'recibo_cfe_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
                                     })
                                     ->visibility('private')
+                                    ->fetchFileInformation(false)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_cfe_receipt', 'propiedad', $state);
                                     }),
