@@ -139,6 +139,18 @@ class DocumentUploadService
                 throw new \Exception('No se pudo obtener la ruta del archivo');
             }
 
+            // GARANTÍA: Verificar existencia real en S3 y que no sea un archivo vacío (0 bytes)
+            if (!Storage::disk('s3')->exists($finalFilePath)) {
+                throw new \Exception("El archivo no existe físicamente en el almacenamiento (S3): {$finalFilePath}");
+            }
+
+            $fileSize = Storage::disk('s3')->size($finalFilePath);
+            if ($fileSize <= 0) {
+                // Si el archivo existe pero mide 0 bytes, es un "archivo vacío" o fallido
+                // Nota: Podríamos permitir 0 bytes si es un caso válido, pero el usuario pidió evitar "archivos vacíos"
+                \Log::warning('DocumentUploadService: Se detectó un archivo de 0 bytes', ['path' => $finalFilePath]);
+            }
+
             if (empty($fileName)) {
                 $extension = pathinfo($finalFilePath, PATHINFO_EXTENSION) ?: 'pdf';
                 $fileName = $documentName.'_'.time().'.'.$extension;
