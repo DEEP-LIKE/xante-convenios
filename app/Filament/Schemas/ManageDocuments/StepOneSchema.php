@@ -2,51 +2,16 @@
 
 namespace App\Filament\Schemas\ManageDocuments;
 
-use App\Filament\Pages\ManageDocuments;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Illuminate\Support\HtmlString;
-use Illuminate\Support\Facades\Storage;
 
 class StepOneSchema
 {
     public static function make($page): array
     {
         return [
-            Section::make('DEBUG INFO (Temporal)')
-                ->description('Estado interno del convenio para depuración')
-                ->collapsed()
-                ->schema([
-                    Placeholder::make('debug_status')
-                        ->label('Estado y Fechas')
-                        ->content(fn() => new HtmlString(sprintf(
-                            '<div class="text-sm">
-                                <b>Status:</b> <code class="bg-gray-100 p-1">%s</code><br>
-                                <b>Sent At:</b> <code class="bg-gray-100 p-1">%s</code><br>
-                                <b>Current Wizard:</b> <code class="bg-gray-100 p-1">%s</code>
-                            </div>',
-                            $page->agreement->status,
-                            $page->agreement->documents_sent_at ?? 'NULL',
-                            $page->agreement->current_wizard ?? 'NULL'
-                        ))),
-                    Placeholder::make('debug_files')
-                        ->label('Archivos en S3')
-                        ->content(function() use ($page) {
-                            $output = '<ul class="text-xs list-disc pl-4">';
-                            foreach($page->agreement->generatedDocuments as $doc) {
-                                $exists = Storage::disk('s3')->exists($doc->file_path);
-                                $color = $exists ? 'text-green-600' : 'text-red-600';
-                                $output .= sprintf('<li>%s: <b class="%s">%s</b></li>', 
-                                    $doc->document_name, 
-                                    $color, 
-                                    $exists ? 'EXISTE' : 'NO EXISTE'
-                                );
-                            }
-                            $output .= '</ul>';
-                            return new HtmlString($output);
-                        }),
-                ]),
             Section::make('Información del Convenio')
                 ->icon('heroicon-o-document-text')
                 ->iconColor('success')
@@ -178,9 +143,9 @@ class StepOneSchema
 
                             return "Los documentos fueron enviados exitosamente el {$sentDate}";
                         })
-                        ->visible(fn () => $page->agreement->status === 'documents_sent'),
+                        ->visible(fn () => in_array($page->agreement->status, ['documents_sent', 'completed'])),
                 ])
-                ->visible($page->agreement->generatedDocuments->isNotEmpty() && $page->agreement->status !== 'documents_sent'),
+                ->visible($page->agreement->generatedDocuments->isNotEmpty() && !in_array($page->agreement->status, ['documents_sent', 'completed'])),
 
             Section::make('Documentos Enviados')
                 ->description('Los documentos han sido enviados al cliente exitosamente')
@@ -230,13 +195,13 @@ class StepOneSchema
                                         onmouseout="this.style.background=\'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)\'; this.style.boxShadow=\'0 4px 16px rgba(107, 114, 128, 0.3)\'; this.style.transform=\'translateY(0) scale(1)\';">
                                     <svg style="width: 16px; height: 16px; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
+                                    </svg>
                                     🔄 Reenviar Documentos
                                 </button>
                             </div>');
                         }),
                 ])
-                ->visible($page->agreement->status === 'documents_sent'),
+                ->visible(in_array($page->agreement->status, ['documents_sent', 'completed'])),
         ];
     }
 }

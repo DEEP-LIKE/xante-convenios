@@ -221,7 +221,8 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                 'sent_at' => $this->agreement->documents_sent_at,
                             ]);
 
-                            if ($this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
+                            // Trigger automático solo si NO se ha enviado ni completado aún
+                            if (!in_array($this->agreement->status, ['documents_sent', 'completed'])) {
                                 \Log::debug('Condition met, calling sendDocumentsToClient');
                                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
 
@@ -232,10 +233,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                     ->duration(5000)
                                     ->send();
                             } else {
-                                \Log::debug('Condition NOT met for sending email', [
-                                    'status_is_documents_sent' => ($this->agreement->status === 'documents_sent'),
-                                    'sent_at_is_set' => !empty($this->agreement->documents_sent_at)
-                                ]);
+                                \Log::debug('Trigger automático omitido (ya enviado o completado)');
                             }
 
                             // Sincronizar datos básicos del cliente (Wizard 1) con HubSpot
