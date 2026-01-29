@@ -306,8 +306,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_water_receipt', 'propiedad', $state);
@@ -329,8 +327,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_cfe_receipt', 'propiedad', $state);
