@@ -18,26 +18,32 @@ class StepTwoSchema
     public static function make(ManageDocuments $page): array
     {
         $getUploadedFileMetadata = function ($file) {
+            if (! $file) return null;
+
             $document = ClientDocument::where('file_path', $file)->first();
 
-            $mimeType = $file ? Storage::disk('s3')->mimeType($file) : null;
-            
+            if (! $document) {
+                $filename = basename($file);
+                $document = ClientDocument::where('file_path', 'like', "%{$filename}")->first();
+            }
+
+            $url = null;
+            if ($document) {
+                $url = route('secure.client.document', $document->id);
+            } else {
+                try {
+                    $url = Storage::disk('s3')->temporaryUrl($file, now()->addMinutes(60));
+                } catch (\Exception $e) {
+                    $url = Storage::disk('s3')->url($file);
+                }
+            }
+
             return [
                 'name' => $document?->document_name ?? basename($file),
                 'size' => $document?->file_size ?? 0,
-                'type' => $mimeType,
-                'url' => $document ? route('secure.client.document', $document->id) : Storage::disk('s3')->url($file),
+                'type' => null,
+                'url' => $url,
             ];
-        };
-
-        $getUploadedFileUrl = function ($file) {
-            $document = ClientDocument::where('file_path', $file)->first();
-            return $document ? route('secure.client.document', $document->id) : null;
-        };
-
-        $getUploadedFileDownloadUrl = function ($file) {
-            $document = ClientDocument::where('file_path', $file)->first();
-            return $document ? route('secure.client.document', ['document' => $document->id, 'download' => 1]) : null;
         };
 
         return [
@@ -83,8 +89,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_ine', 'titular', $state);
@@ -106,8 +110,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_curp', 'titular', $state);
@@ -129,8 +131,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_fiscal_status', 'titular', $state);
@@ -152,8 +152,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_proof_address_home', 'titular', $state);
@@ -175,8 +173,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_proof_address_titular', 'titular', $state);
@@ -198,8 +194,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_birth_certificate', 'titular', $state);
@@ -220,8 +214,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_marriage_certificate', 'titular', $state);
@@ -243,8 +235,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_bank_statement', 'titular', $state);
@@ -274,8 +264,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_notarial_instrument', 'propiedad', $state);
@@ -297,8 +285,6 @@ class StepTwoSchema
                                     ->previewable(false)
                                     ->openable()
                                     ->downloadable()
-                                    ->getUploadedFileUrlUsing($getUploadedFileUrl)
-                                    ->getUploadedFileDownloadUrlUsing($getUploadedFileDownloadUrl)
                                     ->getUploadedFileUsing($getUploadedFileMetadata)
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('property_tax_receipt', 'propiedad', $state);
