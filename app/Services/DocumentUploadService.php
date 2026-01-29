@@ -109,7 +109,9 @@ class DocumentUploadService
             } elseif (is_object($filePath)) {
                 if (method_exists($filePath, 'getClientOriginalName')) {
                     $fileName = $filePath->getClientOriginalName();
-                    $finalFilePath = $filePath->store('convenios/'.$agreement->id.'/client_documents/'.$category, 's3');
+                    // Usar la misma estructura que en el Schema para consistencia
+                    $directory = 'client_documents/'.$agreement->id.'/'.$category;
+                    $finalFilePath = $filePath->store($directory, 's3');
                     $fileSize = $filePath->getSize();
                 }
             }
@@ -229,7 +231,9 @@ class DocumentUploadService
             if ($fieldName && ! empty($document->file_path)) {
                 // Verificar que el archivo existe físicamente
                 if (Storage::disk('s3')->exists($document->file_path)) {
-                    $documents[$fieldName] = [$document->file_path];
+                    // Filament espera un string para campos que no son múltiples
+                    // Si en el futuro se usan campos múltiples, esto debería ajustarse
+                    $documents[$fieldName] = $document->file_path;
                 } else {
                     // Marcar para eliminar de BD
                     $documentsToDelete[] = $document->id;
