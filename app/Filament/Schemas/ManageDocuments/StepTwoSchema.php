@@ -24,7 +24,7 @@ class StepTwoSchema
                 'name' => $document?->document_name ?? basename($file),
                 'size' => $document?->file_size ?? 0,
                 'type' => null, // Dejar nulo para evitar que FilePond intente detectar el tipo
-                'url' => Storage::disk('s3')->url($file),
+                'url' => $document ? route('secure.client.document', $document->id) : Storage::disk('s3')->url($file),
             ];
         };
 
