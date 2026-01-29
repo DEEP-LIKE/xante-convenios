@@ -28,11 +28,24 @@ class StepTwoSchema
                 $document = ClientDocument::where('file_path', 'like', "%{$filename}")->first();
             }
 
+            $url = null;
+            if ($document) {
+                // Priorizar ruta segura
+                $url = route('secure.client.document', $document->id);
+            } else {
+                // Fallback a URL temporal de S3 para carga interna de FilePond
+                try {
+                    $url = Storage::disk('s3')->temporaryUrl($file, now()->addMinutes(60));
+                } catch (\Exception $e) {
+                    $url = Storage::disk('s3')->url($file);
+                }
+            }
+
             return [
                 'name' => $document?->document_name ?? basename($file),
                 'size' => $document?->file_size ?? 0,
                 'type' => null,
-                'url' => null, // Ya no se requieren enlaces de apertura/descarga
+                'url' => $url,
             ];
         };
 
