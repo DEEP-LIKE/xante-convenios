@@ -231,9 +231,7 @@ class DocumentUploadService
             if ($fieldName && ! empty($document->file_path)) {
                 // Verificar que el archivo existe físicamente
                 if (Storage::disk('s3')->exists($document->file_path)) {
-                    // Filament espera un string para campos que no son múltiples
-                    // Si en el futuro se usan campos múltiples, esto debería ajustarse
-                    $documents[$fieldName] = $document->file_path;
+                    $documents[$fieldName] = [$document->file_path];
                 } else {
                     // Marcar para eliminar de BD
                     $documentsToDelete[] = $document->id;
