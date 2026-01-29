@@ -26,18 +26,25 @@ class SendDocumentsAction
 
         // Validar email del cliente
         $clientEmail = $this->getClientEmail($agreement);
+        \Log::debug('Client email obtained', ['email' => $clientEmail]);
+
         if ($clientEmail === 'No disponible' || empty($clientEmail)) {
             throw new \Exception('El cliente no tiene un email registrado en el convenio. Por favor, actualice los datos del cliente.');
         }
 
         // Validar que los archivos PDF existen físicamente
         $documentsWithFiles = $agreement->generatedDocuments->filter(function ($document) {
-            return $document->fileExists();
+            $exists = $document->fileExists();
+            \Log::debug('Checking file existence', ['path' => $document->file_path, 'exists' => $exists]);
+            return $exists;
         });
 
         if ($documentsWithFiles->isEmpty()) {
+            \Log::warning('No generated documents with physical files found', ['agreement_id' => $agreement->id]);
             throw new \Exception('Los archivos PDF no se encontraron en el servidor. Por favor, regenere los documentos.');
         }
+
+        \Log::debug('Documents found for sending', ['count' => $documentsWithFiles->count()]);
 
         // El envío se realiza en una transacción para asegurar consistencia
         try {

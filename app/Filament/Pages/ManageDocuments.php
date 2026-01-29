@@ -215,7 +215,14 @@ class ManageDocuments extends Page implements HasActions, HasForms
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema($this->getStepOneSchema())
                         ->afterValidation(function () {
+                            \Log::debug('Step 1 afterValidation triggered', [
+                                'agreement_id' => $this->agreement->id,
+                                'status' => $this->agreement->status,
+                                'sent_at' => $this->agreement->documents_sent_at,
+                            ]);
+
                             if ($this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
+                                \Log::debug('Condition met, calling sendDocumentsToClient');
                                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
 
                                 Notification::make()
@@ -224,6 +231,11 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                     ->success()
                                     ->duration(5000)
                                     ->send();
+                            } else {
+                                \Log::debug('Condition NOT met for sending email', [
+                                    'status_is_documents_sent' => ($this->agreement->status === 'documents_sent'),
+                                    'sent_at_is_set' => !empty($this->agreement->documents_sent_at)
+                                ]);
                             }
 
                             // Sincronizar datos básicos del cliente (Wizard 1) con HubSpot

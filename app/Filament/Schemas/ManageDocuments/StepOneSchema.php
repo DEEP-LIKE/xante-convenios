@@ -7,12 +7,46 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Storage;
 
 class StepOneSchema
 {
-    public static function make(ManageDocuments $page): array
+    public static function make($page): array
     {
         return [
+            Section::make('DEBUG INFO (Temporal)')
+                ->description('Estado interno del convenio para depuración')
+                ->collapsed()
+                ->schema([
+                    Placeholder::make('debug_status')
+                        ->label('Estado y Fechas')
+                        ->content(fn() => new HtmlString(sprintf(
+                            '<div class="text-sm">
+                                <b>Status:</b> <code class="bg-gray-100 p-1">%s</code><br>
+                                <b>Sent At:</b> <code class="bg-gray-100 p-1">%s</code><br>
+                                <b>Current Wizard:</b> <code class="bg-gray-100 p-1">%s</code>
+                            </div>',
+                            $page->agreement->status,
+                            $page->agreement->documents_sent_at ?? 'NULL',
+                            $page->agreement->current_wizard ?? 'NULL'
+                        ))),
+                    Placeholder::make('debug_files')
+                        ->label('Archivos en S3')
+                        ->content(function() use ($page) {
+                            $output = '<ul class="text-xs list-disc pl-4">';
+                            foreach($page->agreement->generatedDocuments as $doc) {
+                                $exists = Storage::disk('s3')->exists($doc->file_path);
+                                $color = $exists ? 'text-green-600' : 'text-red-600';
+                                $output .= sprintf('<li>%s: <b class="%s">%s</b></li>', 
+                                    $doc->document_name, 
+                                    $color, 
+                                    $exists ? 'EXISTE' : 'NO EXISTE'
+                                );
+                            }
+                            $output .= '</ul>';
+                            return new HtmlString($output);
+                        }),
+                ]),
             Section::make('Información del Convenio')
                 ->icon('heroicon-o-document-text')
                 ->iconColor('success')
