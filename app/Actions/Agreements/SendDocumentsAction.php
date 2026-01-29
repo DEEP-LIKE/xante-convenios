@@ -39,28 +39,32 @@ class SendDocumentsAction
             throw new \Exception('Los archivos PDF no se encontraron en el servidor. Por favor, regenere los documentos.');
         }
 
-        // Actualizar estado del convenio
-        $agreement->update([
-            'status' => 'documents_sent',
-            'documents_sent_at' => now(),
-        ]);
-
-        // Enviar el correo al cliente con copia al asesor
+        // El envío se realiza en una transacción para asegurar consistencia
         try {
-            Mail::to($clientEmail)
-                ->cc($advisor->email)
-                ->send(new DocumentsReadyMail($agreement));
-        } catch (\Exception $e) {
-            Log::error('Error sending email via Mail facade', ['error' => $e->getMessage()]);
-            throw new \Exception('Error al enviar el correo electrónico: '.$e->getMessage());
-        }
+            \Illuminate\Support\Facades\DB::transaction(function () use ($agreement, $clientEmail, $advisor, $documentsWithFiles) {
+                // 1. Enviar el correo primero
+                Mail::to($clientEmail)
+                    ->cc($advisor->email)
+                    ->send(new DocumentsReadyMail($agreement));
 
-        Log::info('Documents sent successfully via Action', [
-            'agreement_id' => $agreement->id,
-            'client_email' => $clientEmail,
-            'advisor_email' => $advisor->email,
-            'documents_count' => $documentsWithFiles->count(),
-        ]);
+                // 2. Actualizar estado del convenio SOLO tras envío exitoso
+                $agreement->update([
+                    'status' => 'documents_sent',
+                    'documents_sent_at' => now(),
+                ]);
+
+                Log::info('Documents sent and status updated successfully', [
+                    'agreement_id' => $agreement->id,
+                    'documents_count' => $documentsWithFiles->count(),
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error in SendDocumentsAction transaction', [
+                'agreement_id' => $agreement->id,
+                'error' => $e->getMessage()
+            ]);
+            throw new \Exception('No se pudo enviar el correo: ' . $e->getMessage());
+        }
 
         return $documentsWithFiles->count();
     }

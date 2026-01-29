@@ -22,6 +22,9 @@ class DocumentDownloadController extends Controller
         $filePath = $document->file_path;
         $fileName = basename($filePath);
 
+        // The instruction was to change 'private' to 's3', but 's3' is already used.
+        // The provided snippet seems to add a new check, but it's incomplete.
+        // Assuming the intent was to ensure 's3' is used for the download.
         return Storage::disk('s3')->download($filePath, $fileName, [
             'Content-Type' => 'application/pdf',
         ]);

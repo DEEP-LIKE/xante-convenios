@@ -43,9 +43,6 @@ class GeneratedDocument extends Model
         return route('documents.download', ['document' => $this->id]);
     }
 
-    /**
-     * Verifica si el archivo existe en el disco
-     */
     public function fileExists(): bool
     {
         return Storage::disk('s3')->exists($this->file_path);

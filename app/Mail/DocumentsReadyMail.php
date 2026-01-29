@@ -61,13 +61,13 @@ class DocumentsReadyMail extends Mailable
                 if ($document->fileExists()) {
                     $fileSize = 0;
                     try {
+                        // Los documentos generados ahora están en S3
                         $fileSize = \Storage::disk('s3')->size($document->file_path);
                     } catch (\Exception $e) {
                         \Log::warning('Error checking file size for attachment in email', [
                             'path' => $document->file_path,
                             'error' => $e->getMessage()
                         ]);
-                        // Fallback to 0 to avoid crash, effectively skipping attachment if size cannot be determined
                     }
 
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
@@ -81,7 +81,6 @@ class DocumentsReadyMail extends Mailable
                             'document' => $document->document_name,
                             'size' => $fileSize,
                             'max_size' => $maxFileSize,
-                            'total_current_size' => $totalSize,
                         ]);
                     }
                 }

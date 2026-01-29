@@ -207,6 +207,7 @@
                     @php 
                         $tooLarge = false;
                         try {
+                            // Los documentos generados ahora están en S3
                             $tooLarge = \Storage::disk('s3')->size($document->file_path) > 4 * 1024 * 1024;
                         } catch (\Exception $e) {
                             \Log::warning('Error checking file size in email view', ['path' => $document->file_path, 'error' => $e->getMessage()]);

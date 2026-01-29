@@ -160,8 +160,7 @@ class PdfGenerationService
             Log::error('Error crítico subiendo archivo original a S3', [
                 'agreement_id' => $agreement->id,
                 'path' => $filePath,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             throw $e;
         }
@@ -252,20 +251,15 @@ class PdfGenerationService
             $extraData = [
                 'agreement_id' => $agreement->id,
                 'path' => $filePath,
-                'error' => $e->getMessage(),
-                'exception_class' => get_class($e),
+                'error' => $e->getMessage()
             ];
 
-            // Intentar extraer el error real de AWS S3
-            $previous = $e->getPrevious();
-            if ($previous instanceof \Aws\S3\Exception\S3Exception) {
-                $extraData['aws_error_code'] = $previous->getAwsErrorCode();
-                $extraData['aws_error_message'] = $previous->getAwsErrorMessage();
-                $extraData['aws_type'] = $previous->getAwsErrorType();
-                $extraData['aws_request_id'] = $previous->getAwsRequestId();
+            // Intentar extraer el error real de AWS S3 si es posible
+            if ($e->getPrevious() instanceof \Aws\S3\Exception\S3Exception) {
+                $extraData['aws_error'] = $e->getPrevious()->getAwsErrorMessage();
             }
 
-            Log::error('Error crítico escribiendo PDF en S3 (AWS Detallado)', $extraData);
+            Log::error('Error crítico escribiendo PDF en S3', $extraData);
             throw $e;
         }
 
