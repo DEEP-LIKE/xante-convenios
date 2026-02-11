@@ -110,7 +110,6 @@ class Agreement extends Model
         'can_generate_documents',
         // Campos de autorización de precio final
         'final_price_authorization_id',
-        'final_price_authorization_id',
         'final_offer_price',
         'co_borrower_id',
     ];

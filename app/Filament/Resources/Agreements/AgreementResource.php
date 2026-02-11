@@ -61,40 +61,51 @@ class AgreementResource extends Resource
     // Método helper corregido para recalcular todos los campos
     protected static function recalculateAll(callable $set, callable $get): void
     {
-        // Obtener valores de los campos
         $valorConvenio = (float) $get('valor_convenio') ?? 0;
         $porcentajeComisionSinIva = (float) $get('porcentaje_comision_sin_iva') ?? 0;
         $isr = (float) $get('isr') ?? 0;
         $cancelacionHipoteca = (float) $get('cancelacion_hipoteca') ?? 0;
         $montoCredito = (float) $get('monto_credito') ?? 0;
 
-        // CÁLCULOS CORREGIDOS SEGÚN EXCEL
+        // 1. Precio Promoción = Valor Convenio * Multiplicador
+        // Intentar obtener multiplicador del estado (Priorizar estado de la propiedad)
+        $multiplicador = 1.0;
+        $stateName = $get('estado_propiedad') ?? $get('holder_state');
+        if ($stateName) {
+            $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
+            if ($rate) {
+                $multiplicador = 1 + ($rate->commission_percentage / 100);
+            }
+        }
 
-        // 1. Monto Comisión (Sin IVA) = % Comisión (Sin IVA) * Valor Convenio / 100
+        $precioPromocion = $valorConvenio * $multiplicador;
+        $set('precio_promocion', round($precioPromocion, 0));
+
+        // 2. Monto Comisión (Sin IVA) = % Comisión (Sin IVA) * Valor Convenio / 100
         $montoComisionSinIva = ($porcentajeComisionSinIva * $valorConvenio) / 100;
         $set('monto_comision_sin_iva', round($montoComisionSinIva, 2));
 
-        // 2. Comisión total por pagar = Monto Comisión (Sin IVA) * IVA Multiplier
-        $ivaMultiplier = ConfigurationCalculator::get('iva_multiplier', 1.16);
+        // 3. Comisión total por pagar = Monto Comisión (Sin IVA) * IVA Multiplier
+        $ivaPercentage = (float) ConfigurationCalculator::get('iva_valor', 16.00);
+        $ivaMultiplier = 1 + ($ivaPercentage / 100);
         $comisionTotalPagar = $montoComisionSinIva * $ivaMultiplier;
         $set('comision_total_pagar', round($comisionTotalPagar, 2));
 
-        // 3. Comisión IVA Incluido = (Comisión Total / Valor Convenio) * 100
+        // 4. Comisión IVA Incluido = (Comisión Total / Valor Convenio) * 100
         if ($valorConvenio > 0) {
             $comisionIvaIncluido = ($comisionTotalPagar / $valorConvenio) * 100;
             $set('comision_iva_incluido', round($comisionIvaIncluido, 2));
         }
 
-        // 4. Total Gastos FI (Venta) = ISR + Cancelación de hipoteca (según Excel: =+SUMA(F33:G34))
+        // 5. Total Gastos FI (Venta) = ISR + Cancelación de hipoteca
         $totalGastosFi = $isr + $cancelacionHipoteca;
         $set('total_gastos_fi', round($totalGastosFi, 2));
 
-        // 5. Ganancia Final según Excel: =+C33-F33-F34-C34-F23
-        // = Valor Convenio - ISR - Cancelación hipoteca - Comisión total - Monto de crédito
-        $gananciaFinal = $valorConvenio - $isr - $cancelacionHipoteca - $comisionTotalPagar - $montoCredito;
+        // 6. Ganancia Final = Precio Promoción - ISR - Cancelación - Comisión total - Monto de crédito
+        $gananciaFinal = $precioPromocion - $isr - $cancelacionHipoteca - $comisionTotalPagar - $montoCredito;
         $set('ganancia_final', round($gananciaFinal, 2));
 
-        // 6. Campos espejo
+        // 7. Campos espejo
         $set('valor_compraventa', $valorConvenio);
         $set('comision_total', round($comisionTotalPagar, 2));
     }
@@ -120,12 +131,10 @@ class AgreementResource extends Resource
                                 ->schema([
                                     Forms\Components\TextInput::make('domicilio_convenio')
                                         ->label('Domicilio Viv. Convenio')
-                                        ->default(fn () => ConfigurationCalculator::get('domicilio_convenio_default', 'PRIVADA MELQUES 6'))
                                         ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('comunidad')
                                         ->label('Comunidad')
-                                        ->default(fn () => ConfigurationCalculator::get('comunidad_default', 'REAL SEGOVIA'))
                                         ->columnSpan(2),
 
                                     Forms\Components\Select::make('tipo_vivienda')
@@ -136,12 +145,10 @@ class AgreementResource extends Resource
                                             'TOWNHOUSE' => 'TOWNHOUSE',
                                             'CONDOMINIO' => 'CONDOMINIO',
                                         ])
-                                        ->default(fn () => ConfigurationCalculator::get('tipo_vivienda_default', 'CASA'))
                                         ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('prototipo')
                                         ->label('Prototipo')
-                                        ->default(fn () => ConfigurationCalculator::get('prototipo_default', 'BURGOS'))
                                         ->columnSpan(2),
                                 ]),
                         ]),
@@ -152,7 +159,7 @@ class AgreementResource extends Resource
                             Grid::make(4)
                                 ->schema([
                                     Forms\Components\TextInput::make('porcentaje_comision_sin_iva')
-                                        ->label('% Comisión (Sin IVA)*')
+                                        ->label('% Comisión Sin IVA*')
                                         ->suffix('%')
                                         ->numeric()
                                         ->default(fn () => ConfigurationCalculator::get('comision_sin_iva_default', 6.50))
@@ -171,7 +178,7 @@ class AgreementResource extends Resource
                                         ->columnSpan(1),
 
                                     Forms\Components\TextInput::make('comision_iva_incluido')
-                                        ->label('Comisión IVA incluido')
+                                        ->label('Comisión con IVA')
                                         ->suffix('%')
                                         ->numeric()
                                         ->disabled()
@@ -209,28 +216,15 @@ class AgreementResource extends Resource
                                         ->prefix('$')
                                         ->numeric()
                                         ->required()
-                                        ->default(fn () => ConfigurationCalculator::get('valor_convenio_default', 1495000))
+                                        ->default(0)
                                         ->live(debounce: 500)
                                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                             if ($state && $state > 0) {
-                                                // Calcular Precio Promoción = Valor Convenio * 1.09
-                                                $precioPromocion = $state * 1.09;
-                                                $set('precio_promocion', round($precioPromocion, 0));
-
-                                                // Cálculo directo simple para test
-                                                $porcentaje = 6.50; // Valor por defecto
-                                                $montoComision = ($porcentaje * $state) / 100;
-                                                $set('monto_comision_sin_iva', round($montoComision, 2));
-
-                                                // Triggear recálculo completo
                                                 self::recalculateAll($set, $get);
                                             }
                                         })
                                         ->afterStateHydrated(function ($state, callable $set, callable $get) {
-                                            // Calcular valores iniciales al cargar
                                             if ($state && $state > 0) {
-                                                $precioPromocion = $state * 1.09;
-                                                $set('precio_promocion', round($precioPromocion, 0));
                                                 self::recalculateAll($set, $get);
                                             }
                                         }),
@@ -239,7 +233,7 @@ class AgreementResource extends Resource
                                         ->label('Monto de crédito')
                                         ->prefix('$')
                                         ->numeric()
-                                        ->default(fn () => ConfigurationCalculator::get('monto_credito_default', 800000))
+                                        ->default(0)
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         ),
@@ -283,7 +277,7 @@ class AgreementResource extends Resource
                                         ->label('ISR')
                                         ->prefix('$')
                                         ->numeric()
-                                        ->default(fn () => ConfigurationCalculator::get('isr_default', 0))
+                                        ->default(0)
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         ),
@@ -292,7 +286,7 @@ class AgreementResource extends Resource
                                         ->label('Cancelación de hipoteca')
                                         ->prefix('$')
                                         ->numeric()
-                                        ->default(fn () => ConfigurationCalculator::get('cancelacion_hipoteca_default', 20000))
+                                        ->default(0)
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::recalculateAll($set, $get)
                                         ),
@@ -623,13 +617,13 @@ class AgreementResource extends Resource
                             ->disabled()
                             ->dehydrated(false),
                         Forms\Components\TextInput::make('ac_quota')
-                            ->label('CUOTA (AC)')
+                            ->label('Mantenimiento desarrollo ($)')
                             ->numeric()
                             ->prefix('$')
                             ->disabled()
                             ->dehydrated(false),
                         Forms\Components\TextInput::make('private_president_quota')
-                            ->label('CUOTA (Presidente)')
+                            ->label('Mantenimiento privada ($)')
                             ->numeric()
                             ->prefix('$')
                             ->disabled()

@@ -7,10 +7,8 @@ use App\Actions\Agreements\SaveDocumentStepAction;
 use App\Actions\Agreements\SendDocumentsAction;
 use App\Actions\Agreements\SyncClientToHubspotAction;
 use App\Models\Agreement;
-use App\Services\DocumentComparisonService;
 use App\Services\DocumentEmailService;
 use App\Services\DocumentFileManager;
-use App\Services\DocumentRenderer;
 use App\Services\DocumentStateManager;
 use App\Services\DocumentUploadService;
 use App\Services\PdfGenerationService;
@@ -53,9 +51,6 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
     public ?float $proposal_value = null;
 
-    public ?float $final_price_value = null;
-
-    public ?string $final_price_justification = null;
 
     // Propiedades para FileUpload con ->live()
     public array $holder_ine = [];
@@ -104,9 +99,6 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
     protected DocumentFileManager $fileManager;
 
-    protected DocumentRenderer $renderer;
-
-    protected DocumentComparisonService $comparisonService;
 
     /**
      * Método boot para inyección de dependencias
@@ -115,16 +107,12 @@ class ManageDocuments extends Page implements HasActions, HasForms
         DocumentStateManager $stateManager,
         DocumentUploadService $uploadService,
         DocumentEmailService $emailService,
-        DocumentFileManager $fileManager,
-        DocumentRenderer $renderer,
-        DocumentComparisonService $comparisonService
+        DocumentFileManager $fileManager
     ): void {
         $this->stateManager = $stateManager;
         $this->uploadService = $uploadService;
         $this->emailService = $emailService;
         $this->fileManager = $fileManager;
-        $this->renderer = $renderer;
-        $this->comparisonService = $comparisonService;
     }
 
 
@@ -548,25 +536,6 @@ class ManageDocuments extends Page implements HasActions, HasForms
     // RENDERING METHODS (Delegated to Service)
     // ========================================
 
-    public function getOriginalValorCompraventa(): string
-    {
-        return $this->renderer->renderOriginalValorCompraventa($this->agreement);
-    }
-
-    public function getOriginalComisionTotal(): string
-    {
-        return $this->renderer->renderOriginalComisionTotal($this->agreement);
-    }
-
-    public function getOriginalGananciaFinal(): string
-    {
-        return $this->renderer->renderOriginalGananciaFinal($this->agreement);
-    }
-
-    public function getValueComparison(): string
-    {
-        return $this->renderer->renderValueComparison($this->agreement);
-    }
 
     // ========================================
     // HELPER METHODS (Delegated to Services)
@@ -724,85 +693,6 @@ class ManageDocuments extends Page implements HasActions, HasForms
         } catch (\Exception $e) {
             Notification::make()
                 ->title('❌ Error al Guardar')
-                ->body('Ocurrió un error: '.$e->getMessage())
-                ->danger()
-                ->duration(7000)
-                ->send();
-        }
-    }
-
-    public function requestFinalPriceAuthorization(): void
-    {
-        try {
-            // Validar que se haya ingresado un precio
-            if (is_null($this->final_price_value) || $this->final_price_value <= 0) {
-                Notification::make()
-                    ->title('❌ Error de Validación')
-                    ->body('Debe ingresar un precio final válido.')
-                    ->danger()
-                    ->send();
-
-                return;
-            }
-
-            // Validar que se haya ingresado una justificación
-            if (empty($this->final_price_justification)) {
-                Notification::make()
-                    ->title('❌ Error de Validación')
-                    ->body('Debe proporcionar una justificación para el precio final.')
-                    ->danger()
-                    ->send();
-
-                return;
-            }
-
-            // Verificar si ya existe una solicitud pendiente
-            $pendingAuth = $this->agreement->finalPriceAuthorizations()
-                ->where('status', 'pending')
-                ->first();
-
-            if ($pendingAuth) {
-                Notification::make()
-                    ->title('⚠️ Solicitud Pendiente')
-                    ->body('Ya existe una solicitud de autorización pendiente.')
-                    ->warning()
-                    ->send();
-
-                return;
-            }
-
-            // Crear la solicitud de autorización
-            $authorization = \App\Models\FinalPriceAuthorization::create([
-                'agreement_id' => $this->agreement->id,
-                'requested_by' => auth()->id(),
-                'final_price' => $this->final_price_value,
-                'justification' => $this->final_price_justification,
-                'status' => 'pending',
-            ]);
-
-            // Notificar a todos los administradores
-            $admins = \App\Models\User::where('role', 'gerencia')->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\FinalPriceAuthorizationRequestedNotification($authorization->id));
-            }
-
-            Notification::make()
-                ->title('✅ Solicitud Enviada')
-                ->body('La solicitud de autorización ha sido enviada al administrador.')
-                ->success()
-                ->duration(5000)
-                ->send();
-
-            // Limpiar campos
-            $this->final_price_value = null;
-            $this->final_price_justification = null;
-
-            // Refrescar el agreement
-            $this->agreement->refresh();
-
-        } catch (\Exception $e) {
-            Notification::make()
-                ->title('❌ Error al Enviar Solicitud')
                 ->body('Ocurrió un error: '.$e->getMessage())
                 ->danger()
                 ->duration(7000)

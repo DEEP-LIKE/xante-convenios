@@ -19,20 +19,20 @@ class AgreementCalculatorService
     {
         $configValues = ConfigurationCalculator::whereIn('key', [
             'comision_sin_iva_default',
-            'comision_iva_incluido_default', // This now stores the IVA percentage (16%)
-            'precio_promocion_multiplicador_default',
-            'isr_default',
-            'cancelacion_hipoteca_default',
-            'monto_credito_default',
+            'iva_valor',
         ])->pluck('value', 'key');
 
+        $ivaPercentage = (float) ($configValues['iva_valor'] ?? 16.00);
+        $ivaMultiplier = 1 + ($ivaPercentage / 100);
+
         return [
-            'porcentaje_comision_sin_iva' => $configValues['comision_sin_iva_default'] ?? 6.50,
-            'iva_percentage' => $configValues['comision_iva_incluido_default'] ?? 16.00, // Using this as IVA %
-            'precio_promocion_multiplicador' => $configValues['precio_promocion_multiplicador_default'] ?? 1.09,
-            'isr' => $configValues['isr_default'] ?? 0,
-            'cancelacion_hipoteca' => $configValues['cancelacion_hipoteca_default'] ?? 20000,
-            'monto_credito' => $configValues['monto_credito_default'] ?? 800000,
+            'porcentaje_comision_sin_iva' => (float) ($configValues['comision_sin_iva_default'] ?? 6.50),
+            'iva_multiplier' => $ivaMultiplier,
+            'base_iva_percentage' => $ivaPercentage,
+            'precio_promocion_multiplicador' => 1.0,
+            'isr' => 0,
+            'cancelacion_hipoteca' => 0,
+            'monto_credito' => 0,
         ];
     }
 
@@ -54,14 +54,17 @@ class AgreementCalculatorService
         $params = array_merge($defaults, $parameters);
 
         $porcentajeComision = (float) ($params['porcentaje_comision_sin_iva'] ?? 6.50);
-        $ivaPercentage = (float) ($params['iva_percentage'] ?? 16.00);
-        $multiplicadorPrecioPromocion = (float) ($params['precio_promocion_multiplicador'] ?? 1.09);
+        $ivaPercentage = (float) ($params['base_iva_percentage'] ?? $params['iva_percentage'] ?? 16.00);
+        $multiplicadorPrecioPromocion = (float) ($params['precio_promocion_multiplicador'] ?? 1.0);
         $isr = (float) ($params['isr'] ?? 0);
-        $cancelacion = (float) ($params['cancelacion_hipoteca'] ?? 20000);
-        $montoCredito = (float) ($params['monto_credito'] ?? 800000);
+        $cancelacion = (float) ($params['cancelacion_hipoteca'] ?? 0);
+        $montoCredito = (float) ($params['monto_credito'] ?? 0);
+
+        // Calcular multiplicador de IVA basado en el porcentaje
+        $ivaMultiplier = 1 + ($ivaPercentage / 100);
 
         // Calcular porcentaje de comisión con IVA incluido dinámicamente
-        $porcentajeComisionIvaIncluido = round($porcentajeComision * (1 + ($ivaPercentage / 100)), 2);
+        $porcentajeComisionIvaIncluido = round($porcentajeComision * $ivaMultiplier, 2);
 
         // Realizar cálculos
         $calculations = [];
@@ -84,15 +87,18 @@ class AgreementCalculatorService
         // 5. Total Gastos FI (Venta) = ISR + Cancelación de Hipoteca
         $calculations['total_gastos_fi_venta'] = round($isr + $cancelacion, 2);
 
-        // 6. Ganancia Final = Valor CompraVenta - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
-        $calculations['ganancia_final'] = round($valorConvenio - $isr - $cancelacion - $calculations['comision_total_pagar'] - $montoCredito, 2);
+        // 6. Ganancia Final = Precio Promoción - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
+        $calculations['ganancia_final'] = round($calculations['precio_promocion'] - $isr - $cancelacion - $calculations['comision_total_pagar'] - $montoCredito, 2);
+
+        // 7. Porcentaje Comisión con IVA (para visualizar en UI)
+        $calculations['comision_iva_incluido'] = $porcentajeComisionIvaIncluido;
 
         // Agregar parámetros utilizados para referencia
         $calculations['parametros_utilizados'] = [
             'valor_convenio' => $valorConvenio,
             'porcentaje_comision_sin_iva' => $porcentajeComision,
-            'iva_percentage' => $ivaPercentage,
-            'porcentaje_comision_iva_incluido' => $porcentajeComisionIvaIncluido,
+            'base_iva_percentage' => $ivaPercentage,
+            'comision_iva_incluido' => $porcentajeComisionIvaIncluido,
             'precio_promocion_multiplicador' => $multiplicadorPrecioPromocion,
             'isr' => $isr,
             'cancelacion_hipoteca' => $cancelacion,
@@ -121,6 +127,7 @@ class AgreementCalculatorService
             'comision_total_pagar' => number_format($calculations['comision_total_pagar'], 2, '.', ','),
             'total_gastos_fi_venta' => number_format($calculations['total_gastos_fi_venta'], 2, '.', ','),
             'ganancia_final' => number_format($calculations['ganancia_final'], 2, '.', ','),
+            'comision_iva_incluido' => number_format($calculations['comision_iva_incluido'], 2, '.', ''),
         ];
     }
 

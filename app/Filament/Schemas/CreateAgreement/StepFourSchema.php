@@ -218,7 +218,7 @@ class StepFourSchema
                         Grid::make(3)
                             ->schema([
                                 TextInput::make('porcentaje_comision_sin_iva')
-                                    ->label('% Comisión (Sin IVA)')
+                                    ->label('% Comisión Sin IVA')
                                     ->numeric()
                                     ->suffix('%')
                                     ->step(0.01)
@@ -231,68 +231,58 @@ class StepFourSchema
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText('Valor fijo desde configuración'),
-                                TextInput::make('iva_percentage')
-                                    ->label('Comisión IVA incluido')
+                                TextInput::make('comision_iva_incluido')
+                                    ->label('% Comisión con IVA')
                                     ->numeric()
                                     ->suffix('%')
                                     ->step(0.01)
                                     ->afterStateHydrated(function ($component, callable $get) {
                                         $sinIva = (float) $get('porcentaje_comision_sin_iva');
-                                        $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
+                                        $config = ConfigurationCalculator::where('key', 'iva_valor')->first();
                                         $ivaPercentage = $config ? (float) $config->value : 16.00;
+                                        $ivaMultiplier = 1 + ($ivaPercentage / 100);
 
-                                        if ($sinIva > 0 && $ivaPercentage > 0) {
-                                            $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
+                                        if ($sinIva > 0 && $ivaMultiplier > 0) {
+                                            $conIva = round($sinIva * $ivaMultiplier, 2);
                                             $component->state($conIva);
                                         }
                                     })
                                     ->disabled()
                                     ->dehydrated()
-                                    ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText(function (callable $get) {
-                                        $sinIva = (float) $get('porcentaje_comision_sin_iva');
-                                        $config = ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->first();
-                                        $ivaPercentage = $config ? (float) $config->value : 16.00;
-
-                                        if ($sinIva > 0 && $ivaPercentage > 0) {
-                                            $conIva = round($sinIva * (1 + ($ivaPercentage / 100)), 2);
-
-                                            return 'Comisión sin IVA × (1 + % IVA)';
-                                            // //. number_format($sinIva, 2) . '% × (1 + ' . number_format($ivaPercentage, 0) . '%) = ' . number_format($conIva, 2) . '%';
-                                        }
-
-                                        return 'Comisión sin IVA × (1 + IVA%)';
-                                    }),
+                                    ->extraAttributes(['class' => 'bg-gray-50']),
                                 TextInput::make('state_commission_percentage')
-                                    ->label('% Multiplicador por estado')
+                                    ->label('% DE ESCRITURACIÓN')
                                     ->numeric()
                                     ->suffix('%')
                                     ->disabled()
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText(function (callable $get) {
-                                        $stateName = $get('estado_propiedad');
-
-                                        return $stateName
-                                            ? '% de comisión por estado: '.$stateName
-                                            : 'Seleccione un estado en el paso anterior';
-                                    }),
+                                    ->afterStateHydrated(function ($component, $state, callable $get) {
+                                        if (! $state || $state == 0) {
+                                            $stateName = $get('estado_propiedad');
+                                            if ($stateName) {
+                                                $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
+                                                $component->state($rate ? $rate->commission_percentage : 0);
+                                            }
+                                        }
+                                    })
+                                    ->helperText('% DE ESCRITURACIÓN'),
                                 TextInput::make('monto_credito')
                                     ->label('Monto de Crédito')
                                     ->numeric()
                                     ->prefix('$')
-                                    ->default(function () {
-                                        $config = ConfigurationCalculator::where('key', 'monto_credito_default')->first();
-
-                                        return $config ? $config->value : 800000;
-                                    })
+                                    ->default(0)
                                     ->live(onBlur: true)
+                                    ->afterStateHydrated(function ($component, $state) {
+                                        if ($state == 800000) {
+                                            $component->state(0);
+                                        }
+                                    })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) use ($page) {
                                         if ($get('valor_convenio')) {
                                             $page->recalculateAllFinancials($set, $get);
                                         }
-                                    })
-                                    ->helperText('Valor editable - precargado desde configuración'),
+                                    }),
                                 Select::make('tipo_credito')
                                     ->label('Tipo de Crédito')
                                     ->options([
@@ -333,7 +323,7 @@ class StepFourSchema
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
                                     ->helperText('Valor Convenio × % Comisión'),
                                 TextInput::make('comision_total_pagar')
-                                    ->label('Comisión Total a Pagar')
+                                    ->label('Comisión con IVA')
                                     ->prefix('$')
                                     ->disabled()
                                     ->dehydrated()
@@ -364,7 +354,7 @@ class StepFourSchema
                                     ->label('Cancelación de Hipoteca')
                                     ->numeric()
                                     ->prefix('$')
-                                    ->default(20000)
+                                    ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) use ($page) {
                                         if ($get('valor_convenio')) {
@@ -384,7 +374,7 @@ class StepFourSchema
                                     ->disabled()
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-green-50 text-green-800 font-bold text-lg'])
-                                    ->helperText('Valor CompraVenta - ISR - Cancelación - Comisión Total - Monto Crédito'),
+                                    ->helperText('Precio Promoción - ISR - Cancelación - Comisión Total - Monto Crédito'),
                             ]),
                     ])
                     ->collapsible(),

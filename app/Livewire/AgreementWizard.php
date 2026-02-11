@@ -562,7 +562,7 @@ class AgreementWizard extends Component
         $this->calculationService->clearConfigurationCache();
 
         $this->stepData['porcentaje_comision_sin_iva'] = ConfigurationCalculator::get('comision_sin_iva_default', 6.50);
-        $this->stepData['monto_credito'] = ConfigurationCalculator::get('monto_credito_default', 800000);
+        $this->stepData['monto_credito'] = ConfigurationCalculator::get('monto_credito_default', 0);
         $this->stepData['isr'] = ConfigurationCalculator::get('isr_default', 0);
         $this->stepData['cancelacion_hipoteca'] = ConfigurationCalculator::get('cancelacion_hipoteca_default', 20000);
         $this->stepData['tipo_credito'] = ConfigurationCalculator::get('tipo_credito_default', 'BANCARIO');

@@ -40,6 +40,7 @@ class StepTwoSchema
                                     ->dehydrated(false),
                                 DatePicker::make('fecha_registro')
                                     ->label('Fecha')
+                                    ->native(false)
                                     ->displayFormat('d/m/Y')
                                     ->disabled()
                                     ->dehydrated(false)
@@ -59,9 +60,13 @@ class StepTwoSchema
                                     ->dehydrated(false)
                                     ->required()
                                     ->maxLength(255),
-                                TextInput::make('holder_delivery_file')
+                                Select::make('holder_delivery_file')
                                     ->label('Entrega expediente')
-                                    ->maxLength(100),
+                                    ->options([
+                                        'ENTREGADO' => 'ENTREGADO',
+                                        'PENDIENTE' => 'PENDIENTE',
+                                    ])
+                                    ->required(),
                                 DatePicker::make('holder_birthdate')
                                     ->native(false)
                                     ->label('Fecha de Nacimiento (min 18 años)')
@@ -94,9 +99,17 @@ class StepTwoSchema
                                     ->label('CURP')
                                     ->maxLength(18)
                                     ->minLength(18),
-                                TextInput::make('holder_regime_type')
+                                Select::make('holder_regime_type')
                                     ->label('Régimen Fiscal')
-                                    ->maxLength(100),
+                                    ->options([
+                                        '605' => '605 - Sueldos y Salarios e Ingresos Asimilados a Salarios',
+                                        '626' => '626 - Régimen Simplificado de Confianza (RESICO)',
+                                        '612' => '612 - Personas Físicas con Actividades Empresariales y Profesionales',
+                                        '606' => '606 - Arrendamiento',
+                                        '616' => '616 - Sin obligaciones fiscales',
+                                        'OTRO' => 'Otro',
+                                    ])
+                                    ->searchable(),
                                 TextInput::make('holder_rfc')
                                     ->label('RFC')
                                     ->maxLength(13),
@@ -197,9 +210,12 @@ class StepTwoSchema
                                     ->label('Nombre Completo')
                                     ->required()
                                     ->maxLength(255),
-                                TextInput::make('spouse_delivery_file')
+                                Select::make('spouse_delivery_file')
                                     ->label('Entrega expediente')
-                                    ->maxLength(100),
+                                    ->options([
+                                        'ENTREGADO' => 'ENTREGADO',
+                                        'PENDIENTE' => 'PENDIENTE',
+                                    ]),
                                 DatePicker::make('spouse_birthdate')
                                     ->native(false)
                                     ->label('Fecha de Nacimiento')
@@ -209,9 +225,17 @@ class StepTwoSchema
                                     ->label('CURP')
                                     ->maxLength(18)
                                     ->minLength(18),
-                                TextInput::make('spouse_regime_type')
+                                Select::make('spouse_regime_type')
                                     ->label('Régimen Fiscal')
-                                    ->maxLength(100),
+                                    ->options([
+                                        '605' => '605 - Sueldos y Salarios e Ingresos Asimilados a Salarios',
+                                        '626' => '626 - Régimen Simplificado de Confianza (RESICO)',
+                                        '612' => '612 - Personas Físicas con Actividades Empresariales y Profesionales',
+                                        '606' => '606 - Arrendamiento',
+                                        '616' => '616 - Sin obligaciones fiscales',
+                                        'OTRO' => 'Otro',
+                                    ])
+                                    ->searchable(),
                                 TextInput::make('spouse_rfc')
                                     ->label('RFC')
                                     ->maxLength(13),
@@ -353,11 +377,11 @@ class StepTwoSchema
                                     ->tel()
                                     ->maxLength(20),
                                 TextInput::make('ac_quota')
-                                    ->label('CUOTA')
+                                    ->label('Mantenimiento desarrollo ($)')
                                     ->numeric()
                                     ->prefix('$'),
                                 TextInput::make('private_president_quota')
-                                    ->label('CUOTA')
+                                    ->label('Mantenimiento privada ($)')
                                     ->numeric()
                                     ->prefix('$'),
                             ]),

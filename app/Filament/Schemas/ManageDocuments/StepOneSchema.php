@@ -50,7 +50,7 @@ class StepOneSchema
                 ->icon('heroicon-o-document-text')
                 ->iconColor('success')
                 ->schema($page->getDocumentFields())
-                ->visible($page->agreement->generatedDocuments->isNotEmpty()),
+                ->visible(fn () => $page->agreement->generatedDocuments->isNotEmpty()),
 
             Section::make('Sin Documentos')
                 ->description('No hay documentos generados')
@@ -96,7 +96,7 @@ class StepOneSchema
                         }),
 
                 ])
-                ->visible($page->agreement->generatedDocuments->isEmpty()),
+                ->visible(fn () => $page->agreement->generatedDocuments->isEmpty()),
 
             Section::make('Enviar al Cliente')
                 ->description('Enviar documentos por correo electrónico')
@@ -143,9 +143,9 @@ class StepOneSchema
 
                             return "Los documentos fueron enviados exitosamente el {$sentDate}";
                         })
-                        ->visible(fn () => in_array($page->agreement->status, ['documents_sent', 'completed'])),
+                        ->visible(fn () => in_array($page->agreement->status, ['documents_sent', 'completed']) && !empty($page->agreement->documents_sent_at)),
                 ])
-                ->visible($page->agreement->generatedDocuments->isNotEmpty() && !in_array($page->agreement->status, ['documents_sent', 'completed'])),
+                ->visible(fn () => $page->agreement->generatedDocuments->isNotEmpty() && !in_array($page->agreement->status, ['documents_sent', 'completed'])),
 
             Section::make('Documentos Enviados')
                 ->description('Los documentos han sido enviados al cliente exitosamente')
@@ -201,7 +201,7 @@ class StepOneSchema
                             </div>');
                         }),
                 ])
-                ->visible(in_array($page->agreement->status, ['documents_sent', 'completed'])),
+                ->visible(fn () => in_array($page->agreement->status, ['documents_sent', 'completed']) && !empty($page->agreement->documents_sent_at)),
         ];
     }
 }

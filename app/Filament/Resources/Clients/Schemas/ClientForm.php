@@ -178,11 +178,11 @@ class ClientForm
                             ->tel()
                             ->maxLength(255),
                         TextInput::make('ac_quota')
-                            ->label('CUOTA (AC)')
+                            ->label('Mantenimiento desarrollo ($)')
                             ->numeric()
                             ->prefix('$'),
                         TextInput::make('private_president_quota')
-                            ->label('CUOTA (Presidente)')
+                            ->label('Mantenimiento privada ($)')
                             ->numeric()
                             ->prefix('$'),
                     ])->columns(2),

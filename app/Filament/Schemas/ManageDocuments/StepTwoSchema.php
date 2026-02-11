@@ -83,6 +83,7 @@ class StepTwoSchema
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
                                     ->placeholder('📄 Arrastra tu archivo aquí o haz clic para seleccionar')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -102,6 +103,8 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -121,6 +124,8 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -140,6 +145,8 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -159,6 +166,8 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -178,6 +187,8 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -196,6 +207,8 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -215,6 +228,7 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -242,6 +256,7 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -261,6 +276,7 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -280,6 +296,7 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -299,6 +316,7 @@ class StepTwoSchema
                                     ->maxSize(10240)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -328,16 +346,16 @@ class StepTwoSchema
                                 $clientEmail = $page->getClientEmail();
                                 $advisorEmail = auth()->user()->email ?? 'No disponible';
 
-                                return new HtmlString('✅ <strong>Correo de confirmación enviado</strong><br>'.
-                                       "📅 Fecha: {$receivedDate}<br>".
-                                       "👤 Cliente: {$clientEmail}<br>".
-                                       "🏢 Asesor: {$advisorEmail}<br>".
-                                       '📋 Estado: Convenio completado exitosamente<br>'.
-                                       '🎯 <strong>Etapa: Proceso Completado Exitosamente</strong>');
-                            } else {
-                                return new HtmlString('⏳ <strong>Pendiente de envío</strong><br>'.
-                                       'El correo de confirmación se enviará automáticamente al avanzar al siguiente paso.');
-                            }
+                                 return new HtmlString('✅ <strong>Correo de confirmación enviado exitosamente</strong><br>'.
+                                       "📅 Enviado el: {$receivedDate}<br>".
+                                       "📧 Destinatario: {$clientEmail}<br>".
+                                       "🏢 Enviado por: {$advisorEmail}<br>".
+                                       '📋 Estado: Documentación recibida y convenio completado.<br>'.
+                                       '🎯 <strong>Etapa actual: Proceso de Documentación Finalizado</strong>');
+                             } else {
+                                 return new HtmlString('⏳ <strong>Pendiente de envío</strong><br>'.
+                                        'El correo de confirmación se enviará automáticamente al cliente una vez que se complete la carga de todos los documentos obligatorios y se avance al siguiente paso.');
+                             }
                         }),
                 ]),
         ];

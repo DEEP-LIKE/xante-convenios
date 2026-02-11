@@ -347,7 +347,7 @@
                         <span class="contact-value">{{ $ac_phone ?? '' }}</span>
                     </div>
                     <div class="contact-field">
-                        <span class="contact-label">CUOTA</span>
+                        <span class="contact-label">Mantenimiento desarrollo ($)</span>
                         <span class="contact-value">
                             @if(isset($ac_quota) && $ac_quota)
                                 ${{ number_format($ac_quota, 2) }}
@@ -366,7 +366,7 @@
                         <span class="contact-value">{{ $private_president_phone ?? '' }}</span>
                     </div>
                     <div class="contact-field">
-                        <span class="contact-label">CUOTA</span>
+                        <span class="contact-label">Mantenimiento privada ($)</span>
                         <span class="contact-value">
                             @if(isset($private_president_quota) && $private_president_quota)
                                 ${{ number_format($private_president_quota, 2) }}

@@ -240,8 +240,8 @@ class CalculationService
                 'iva_multiplier' => ConfigurationCalculator::get('iva_multiplier', 1.16),
                 'precio_promocion_multiplier' => ConfigurationCalculator::get('precio_promocion_multiplier', 1.09),
                 'isr_default' => ConfigurationCalculator::get('isr_default', 0),
-                'cancelacion_hipoteca_default' => ConfigurationCalculator::get('cancelacion_hipoteca_default', 20000),
-                'monto_credito_default' => ConfigurationCalculator::get('monto_credito_default', 800000),
+                'cancelacion_hipoteca_default' => ConfigurationCalculator::get('cancelacion_hipoteca_default', 0),
+                'monto_credito_default' => ConfigurationCalculator::get('monto_credito_default', 0),
                 'tipo_credito_default' => ConfigurationCalculator::get('tipo_credito_default', 'BANCARIO'),
                 'otro_banco_default' => ConfigurationCalculator::get('otro_banco_default', 'NO APLICA'),
             ];

@@ -56,6 +56,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
     protected $listeners = [
         'stepChanged' => 'handleStepChange',
+        'refreshWizard' => '$refresh',
     ];
 
     // ... (rest of the class)
@@ -369,10 +370,16 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
         $stateCommission = $sanitizeFloat($rawStateCommission);
 
-        // Si es 0 y hay un default configurado (ej fallback), podríamos usarlo, pero mejor confiar en el input
-        // Fallback a 9 solo si es nulo o vacío, pero si es 0 explicitamente (estado sin comision), respetar 0.
-        if ($rawStateCommission === null || $rawStateCommission === '') {
-            $stateCommission = 9.0; // Valor default historial
+        $stateCommission = $sanitizeFloat($rawStateCommission);
+
+        // Si es 0 o nulo, intentar obtenerlo del estado de la propiedad
+        if ($rawStateCommission === null || $rawStateCommission === '' || $stateCommission == 0) {
+            $stateName = $get('estado_propiedad');
+            if ($stateName) {
+                $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
+                $stateCommission = $rate ? (float) $rate->commission_percentage : 0;
+                $set('state_commission_percentage', $stateCommission);
+            }
         }
 
         /*
@@ -395,13 +402,17 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
         $precioPromocion = $valorConvenio * $multiplicadorPrecioPromocion;
         $set('precio_promocion', number_format($precioPromocion, 2, '.', ''));
 
+        $ivaPercentage = (float) (\App\Models\ConfigurationCalculator::where('key', 'iva_valor')->value('value') ?? 16.00);
+        $ivaMultiplier = 1 + ($ivaPercentage / 100);
+
         $parameters = [
             'porcentaje_comision_sin_iva' => (float) ($get('porcentaje_comision_sin_iva') ?? 6.50),
-            'iva_percentage' => (float) (\App\Models\ConfigurationCalculator::where('key', 'comision_iva_incluido_default')->value('value') ?? 16.00),
+            'base_iva_percentage' => $ivaPercentage,
+            'iva_multiplier' => $ivaMultiplier,
             'precio_promocion_multiplicador' => $multiplicadorPrecioPromocion,
             'isr' => (float) ($get('isr') ?? 0),
-            'cancelacion_hipoteca' => (float) ($get('cancelacion_hipoteca') ?? 20000),
-            'monto_credito' => (float) ($get('monto_credito') ?? 800000),
+            'cancelacion_hipoteca' => (float) ($get('cancelacion_hipoteca') ?? 0),
+            'monto_credito' => (float) ($get('monto_credito') ?? 0),
         ];
 
         $calculations = $this->calculatorService->calculateAllFinancials($valorConvenio, $parameters);
@@ -643,6 +654,89 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
             // Si no hay redirección (error), ocultar loading
             $this->dispatch('hideLoading');
         }
+    }
+
+    /**
+     * Acción para que el coordinador apruebe el convenio directamente
+     */
+    public function approveAgreementAction(): void
+    {
+        if (! in_array(auth()->user()->role, ['admin', 'coordinador_fi', 'gerencia'])) {
+            return;
+        }
+
+        $agreement = Agreement::find($this->agreementId);
+        if (! $agreement || ! $agreement->currentValidation) {
+            return;
+        }
+
+        app(\App\Services\ValidationService::class)->approveValidation(
+            $agreement->currentValidation,
+            auth()->user()
+        );
+
+        Notification::make()
+            ->title('Convenio Aprobado')
+            ->success()
+            ->send();
+
+        $this->dispatch('refreshWizard');
+    }
+
+    /**
+     * Acción para que el coordinador solicite cambios
+     */
+    public function requestChangesAction(array $data): void
+    {
+        if (! in_array(auth()->user()->role, ['admin', 'coordinador_fi', 'gerencia'])) {
+            return;
+        }
+
+        $agreement = Agreement::find($this->agreementId);
+        if (! $agreement || ! $agreement->currentValidation) {
+            return;
+        }
+
+        app(\App\Services\ValidationService::class)->requestChanges(
+            $agreement->currentValidation,
+            auth()->user(),
+            $data['observations']
+        );
+
+        Notification::make()
+            ->title('Observaciones Enviadas')
+            ->info()
+            ->send();
+
+        $this->dispatch('refreshWizard');
+    }
+
+    /**
+     * Acción para que el coordinador rechace el convenio
+     */
+    public function rejectAgreementAction(array $data): void
+    {
+        if (! in_array(auth()->user()->role, ['admin', 'coordinador_fi', 'gerencia'])) {
+            return;
+        }
+
+        $agreement = Agreement::find($this->agreementId);
+        if (! $agreement || ! $agreement->currentValidation) {
+            return;
+        }
+
+        app(\App\Services\ValidationService::class)->rejectValidation(
+            $agreement->currentValidation,
+            auth()->user(),
+            $data['reason']
+        );
+
+        Notification::make()
+            ->title('Convenio Rechazado')
+            ->danger()
+            ->send();
+
+        $this->dispatch('refreshWizard');
     }
 
     /**
