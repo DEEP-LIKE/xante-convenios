@@ -50,6 +50,32 @@ class StepTwoSchema
         };
 
         return [
+            Section::make('Estado de Confirmación')
+                ->description('Información sobre el correo de confirmación')
+                ->icon(fn () => $page->agreement->documents_received_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
+                ->iconColor(fn () => $page->agreement->documents_received_at ? 'success' : 'warning')
+                ->schema([
+                    Placeholder::make('confirmation_status')
+                        ->label('📧 Correo de Confirmación')
+                        ->content(function () use ($page) {
+                            if ($page->agreement->documents_received_at) {
+                                $receivedDate = $page->agreement->documents_received_at->timezone('America/Mexico_City')->format('d/m/Y H:i');
+                                $clientEmail = $page->getClientEmail();
+                                $advisorEmail = auth()->user()->email ?? 'No disponible';
+
+                                 return new HtmlString('✅ <strong>Correo de confirmación enviado exitosamente</strong><br>'.
+                                       "📅 Enviado el: {$receivedDate}<br>".
+                                       "📧 Destinatario: {$clientEmail}<br>".
+                                       "🏢 Enviado por: {$advisorEmail}<br>".
+                                       '📋 Estado: Documentación recibida y convenio completado.<br>'.
+                                       '🎯 <strong>Etapa actual: Proceso de Documentación Finalizado</strong>');
+                             } else {
+                                 return new HtmlString('⏳ <strong>Pendiente de envío</strong><br>'.
+                                        'El correo de confirmación se enviará automáticamente al cliente una vez que se complete la carga de todos los documentos obligatorios y se avance al siguiente paso.');
+                             }
+                        }),
+                ]),
+
             Section::make('Documentos Requeridos del Cliente')
                 ->description(new HtmlString(
                     'Gestionar documentos que debe proporcionar el cliente <br> <span class="font-semibold text-gray-700">Documento cargado previamente se mostrará automáticamente</span>'
@@ -333,31 +359,6 @@ class StepTwoSchema
                     ]),
                 ]),
 
-            Section::make('Estado de Confirmación')
-                ->description('Información sobre el correo de confirmación')
-                ->icon(fn () => $page->agreement->documents_received_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
-                ->iconColor(fn () => $page->agreement->documents_received_at ? 'success' : 'warning')
-                ->schema([
-                    Placeholder::make('confirmation_status')
-                        ->label('📧 Correo de Confirmación')
-                        ->content(function () use ($page) {
-                            if ($page->agreement->documents_received_at) {
-                                $receivedDate = $page->agreement->documents_received_at->format('Y-m-d H:i:s');
-                                $clientEmail = $page->getClientEmail();
-                                $advisorEmail = auth()->user()->email ?? 'No disponible';
-
-                                 return new HtmlString('✅ <strong>Correo de confirmación enviado exitosamente</strong><br>'.
-                                       "📅 Enviado el: {$receivedDate}<br>".
-                                       "📧 Destinatario: {$clientEmail}<br>".
-                                       "🏢 Enviado por: {$advisorEmail}<br>".
-                                       '📋 Estado: Documentación recibida y convenio completado.<br>'.
-                                       '🎯 <strong>Etapa actual: Proceso de Documentación Finalizado</strong>');
-                             } else {
-                                 return new HtmlString('⏳ <strong>Pendiente de envío</strong><br>'.
-                                        'El correo de confirmación se enviará automáticamente al cliente una vez que se complete la carga de todos los documentos obligatorios y se avance al siguiente paso.');
-                             }
-                        }),
-                ]),
         ];
     }
 }

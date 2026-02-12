@@ -49,7 +49,7 @@ class StepThreeSchema
                         ->schema([
                             Placeholder::make('completion_date')
                                 ->label('Fecha de Finalización')
-                                ->content($agreement->completed_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i')),
+                                ->content($agreement->completed_at?->timezone('America/Mexico_City')->format('d/m/Y H:i') ?? now()->timezone('America/Mexico_City')->format('d/m/Y H:i')),
 
                             Placeholder::make('total_documents')
                                 ->label('Documentos Generados')

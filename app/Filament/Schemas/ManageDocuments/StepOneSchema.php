@@ -121,12 +121,12 @@ class StepOneSchema
                                 ->content(function () use ($page) {
                                     $agreementValue = $page->getAgreementValue();
                                     $community = $page->getPropertyCommunity();
-                                    $createdDate = $page->agreement->created_at->format('d/m/Y');
+                                    $createdDate = $page->agreement->created_at->timezone('America/Mexico_City')->format('d/m/Y');
 
                                     $content = "Valor: {$agreementValue}<br>Comunidad: {$community}<br>Creado: {$createdDate}";
 
                                     if ($page->agreement->documents_sent_at) {
-                                        $sentDate = $page->agreement->documents_sent_at->format('Y-m-d H:i:s');
+                                        $sentDate = $page->agreement->documents_sent_at->timezone('America/Mexico_City')->format('d/m/Y H:i');
                                         $content .= "<br><span style='color: #10b981; font-weight: 600;'>📧 Enviado: {$sentDate}</span>";
                                     }
 
@@ -138,7 +138,7 @@ class StepOneSchema
                         ->label('✅ Documentos Enviados')
                         ->content(function () use ($page) {
                             $sentDate = $page->agreement->documents_sent_at ?
-                                $page->agreement->documents_sent_at->format('d/m/Y H:i') :
+                                $page->agreement->documents_sent_at->timezone('America/Mexico_City')->format('d/m/Y H:i') :
                                 'Fecha no disponible';
 
                             return "Los documentos fueron enviados exitosamente el {$sentDate}";
@@ -157,7 +157,7 @@ class StepOneSchema
                             Placeholder::make('sent_confirmation')
                                 ->label('📤 Estado del Envío')
                                 ->content(function () use ($page) {
-                                    $sentDate = $page->agreement->documents_sent_at?->format('d/m/Y H:i') ?? 'fecha no disponible';
+                                    $sentDate = $page->agreement->documents_sent_at?->timezone('America/Mexico_City')->format('d/m/Y H:i') ?? 'fecha no disponible';
                                     $clientName = $page->getClientName();
                                     $clientEmail = $page->getClientEmail();
                                     $docsCount = $page->agreement->generatedDocuments->count();

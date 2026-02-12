@@ -123,18 +123,24 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
     public function mount(): void
     {
-        // Determinar paso actual
-        $this->currentStep = $this->stateManager->determineCurrentStep($this->agreement);
+        // 1. Determinar el paso máximo permitido según el estado actual
+        $maxAllowedStep = $this->stateManager->determineCurrentStep($this->agreement);
 
-        // Verificar si hay paso específico en URL
+        // 2. Verificar si hay un paso solicitado en la URL
         $urlStep = $this->getCurrentUrlStep();
-        if ($urlStep && $urlStep !== $this->currentStep) {
+
+        // 3. Establecer paso actual con validación (no permitir avanzar más allá del estado real)
+        if ($urlStep && $urlStep <= $maxAllowedStep) {
             $this->currentStep = $urlStep;
-            if ($this->currentStep === 3 && $this->agreement->status !== 'completed') {
-                $this->stateManager->markAsCompleted($this->agreement);
-            }
-        } elseif ($this->stateManager->shouldMarkAsCompleted($this->agreement, $this->currentStep)) {
-            $this->stateManager->markAsCompleted($this->agreement);
+        } else {
+            // Si no hay URL o el paso URL es inválido/futuro, usar el paso determinado por el estado
+            $this->currentStep = $maxAllowedStep;
+        }
+
+        // 4. Lógica de seguridad: Si estamos en paso 2 pero no se ha enviado el correo, forzar paso 1
+        // Esto corrige el caso donde se fuerza el paso 2 por URL pero falta el envío
+        if ($this->currentStep === 2 && ! $this->agreement->documents_sent_at) {
+            $this->currentStep = 1;
         }
 
         // Refrescar relaciones
@@ -154,13 +160,6 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
         if (! empty($existingDocuments)) {
             $this->form->fill($existingDocuments);
-
-            Notification::make()
-                ->title('Documentos Cargados')
-                ->body('Se han recuperado '.count($existingDocuments).' documentos previamente subidos')
-                ->success()
-                ->duration(4000)
-                ->send();
         }
 
         $this->documents_validated = $this->agreement->status === 'completed';
