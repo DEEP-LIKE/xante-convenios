@@ -50,14 +50,21 @@ class StepTwoSchema
         };
 
         return [
-            Section::make('Estado de Confirmación')
-                ->description('Información sobre el correo de confirmación')
-                ->icon(fn () => $page->agreement->documents_received_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
-                ->iconColor(fn () => $page->agreement->documents_received_at ? 'success' : 'warning')
+            Section::make('Estatus de Notificaciones')
+                ->description('Seguimiento de correos electrónicos enviados')
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->iconColor('info')
                 ->schema([
-                    Placeholder::make('confirmation_status')
-                        ->label('Correo de Confirmación')
-                        // ->icon('heroicon-o-envelope')
+                    Placeholder::make('step_1_status')
+                        ->label('1. Envío de Documentos (Paso 1)')
+                        ->content(fn () => view('filament.components.email-confirmation-status', [
+                            'agreement' => $page->agreement,
+                            'clientEmail' => $page->getClientEmail(),
+                            'docsCount' => $page->agreement->generatedDocuments->count(),
+                        ])),
+
+                    Placeholder::make('step_2_status')
+                        ->label('2. Confirmación de Recepción (Paso 2)')
                         ->content(fn () => view('filament.components.confirmation-status', [
                             'agreement' => $page->agreement,
                             'clientEmail' => $page->getClientEmail(),

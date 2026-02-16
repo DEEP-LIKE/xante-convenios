@@ -10,8 +10,8 @@
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
         </div>
         <div>
-            <h3 style="font-size: 1.125rem; font-weight: 700; color: #14532d; line-height: 1; margin: 0;">Correo de Confirmación</h3>
-            <p style="font-size: 0.875rem; color: #15803d; margin: 0.25rem 0 0 0;">Documentos enviados exitosamente al cliente</p>
+            <h3 style="font-size: 1.125rem; font-weight: 700; color: #14532d; line-height: 1; margin: 0;">Estatus: Envío de Documentos</h3>
+            <p style="font-size: 0.875rem; color: #15803d; margin: 0.25rem 0 0 0;">Los documentos iniciales han sido enviados al cliente</p>
         </div>
     </div>
 
