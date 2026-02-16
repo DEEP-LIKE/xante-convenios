@@ -1,5 +1,5 @@
 @php
-    $receivedDate = $agreement->documents_received_at?->timezone('America/Mexico_City')->format('d/m/Y H:i');
+    $receivedDate = $agreement->documents_received_at?->format('d/m/Y H:i');
     $isSent = !is_null($receivedDate);
 @endphp
 
