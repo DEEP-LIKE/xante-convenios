@@ -1,45 +1,45 @@
-<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 shadow-sm mb-6">
-    <div class="flex items-center gap-2 mb-6">
-        <div class="p-1.5 bg-yellow-100 rounded-full text-yellow-700">
-            <x-heroicon-o-currency-dollar class="w-5 h-5" />
+<div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); margin-bottom: 1.5rem; font-family: sans-serif;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <div style="background-color: #fef9c3; color: #a16207; padding: 0.375rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         <div>
-            <h3 class="text-lg font-bold text-yellow-900 leading-none">Resumen Financiero</h3>
-            <p class="text-sm text-yellow-700 mt-1">Valores financieros actuales del convenio</p>
+            <h3 style="font-size: 1.125rem; font-weight: 700; color: #713f12; line-height: 1; margin: 0;">Resumen Financiero</h3>
+            <p style="font-size: 0.875rem; color: #a16207; margin: 0.25rem 0 0 0;">Valores financieros actuales del convenio</p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; @media (min-width: 768px) { grid-template-columns: repeat(4, 1fr); }">
         <div>
-            <span class="block text-sm font-medium text-gray-500 mb-1">Valor Convenio</span>
-            <span class="block text-xl font-bold text-gray-900">$ {{ number_format($agreement->currentFinancials['agreement_value'], 2) }}</span>
+            <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Valor Convenio</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format($agreement->currentFinancials['agreement_value'], 2) }}</span>
         </div>
         
         <div>
-            <span class="block text-sm font-medium text-gray-500 mb-1">Precio Promoción</span>
-            <span class="block text-xl font-bold text-gray-900">$ {{ number_format($agreement->currentFinancials['proposal_value'], 2) }}</span>
+            <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Precio Promoción</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format($agreement->currentFinancials['proposal_value'], 2) }}</span>
         </div>
 
         <div>
-            <span class="block text-sm font-medium text-gray-500 mb-1">Comisión Total</span>
-            <span class="block text-xl font-bold text-gray-900">$ {{ number_format($agreement->currentFinancials['commission_total'], 2) }}</span>
+            <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Comisión Total</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format($agreement->currentFinancials['commission_total'], 2) }}</span>
         </div>
 
         <div>
-            <span class="block text-sm font-medium text-gray-500 mb-1">Ganancia Final</span>
-            <span class="block text-xl font-bold text-green-600">$ {{ number_format($agreement->currentFinancials['final_profit'], 2) }}</span>
+            <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Ganancia Final</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #16a34a;">$ {{ number_format($agreement->currentFinancials['final_profit'], 2) }}</span>
         </div>
     </div>
 
     @if($agreement->currentFinancials['is_recalculated'])
-        <div class="mt-4 pt-4 border-t border-yellow-200 flex items-center gap-2">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #fef08a; display: flex; align-items: center; gap: 0.5rem;">
+            <span style="display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; background-color: #dbeafe; color: #1e40af;">
                 Recálculo #{{ $agreement->currentFinancials['recalculation_number'] }}
             </span>
-            <span class="text-xs text-gray-500">
+            <span style="font-size: 0.75rem; color: #6b7280;">
                 Actualizado: {{ $agreement->currentFinancials['recalculation_date']->timezone('America/Mexico_City')->format('d/m/Y H:i') }}
             </span>
-            <span class="text-xs text-gray-500 border-l border-gray-300 pl-2 ml-1">
+            <span style="font-size: 0.75rem; color: #6b7280; border-left: 1px solid #d1d5db; padding-left: 0.5rem; margin-left: 0.25rem;">
                  Por: {{ $agreement->currentFinancials['user']->name ?? 'Usuario' }}
             </span>
         </div>
