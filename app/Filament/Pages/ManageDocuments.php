@@ -208,9 +208,15 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                 'sent_at' => $this->agreement->documents_sent_at,
                             ]);
 
-                            // Trigger automático solo si NO se ha enviado ni completado aún
-                            \Log::info('Checking Step 1 completion status', ['id' => $this->agreement->id, 'status' => $this->agreement->status, 'sent_at' => $this->agreement->documents_sent_at]);
-                            if (!in_array($this->agreement->status, ['documents_sent', 'completed'])) {
+                            // CORRECCIÓN: Verificar solo si NO se han enviado los documentos (documents_sent_at es NULL)
+                            // No verificar el status porque puede ser 'completed' de operaciones previas
+                            \Log::info('Checking Step 1 completion status', [
+                                'id' => $this->agreement->id, 
+                                'status' => $this->agreement->status, 
+                                'sent_at' => $this->agreement->documents_sent_at
+                            ]);
+                            
+                            if (!$this->agreement->documents_sent_at) {
                                 \Log::info('Step 1 Condition met for agreement ' . $this->agreement->id . ', calling sendDocumentsToClient');
                                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
 
@@ -221,7 +227,9 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                     ->duration(5000)
                                     ->send();
                             } else {
-                                \Log::debug('Trigger automático omitido (ya enviado o completado)');
+                                \Log::debug('Trigger automático omitido (documentos ya enviados previamente)', [
+                                    'sent_at' => $this->agreement->documents_sent_at
+                                ]);
                             }
 
                             // Sincronizar datos básicos del cliente (Wizard 1) con HubSpot
@@ -392,27 +400,38 @@ class ManageDocuments extends Page implements HasActions, HasForms
         ]);
 
         if ($oldStep === 1 && $newStep === 2) {
-             \Log::info('HandleStepChange 1->2 detected', ['agreement_id' => $this->agreement->id, 'status' => $this->agreement->status]);
-             if ($this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
-            try {
-                $this->sendDocumentsToClient(app(SendDocumentsAction::class));
+            \Log::info('HandleStepChange 1->2 detected', [
+                'agreement_id' => $this->agreement->id, 
+                'status' => $this->agreement->status,
+                'documents_sent_at' => $this->agreement->documents_sent_at
+            ]);
+            
+            // CORRECCIÓN: Solo verificar si documents_sent_at es NULL
+            // No verificar status porque puede ser 'completed' de operaciones previas
+            if (!$this->agreement->documents_sent_at) {
+                try {
+                    $this->sendDocumentsToClient(app(SendDocumentsAction::class));
 
-                Notification::make()
-                    ->title('✅ Documentos Enviados')
-                    ->body('Los documentos han sido enviados exitosamente.')
-                    ->success()
-                    ->duration(5000)
-                    ->send();
-            } catch (\Exception $e) {
-                Notification::make()
-                    ->title('❌ Error al Enviar Documentos')
-                    ->body('Error: '.$e->getMessage())
-                    ->danger()
-                    ->duration(7000)
-                    ->send();
+                    Notification::make()
+                        ->title('✅ Documentos Enviados')
+                        ->body('Los documentos han sido enviados exitosamente.')
+                        ->success()
+                        ->duration(5000)
+                        ->send();
+                } catch (\Exception $e) {
+                    Notification::make()
+                        ->title('❌ Error al Enviar Documentos')
+                        ->body('Error: '.$e->getMessage())
+                        ->danger()
+                        ->duration(7000)
+                        ->send();
+                }
+            } else {
+                \Log::debug('Email sending skipped - documents already sent', [
+                    'sent_at' => $this->agreement->documents_sent_at
+                ]);
             }
         }
-    }
 
         // Paso 2 -> 3: Completar convenio
         if ($oldStep === 2 && $newStep === 3 && ! $this->agreement->documents_received_at) {
