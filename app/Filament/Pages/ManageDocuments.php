@@ -250,13 +250,62 @@ class ManageDocuments extends Page implements HasActions, HasForms
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema($this->getStepTwoSchema())
                         ->afterValidation(function () {
-                            // NOTA: El status se actualiza a 'completed' en handleStepChange al pasar del paso 2→3
-                            // NO actualizar aquí para evitar cambios prematuros
-                            
                             \Log::debug('Step 2 afterValidation triggered', [
                                 'agreement_id' => $this->agreement->id,
                                 'documents_received_at' => $this->agreement->documents_received_at,
+                                'status' => $this->agreement->status,
                             ]);
+
+                            // CORRECCIÓN: Trigger de completado y email aquí, ya que handleStepChange no siempre se dispara
+                            if (! $this->agreement->documents_received_at) {
+                                try {
+                                    $this->agreement->update([
+                                        'status' => 'completed',
+                                        'documents_received_at' => now(),
+                                        'completion_percentage' => 100,
+                                    ]);
+
+                                    \Log::info('Agreement marked as completed in Step 2 afterValidation', ['id' => $this->agreement->id]);
+
+                                    // Enviar email de confirmación
+                                    $this->emailService->sendDocumentsReceivedConfirmation($this->agreement);
+
+                                    Notification::make()
+                                        ->title('🎉 Convenio Completado')
+                                        ->body('El convenio ha sido marcado como exitoso y se envió la confirmación.')
+                                        ->success()
+                                        ->duration(5000)
+                                        ->send();
+
+                                    // Sincronizar con HubSpot
+                                    try {
+                                        app(SyncClientToHubspotAction::class)->execute($this->agreement, $this->agreement->wizard_data ?? []);
+                                        
+                                        // Sincronización Fase 2: Actualizar 'nombre_inmueble' (XA-ID)
+                                        if ($this->agreement->client && $this->agreement->client->hubspot_deal_id) {
+                                            $hubspotDealId = $this->agreement->client->hubspot_deal_id;
+                                            $xanteId = $this->agreement->client->xante_id;
+                                            
+                                            if ($hubspotDealId && $xanteId) {
+                                                $nombreInmueble = str_starts_with($xanteId, 'XA-') ? $xanteId : 'XA-'.$xanteId;
+                                                app(\App\Services\HubSpotService::class)->updateDeal($hubspotDealId, [
+                                                    'nombre_inmueble' => $nombreInmueble,
+                                                ]);
+                                                \Log::info('HubSpot Deal updated with nombre_inmueble in afterValidation', ['deal_id' => $hubspotDealId]);
+                                            }
+                                        }
+                                    } catch (\Exception $e) {
+                                        \Log::error('Error syncing to HubSpot in Step 2 afterValidation', ['error' => $e->getMessage()]);
+                                    }
+                                } catch (\Exception $e) {
+                                    \Log::error('Error finalizing agreement in Step 2 afterValidation', ['error' => $e->getMessage()]);
+                                    Notification::make()
+                                        ->title('❌ Error al Completar')
+                                        ->body($e->getMessage())
+                                        ->danger()
+                                        ->send();
+                                }
+                            }
 
                             $this->saveStepData(2);
                         }),
@@ -387,66 +436,8 @@ class ManageDocuments extends Page implements HasActions, HasForms
             }
         }
 
-        // Paso 2 -> 3: Completar convenio
-        if ($oldStep === 2 && $newStep === 3 && ! $this->agreement->documents_received_at) {
-            try {
-                $this->agreement->update([
-                    'status' => 'completed',
-                    'documents_received_at' => now(),
-                    'completion_percentage' => 100,
-                ]);
-
-                // Enviar email de confirmación
-                $this->emailService->sendDocumentsReceivedConfirmation($this->agreement);
-
-                Notification::make()
-                    ->title('🎉 Convenio Completado')
-                    ->body('El convenio ha sido marcado como exitoso.')
-                    ->success()
-                    ->duration(5000)
-                    ->send();
-
-                // Sincronizar estatus 'completed' (Aceptado) con HubSpot
-                try {
-                    $syncAction = app(SyncClientToHubspotAction::class);
-                    $syncAction->execute($this->agreement, $this->agreement->wizard_data ?? []);
-
-                    // Sincronización Fase 2: Actualizar 'nombre_inmueble'
-                    if ($this->agreement->client && $this->agreement->client->hubspot_deal_id) {
-                        $hubspotDealId = $this->agreement->client->hubspot_deal_id;
-                        $xanteId = $this->agreement->client->xante_id;
-
-                        if ($hubspotDealId && $xanteId) {
-                            // Lógica idempotente: Solo agregar XA- si no lo tiene
-                            $nombreInmueble = str_starts_with($xanteId, 'XA-')
-                                ? $xanteId
-                                : 'XA-'.$xanteId;
-
-                            app(HubSpotService::class)->updateDeal($hubspotDealId, [
-                                'nombre_inmueble' => $nombreInmueble,
-                            ]);
-
-                            \Log::info('HubSpot Deal updated with nombre_inmueble', [
-                                'deal_id' => $hubspotDealId,
-                                'nombre_inmueble' => $nombreInmueble,
-                            ]);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    \Log::error('Error syncing to HubSpot on completion', [
-                        'agreement_id' => $this->agreement->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Notification::make()
-                    ->title('❌ Error al Completar Convenio')
-                    ->body('Error: '.$e->getMessage())
-                    ->danger()
-                    ->duration(7000)
-                    ->send();
-            }
-        }
+        // Paso 2 -> 3: El completado se maneja ahora en el afterValidation del Step 2
+        // para asegurar que el trigger de email se dispare correctamente.
     }
 
     public function saveStepData(int $step): void
