@@ -209,8 +209,9 @@ class ManageDocuments extends Page implements HasActions, HasForms
                             ]);
 
                             // Trigger automático solo si NO se ha enviado ni completado aún
+                            \Log::info('Checking Step 1 completion status', ['id' => $this->agreement->id, 'status' => $this->agreement->status, 'sent_at' => $this->agreement->documents_sent_at]);
                             if (!in_array($this->agreement->status, ['documents_sent', 'completed'])) {
-                                \Log::debug('Condition met, calling sendDocumentsToClient');
+                                \Log::info('Step 1 Condition met for agreement ' . $this->agreement->id . ', calling sendDocumentsToClient');
                                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
 
                                 Notification::make()
@@ -390,8 +391,9 @@ class ManageDocuments extends Page implements HasActions, HasForms
             'agreement_id' => $this->agreement->id,
         ]);
 
-        // Paso 1 -> 2: Enviar documentos
-        if ($oldStep === 1 && $newStep === 2 && $this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
+        if ($oldStep === 1 && $newStep === 2) {
+             \Log::info('HandleStepChange 1->2 detected', ['agreement_id' => $this->agreement->id, 'status' => $this->agreement->status]);
+             if ($this->agreement->status !== 'documents_sent' && ! $this->agreement->documents_sent_at) {
             try {
                 $this->sendDocumentsToClient(app(SendDocumentsAction::class));
 
@@ -410,6 +412,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                     ->send();
             }
         }
+    }
 
         // Paso 2 -> 3: Completar convenio
         if ($oldStep === 2 && $newStep === 3 && ! $this->agreement->documents_received_at) {
@@ -504,6 +507,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                 ->send();
 
             $documentsCount = $action->execute($this->agreement, $advisor);
+            \Log::info('sendDocumentsToClient executed action', ['count' => $documentsCount]);
 
             Notification::make()
                 ->title('✅ Documentos Enviados Exitosamente')
@@ -518,6 +522,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
             \Log::error('Error sending documents to client', [
                 'agreement_id' => $this->agreement->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             Notification::make()

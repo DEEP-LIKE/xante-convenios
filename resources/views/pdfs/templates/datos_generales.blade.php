@@ -57,7 +57,7 @@
         .header-box {
             display: inline-block;
             border: 1px solid #000;
-            padding: 3px 8px;
+            padding: 0px 8px;
             margin-left: 5px;
             min-width: 80px;
         }
@@ -72,7 +72,7 @@
             border-bottom: 1px solid #000;
             min-height: 16px;
             display: block;
-            margin-top: 2px;
+            margin-top: 0px;
         }
         
         /* TÍTULO PRINCIPAL */
@@ -80,7 +80,7 @@
             text-align: center;
             font-size: 12pt;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 5px;
             text-transform: uppercase;
         }
         
