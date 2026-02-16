@@ -50,28 +50,6 @@ class StepTwoSchema
         };
 
         return [
-            Section::make('Estatus de Notificaciones')
-                ->description('Seguimiento de correos electrónicos enviados')
-                ->icon('heroicon-o-chat-bubble-left-right')
-                ->iconColor('info')
-                ->schema([
-                    Placeholder::make('step_1_status')
-                        ->label('1. Envío de Documentos (Paso 1)')
-                        ->content(fn () => view('filament.components.email-confirmation-status', [
-                            'agreement' => $page->agreement,
-                            'clientEmail' => $page->getClientEmail(),
-                            'docsCount' => $page->agreement->generatedDocuments->count(),
-                        ])),
-
-                    Placeholder::make('step_2_status')
-                        ->label('2. Confirmación de Recepción (Paso 2)')
-                        ->content(fn () => view('filament.components.confirmation-status', [
-                            'agreement' => $page->agreement,
-                            'clientEmail' => $page->getClientEmail(),
-                            'advisorEmail' => auth()->user()->email ?? 'No disponible',
-                        ])),
-                ]),
-
             Section::make('Documentos Requeridos del Cliente')
                 ->description(new HtmlString(
                     'Gestionar documentos que debe proporcionar el cliente <br> <span class="font-semibold text-gray-700">Documento cargado previamente se mostrará automáticamente</span>'
@@ -354,6 +332,29 @@ class StepTwoSchema
                             ->collapsible(),
                     ]),
                 ]),
+            Section::make('Estatus de Notificaciones')
+                ->description('Seguimiento de correos electrónicos enviados')
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->iconColor('info')
+                ->schema([
+                    Placeholder::make('step_1_status')
+                        ->label('1. Envío de Documentos (Paso 1)')
+                        ->content(fn () => view('filament.components.email-confirmation-status', [
+                            'agreement' => $page->agreement,
+                            'clientEmail' => $page->getClientEmail(),
+                            'docsCount' => $page->agreement->generatedDocuments->count(),
+                        ])),
+
+                    Placeholder::make('step_2_status')
+                        ->label('2. Confirmación de Recepción (Paso 2)')
+                        ->content(fn () => view('filament.components.confirmation-status', [
+                            'agreement' => $page->agreement,
+                            'clientEmail' => $page->getClientEmail(),
+                            'advisorEmail' => auth()->user()->email ?? 'No disponible',
+                        ])),
+                ]),
+
+           
 
         ];
     }

@@ -104,7 +104,7 @@ class StepOneSchema
                 ->iconColor(fn () => $page->agreement->documents_sent_at ? 'success' : 'warning')
                 ->schema([
                     Placeholder::make('email_confirmation_status')
-                        ->label('')
+                        ->hiddenLabel()
                         ->content(fn () => view('filament.components.email-confirmation-status', [
                             'agreement' => $page->agreement,
                             'clientEmail' => $page->getClientEmail(),
