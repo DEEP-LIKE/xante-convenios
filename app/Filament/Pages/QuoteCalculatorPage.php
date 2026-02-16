@@ -220,7 +220,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                     $stateName = $get('estado_propiedad');
 
                                     return $stateName
-                                        ? '% de comisión por estado: '.$stateName
+                                        ? '% de escrituracion: '.$stateName
                                         : 'Seleccione un estado';
                                 }),
                             TextInput::make('monto_credito')
@@ -233,7 +233,6 @@ class QuoteCalculatorPage extends Page implements HasForms
                                         $this->recalculateAllFinancials();
                                     }
                                 })
-                                ->helperText('Valor editable - precargado desde configuración')
                                 ->inputMode('numeric'),
                             Select::make('tipo_credito')
                                 ->label('Tipo de Crédito')
@@ -266,7 +265,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
-                                ->helperText('Valor Convenio × % Multiplicador por estado'),
+                                ->helperText('Valor Convenio × % de escrituración'),
                             TextInput::make('monto_comision_sin_iva')
                                 ->label('Monto Comisión (Sin IVA)')
                                 ->prefix('$')
@@ -327,7 +326,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-green-50 text-green-800 font-bold text-lg'])
-                                ->helperText('Precio Promoción - ISR - Cancelación - Comisión Total - Monto Crédito'),
+                                ->helperText('Valor Convenio - ISR - Cancelación - Comisión Total - Monto Crédito'),
                         ]),
                 ])
                 ->collapsible(),
@@ -374,6 +373,9 @@ class QuoteCalculatorPage extends Page implements HasForms
         $parameters = array_merge($this->data, [
             'precio_promocion_multiplicador' => 1 + ($statePercentage / 100),
             'base_iva_percentage' => $defaults['base_iva_percentage'],
+            'isr' => $sanitizeFloat($this->data['isr'] ?? 0),
+            'cancelacion_hipoteca' => $sanitizeFloat($this->data['cancelacion_hipoteca'] ?? 0),
+            'monto_credito' => $sanitizeFloat($this->data['monto_credito'] ?? 0),
         ]);
 
         // Validar parámetros
@@ -476,11 +478,24 @@ class QuoteCalculatorPage extends Page implements HasForms
                 return;
             }
 
-            if (empty($this->data['valor_convenio']) || $this->data['valor_convenio'] <= 0) {
+            if (empty($this->data['valor_convenio']) || (float) $this->data['valor_convenio'] <= 0) {
                 Notification::make()
                     ->title('Error')
                     ->body('Debe ingresar un valor de convenio válido antes de enlazar.')
                     ->danger()
+                    ->send();
+
+                return;
+            }
+
+            // BLOQUEO: No permitir enlazar si la ganancia final es 0 o negativa
+            $gananciaFinal = (float) str_replace([',', '$'], '', $this->data['ganancia_final'] ?? 0);
+            if ($gananciaFinal <= 0) {
+                Notification::make()
+                    ->title('⚠️ Ganancia insuficiente')
+                    ->body('No es posible enlazar una propuesta con ganancia final de $0.00 o negativa por motivos de rentabilidad.')
+                    ->warning()
+                    ->persistent()
                     ->send();
 
                 return;
@@ -552,6 +567,15 @@ class QuoteCalculatorPage extends Page implements HasForms
             ->success()
             ->duration(5000)
             ->send();
+
+        if ($gananciaFinal <= 0) {
+            Notification::make()
+                ->title('⚠️ Alerta: Sin Rentabilidad')
+                ->body('Tenga en cuenta que este cálculo muestra una ganancia de $0.00 o negativa y no podrá ser enlazada.')
+                ->warning()
+                ->persistent()
+                ->send();
+        }
     }
 
     /**

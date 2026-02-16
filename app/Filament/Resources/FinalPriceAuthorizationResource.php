@@ -30,8 +30,7 @@ class FinalPriceAuthorizationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        // Solo visible para administradores
-        return auth()->check() && auth()->user()->role === 'gerencia';
+        return false;
     }
 
     public static function form(Schema $schema): Schema

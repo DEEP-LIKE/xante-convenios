@@ -22,9 +22,12 @@ class EditQuoteValidation extends EditRecord
                 ->modalDescription('¿Está seguro de que desea aprobar esta validación?')
                 ->visible(fn (): bool => in_array($this->record->status, ['pending', 'rejected']) &&
                     auth()->user()->can('approve', $this->record) &&
-                    ! $this->record->hasValueChanges(
-                        (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['valor_convenio'] ?? 0),
-                        (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['porcentaje_comision_sin_iva'] ?? 0)
+                    (
+                        auth()->user()->role === 'coordinador_fi' ||
+                        ! $this->record->hasValueChanges(
+                            (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['valor_convenio'] ?? 0),
+                            (float) str_replace([',', '$'], '', $this->data['calculator_snapshot']['porcentaje_comision_sin_iva'] ?? 0)
+                        )
                     ))
                 ->action(function () {
                     // Guardar primero por si hubo cambios menores no detectados (aunque debería estar bloqueado)

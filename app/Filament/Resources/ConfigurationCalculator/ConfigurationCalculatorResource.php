@@ -38,6 +38,12 @@ class ConfigurationCalculatorResource extends Resource
         return in_array(auth()->user()?->role, ['gerencia']);
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->whereIn('key', ['comision_sin_iva_default', 'iva_valor']);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema

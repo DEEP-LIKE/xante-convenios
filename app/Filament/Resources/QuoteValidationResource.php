@@ -18,7 +18,7 @@ class QuoteValidationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
-    protected static ?string $navigationLabel = 'Validaciones';
+    protected static ?string $navigationLabel = 'Autorizaciones';
 
     protected static ?string $modelLabel = 'Validación';
 
@@ -211,11 +211,11 @@ class QuoteValidationResource extends Resource
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
                                     ->helperText('Comisión sin IVA × (1 + % IVA)'),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.multiplicador_estado')
-                                    ->label('% Multiplicador por estado')
+                                    ->label('% DE ESCRITURACIÓN')
                                     ->suffix('%')
                                     ->disabled()
                                     ->dehydrated()
-                                    ->helperText(fn ($record) => ($state = $record?->agreement?->wizard_data['estado_propiedad'] ?? $record?->agreement?->wizard_data['property_state'] ?? $record?->agreement?->wizard_data['estado'] ?? $record?->agreement?->wizard_data['state'] ?? $record?->calculator_snapshot['estado_propiedad'] ?? null) ? '% de comisión por estado: '.$state : null),
+                                    ->helperText(fn ($record) => ($state = $record?->agreement?->wizard_data['estado_propiedad'] ?? $record?->agreement?->wizard_data['property_state'] ?? $record?->agreement?->wizard_data['estado'] ?? $record?->agreement?->wizard_data['state'] ?? $record?->calculator_snapshot['estado_propiedad'] ?? null) ? '% de escrituracion: '.$state : null),
                             ]),
 
                         \Filament\Schemas\Components\Grid::make(2)
@@ -225,8 +225,7 @@ class QuoteValidationResource extends Resource
                                     ->prefix('$')
                                     ->disabled()
                                     ->dehydrated()
-                                    ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
-                                    ->helperText('Valor editable - precargado desde configuración'),
+                                    ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2)),
                                 \Filament\Forms\Components\TextInput::make('calculator_snapshot.tipo_credito')
                                     ->label('Tipo de Crédito')
                                     ->disabled()
@@ -252,7 +251,7 @@ class QuoteValidationResource extends Resource
                                     ->disabled()
                                     ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
-                                    ->helperText('Valor Convenio × % Multiplicador por estado'),
+                                    ->helperText('Valor Convenio × % de escrituración'),
                             ]),
                         \Filament\Schemas\Components\Grid::make(2)
                             ->schema([
@@ -524,7 +523,6 @@ class QuoteValidationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        // Visible solo para coordinadores FI y gerencia
-        return auth()->check() && in_array(auth()->user()->role, ['coordinador_fi', 'gerencia']);
+        return auth()->check() && auth()->user()->role === 'coordinador_fi';
     }
 }

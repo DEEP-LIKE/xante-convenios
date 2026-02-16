@@ -106,7 +106,8 @@ class StepOneSchema
                     Grid::make(2)
                         ->schema([
                             Placeholder::make('send_summary')
-                                ->label('📋 Resumen del Envío')
+                                ->label('Resumen del Envío')
+                                ->icon('heroicon-o-clipboard-document-list')
                                 ->content(function () use ($page) {
                                     $clientName = $page->getClientName();
                                     $clientEmail = $page->getClientEmail();
@@ -117,7 +118,8 @@ class StepOneSchema
                                 }),
 
                             Placeholder::make('agreement_summary')
-                                ->label('💰 Datos del Convenio')
+                                ->label('Datos del Convenio')
+                                ->icon('heroicon-o-currency-dollar')
                                 ->content(function () use ($page) {
                                     $agreementValue = $page->getAgreementValue();
                                     $community = $page->getPropertyCommunity();
@@ -135,7 +137,8 @@ class StepOneSchema
                         ]),
 
                     Placeholder::make('sent_info')
-                        ->label('✅ Documentos Enviados')
+                        ->label('Documentos Enviados')
+                        ->icon('heroicon-o-check-circle')
                         ->content(function () use ($page) {
                             $sentDate = $page->agreement->documents_sent_at ?
                                 $page->agreement->documents_sent_at->timezone('America/Mexico_City')->format('d/m/Y H:i') :
@@ -155,18 +158,20 @@ class StepOneSchema
                     Grid::make(2)
                         ->schema([
                             Placeholder::make('sent_confirmation')
-                                ->label('📤 Estado del Envío')
+                                ->label('Estado del Envío')
+                                ->icon('heroicon-o-paper-airplane')
                                 ->content(function () use ($page) {
                                     $sentDate = $page->agreement->documents_sent_at?->timezone('America/Mexico_City')->format('d/m/Y H:i') ?? 'fecha no disponible';
                                     $clientName = $page->getClientName();
                                     $clientEmail = $page->getClientEmail();
                                     $docsCount = $page->agreement->generatedDocuments->count();
 
-                                    return new HtmlString("✅ Enviado exitosamente el {$sentDate}<br>Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs");
+                                    return new HtmlString("Enviado exitosamente el {$sentDate}<br>Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs");
                                 }),
 
                             Placeholder::make('next_steps')
-                                ->label('📋 Próximos Pasos')
+                                ->label('Próximos Pasos')
+                                ->icon('heroicon-o-clipboard-document-list')
                                 ->content('El cliente debe revisar los documentos y enviar la documentación requerida. Proceda al siguiente paso para gestionar la recepción de documentos del cliente.'),
                         ]),
 

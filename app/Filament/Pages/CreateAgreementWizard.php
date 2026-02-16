@@ -356,7 +356,7 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
     {
         $valorConvenio = (float) str_replace(['$', ','], '', $get('valor_convenio') ?? 0);
 
-        // Obtener y sanitizar el porcentaje de comisión por estado
+        // Obtener y sanitizar el porcentaje de escrituracion
         $rawStateCommission = $get('state_commission_percentage');
 
         // Función helper local para sanitizar floats

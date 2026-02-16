@@ -87,8 +87,8 @@ class AgreementCalculatorService
         // 5. Total Gastos FI (Venta) = ISR + Cancelación de Hipoteca
         $calculations['total_gastos_fi_venta'] = round($isr + $cancelacion, 2);
 
-        // 6. Ganancia Final = Precio Promoción - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
-        $calculations['ganancia_final'] = round($calculations['precio_promocion'] - $isr - $cancelacion - $calculations['comision_total_pagar'] - $montoCredito, 2);
+        // 6. Ganancia Final = Valor Convenio - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
+        $calculations['ganancia_final'] = round($valorConvenio - $isr - $cancelacion - $calculations['comision_total_pagar'] - $montoCredito, 2);
 
         // 7. Porcentaje Comisión con IVA (para visualizar en UI)
         $calculations['comision_iva_incluido'] = $porcentajeComisionIvaIncluido;

@@ -6,6 +6,7 @@ use App\Models\ConfigurationCalculator;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Wizard\Step;
@@ -32,6 +33,21 @@ class StepFourSchema
                 if ($agreementId) {
                     $agreement = \App\Models\Agreement::find($agreementId);
                     if ($agreement) {
+                        // BLOQUEO: No permitir avanzar si la ganancia final es 0 o negativa
+                        $gananciaFinal = (float) str_replace([',', '$'], '', $page->data['ganancia_final'] ?? 0);
+                        if ($gananciaFinal <= 0) {
+                            Notification::make()
+                                ->title('⚠️ Ganancia insuficiente')
+                                ->body('La ganancia final estimada debe ser mayor a $0.00 para proceder con este convenio por motivos de rentabilidad.')
+                                ->warning()
+                                ->persistent()
+                                ->send();
+
+                            throw \Illuminate\Validation\ValidationException::withMessages([
+                                'ganancia_final' => 'La ganancia final estimada debe ser positiva para continuar.',
+                            ]);
+                        }
+
                         $validationService = app(\App\Services\ValidationService::class);
                         try {
                             $validationService->requestValidation($agreement, auth()->user());
@@ -265,8 +281,7 @@ class StepFourSchema
                                                 $component->state($rate ? $rate->commission_percentage : 0);
                                             }
                                         }
-                                    })
-                                    ->helperText('% DE ESCRITURACIÓN'),
+                                    }),
                                 TextInput::make('monto_credito')
                                     ->label('Monto de Crédito')
                                     ->numeric()
@@ -314,7 +329,7 @@ class StepFourSchema
                                     ->disabled()
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-blue-50 text-blue-800 font-semibold'])
-                                    ->helperText('Valor Convenio × % Multiplicador por estado'),
+                                    ->helperText('Valor Convenio × % de escrituración'),
                                 TextInput::make('monto_comision_sin_iva')
                                     ->label('Monto Comisión (Sin IVA)')
                                     ->prefix('$')
@@ -374,7 +389,7 @@ class StepFourSchema
                                     ->disabled()
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-green-50 text-green-800 font-bold text-lg'])
-                                    ->helperText('Precio Promoción - ISR - Cancelación - Comisión Total - Monto Crédito'),
+                                    ->helperText('Valor Convenio - ISR - Cancelación - Comisión Total - Monto Crédito'),
                             ]),
                     ])
                     ->collapsible(),
