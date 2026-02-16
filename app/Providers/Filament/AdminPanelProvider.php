@@ -32,7 +32,12 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Xante')
-            ->favicon(asset('favicon/favicon.ico'))
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_START,
+                fn (): string => view('filament.partials.favicon')->render(),
+            )
+            // ->brandName('Xante')
+            // ->favicon(asset('favicon/favicon.ico')) // Replaced by renderHook above covering all icons
             ->brandLogo(fn () => view('filament.brand.logo'))
             ->darkModeBrandLogo(fn () => view('filament.brand.logo-dark'))
             ->brandLogoHeight('5rem')
