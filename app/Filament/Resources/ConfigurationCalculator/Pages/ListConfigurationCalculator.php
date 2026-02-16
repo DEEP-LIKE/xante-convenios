@@ -13,7 +13,7 @@ class ListConfigurationCalculator extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            // Actions\CreateAction::make(),
+            // No se permite la creación manual de nuevas claves de configuración
         ];
     }
 }

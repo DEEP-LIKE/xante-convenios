@@ -41,7 +41,10 @@ class ConfigurationCalculatorResource extends Resource
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return parent::getEloquentQuery()
-            ->whereIn('key', ['comision_sin_iva_default', 'iva_valor']);
+            ->whereIn('key', [
+                'comision_sin_iva_default', 
+                'iva_valor',
+            ]);
     }
 
     public static function form(Schema $schema): Schema
@@ -50,25 +53,10 @@ class ConfigurationCalculatorResource extends Resource
             ->components([
                 Section::make('Información de la Configuración')
                     ->schema([
-                        TextInput::make('key')
-                            ->label('Clave')
-                            ->required()
-                            ->disabled(), // Clave no debería ser editable
-
-                        Textarea::make('description')
+                        TextInput::make('description')
                             ->label('Descripción')
-                            ->rows(2)
-                            ->columnSpanFull(),
-
-                        Select::make('type')
-                            ->label('Tipo')
-                            ->options([
-                                'text' => 'Texto',
-                                'number' => 'Número Entero',
-                                'decimal' => 'Número Decimal',
-                                'boolean' => 'Verdadero/Falso',
-                            ])
-                            ->required(),
+                            ->required()
+                            ->disabled(), // Descripción no editable para evitar cambios accidentales en la lógica
 
                         TextInput::make('value')
                             ->label('Valor')
@@ -81,22 +69,20 @@ class ConfigurationCalculatorResource extends Resource
     {
         return $table
             ->columns([
-                // TextColumn::make('group')->label('Grupo')->badge(), // <-- Mostrar el grupo como "badge"
                 TextColumn::make('description')
                     ->label('Descripción')
                     ->sortable()
-                    ->searchable(), // <-- Ahora la descripción es searchable
+                    ->searchable(),
                 TextColumn::make('value')
                     ->sortable()
                     ->label('Valor'),
                 TextColumn::make('updated_at')
                     ->label('Actualizado')
                     ->sortable()
-                    ->searchable() // <-- Ahora el nombre es searchable
                     ->dateTime(),
             ])
             ->filters([
-                // Dejamos este arreglo vacío para evitar el botón de filtros y usar solo el buscador global.
+                //
             ])
             ->recordActions([
                 Action::make('edit')
@@ -109,7 +95,6 @@ class ConfigurationCalculatorResource extends Resource
     {
         return [
             'index' => Pages\ListConfigurationCalculator::route('/'),
-            // 'create' => Pages\CreateConfigurationCalculator::route('/create'),
             'edit' => Pages\EditConfigurationCalculator::route('/{record}/edit'),
         ];
     }
