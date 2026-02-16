@@ -60,26 +60,45 @@
     </div>
 </div>
 @else
-<div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); margin-bottom: 1.5rem; font-family: sans-serif;">
-     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-        <div style="background-color: #fee2e2; color: #b91c1c; padding: 0.375rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center;">
+<div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); margin-bottom: 1.5rem; font-family: sans-serif;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <div style="background-color: #fef3c7; color: #92400e; padding: 0.375rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center;">
             <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         <div>
-            <h3 style="font-size: 1.125rem; font-weight: 700; color: #991b1b; line-height: 1; margin: 0;">Estatus: Pendiente de Envío</h3>
-            <p style="font-size: 0.875rem; color: #b91c1c; margin: 0.25rem 0 0 0;">Los documentos se enviarán al avanzar al siguiente paso</p>
-        </div>
-    </div>
-    
-    <div style="background-color: rgba(255, 255, 255, 0.5); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px dashed #fecaca;">
-        <div style="display: flex; align-items: center; gap: 8px; color: #7f1d1d; font-size: 0.9rem;">
-            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path></svg>
-            <strong>Destinatario:</strong> {{ $clientEmail }}
+            <h3 style="font-size: 1.125rem; font-weight: 700; color: #78350f; line-height: 1; margin: 0;">Estatus: Pendiente de Envío</h3>
+            <p style="font-size: 0.875rem; color: #92400e; margin: 0.25rem 0 0 0;">Los documentos se enviarán automáticamente al avanzar</p>
         </div>
     </div>
 
-    <p style="font-size: 0.875rem; color: #7f1d1d; margin: 0; line-height: 1.5;">
-        Al hacer clic en el botón <strong>"Siguiente"</strong> para pasar a la etapa de Recepción de Documentos, el sistema enviará automáticamente este correo con los <strong>{{ $docsCount }} documentos PDFs</strong> adjuntos al cliente.
-    </p>
+    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; row-gap: 1rem;">
+        <div style="flex: 1; min-width: 180px;">
+            <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #92400e; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 4px;">
+                <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path></svg>
+                Para enviar a
+            </span>
+            <span style="display: block; font-size: 1rem; font-weight: 600; color: #111827;">{{ $clientEmail }}</span>
+        </div>
+
+        <div style="flex: 1; min-width: 140px;">
+            <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #92400e; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 4px;">
+                <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Archivos a adjuntar
+            </span>
+            <span style="display: block; font-size: 1rem; font-weight: 600; color: #111827;">{{ $docsCount }} PDFs</span>
+        </div>
+
+        <div style="width: 100%; height: 1px; background-color: #fef3c7;"></div>
+
+        <div style="width: 100%;">
+            <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #92400e; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 4px;">
+                <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Instrucciones
+            </span>
+            <p style="font-size: 0.95rem; color: #78350f; margin: 0; line-height: 1.5;">
+                Al hacer clic en el botón <strong>"Siguiente"</strong> para pasar a la etapa de Recepción de Documentos, el sistema procesará los archivos y enviará automáticamente este correo de confirmación al cliente y al asesor interesado.
+            </p>
+        </div>
+    </div>
 </div>
 @endif
