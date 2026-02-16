@@ -79,6 +79,41 @@ class TransformHubspotDeal
             $clientData['state'] = $dealProps['estado'];
         }
 
+        // Datos de la propiedad (Paso 3 del Wizard) desde el Deal
+        // Mapeo: HubSpot API → Local DB
+        if (! empty($dealProps['nombre_del_desarrollo'])) {
+            $clientData['comunidad'] = $dealProps['nombre_del_desarrollo'];
+        }
+
+        if (! empty($dealProps['calle_o_privada_'])) {
+            $clientData['domicilio_convenio'] = $dealProps['calle_o_privada_'];
+        }
+
+        if (! empty($dealProps['tipo_de_inmueble_'])) {
+            $clientData['tipo_vivienda'] = $dealProps['tipo_de_inmueble_'];
+        }
+
+        if (! empty($dealProps['ciudad'])) {
+            $clientData['municipio_propiedad'] = $dealProps['ciudad'];
+        }
+
+        if (! empty($dealProps['state'])) {
+            $clientData['estado_propiedad'] = $dealProps['state'];
+        }
+
+        // Campos adicionales de propiedad
+        if (! empty($dealProps['hipotecada'])) {
+            $clientData['hipotecado'] = $dealProps['hipotecada'];
+        }
+
+        if (! empty($dealProps['tipo_de_hipoteca'])) {
+            $clientData['tipo_hipoteca'] = $dealProps['tipo_de_hipoteca'];
+        }
+
+        if (! empty($dealProps['niveles_casa'])) {
+            $clientData['niveles'] = $dealProps['niveles_casa'];
+        }
+
         return $clientData;
     }
 }

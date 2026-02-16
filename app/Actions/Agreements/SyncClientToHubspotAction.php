@@ -27,16 +27,16 @@ class SyncClientToHubspotAction
         }
 
         // 1. Asegurar que el cliente local tenga los datos más recientes del Wizard
-        // Esto es CRÍTICO porque pushClientToHubspot lee de la BD, no del array wizardData
-        $this->updateClientAction->execute($client->id, $wizardData);
+        // Capturar los campos que realmente cambiaron (Dirty Sync)
+        $dirtyFields = $this->updateClientAction->execute($client->id, $wizardData);
 
         // Recargar cliente para obtener los datos recién guardados
         $client->refresh();
 
         // 2. Ejecutar Push a HubSpot usando el servicio centralizado
-        Log::info('Iniciando Push a HubSpot desde Wizard', ['client_id' => $client->id]);
+        Log::info('Iniciando Push a HubSpot desde Wizard (Dirty Sync)', ['client_id' => $client->id, 'dirty_count' => count($dirtyFields)]);
 
-        $result = $this->hubspotService->pushClientToHubspot($client, $agreement);
+        $result = $this->hubspotService->pushClientToHubspot($client, $agreement, $dirtyFields);
 
         // 3. Procesar resultados
         $errors = $result['errors'] ?? [];

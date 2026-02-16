@@ -70,11 +70,11 @@ class StepFourSchema
             })
             ->schema([
                 // ⭐ Indicador de Pre-cálculo Previo
-                Section::make('💡 PRE-CÁLCULO DETECTADO')
+                Section::make('PRE-CÁLCULO DETECTADO')
                     ->description('Este cliente ya tiene una cotización previa registrada')
                     ->schema([
                         Placeholder::make('existing_proposal_alert')
-                            ->label('')
+                            ->label('Revisar que los calculos sean los acordados')
                             ->content(function () use ($page) {
                                 $proposalInfo = $page->hasExistingProposal();
 
@@ -87,48 +87,48 @@ class StepFourSchema
                                 $fechaCalculo = $proposalInfo['created_at']->format('d/m/Y H:i');
 
                                 return new HtmlString('
-                                    <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); 
-                                                border-left: 4px solid #F59E0B; 
+                                    <div style="background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%); 
+                                                border-left: 4px solid #3B82F6; 
                                                 padding: 20px; 
                                                 border-radius: 12px;
-                                                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                                                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);">
                                         <div style="display: flex; align-items: start; gap: 16px;">
                                             <!-- Icono -->
                                             <div style="flex-shrink: 0;">
-                                                <svg style="width: 32px; height: 32px; color: #D97706;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                <svg style="width: 32px; height: 32px; color: #3B82F6;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                                 </svg>
                                             </div>
                                             
                                             <!-- Contenido -->
                                             <div style="flex: 1;">
-                                                <h3 style="font-size: 18px; font-weight: 700; color: #92400E; margin: 0 0 12px 0;">
-                                                    ✅ Pre-cálculo Previo Detectado
+                                                <h3 style="font-size: 18px; font-weight: 700; color: #1E3A8A; margin: 0 0 12px 0;">
+                                                    Pre-cálculo Previo Detectado
                                                 </h3>
                                                 
-                                                <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                                                <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
                                                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
                                                         <div>
-                                                            <strong style="color: #78350F;">📅 Fecha del cálculo:</strong><br>
-                                                            <span style="color: #92400E;">'.$fechaCalculo.'</span>
+                                                            <strong style="color: #475569;">Fecha del cálculo:</strong><br>
+                                                            <span style="color: #1E293B;">'.$fechaCalculo.'</span>
                                                         </div>
                                                         <div>
-                                                            <strong style="color: #78350F;">💰 Valor Convenio:</strong><br>
-                                                            <span style="color: #92400E; font-weight: 600;">$'.number_format($valorConvenio, 2).'</span>
+                                                            <strong style="color: #475569;">Valor Convenio:</strong><br>
+                                                            <span style="color: #1E293B; font-weight: 600;">$'.number_format($valorConvenio, 2).'</span>
                                                         </div>
                                                         <div>
-                                                            <strong style="color: #78350F;">💵 Ganancia Estimada:</strong><br>
+                                                            <strong style="color: #475569;">Ganancia Estimada:</strong><br>
                                                             <span style="color: #059669; font-weight: 700; font-size: 16px;">$'.number_format($gananciaFinal, 2).'</span>
                                                         </div>
                                                         <div>
-                                                            <strong style="color: #78350F;">📊 Estado:</strong><br>
-                                                            <span style="background: #D97706; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;">ENLAZADO</span>
+                                                            <strong style="color: #475569;">Estado:</strong><br>
+                                                            <span style="background: #3B82F6; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;">ENLAZADO</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 
-                                                <p style="font-size: 13px; color: #B45309; margin: 0; font-style: italic;">
-                                                    ℹ️ Los valores han sido precargados automáticamente desde la calculadora previa. Puede modificarlos si es necesario.
+                                                <p style="font-size: 13px; color: #64748B; margin: 0; font-style: italic;">
+                                                    Los valores han sido precargados automáticamente desde la calculadora previa. Puede modificarlos si es necesario.
                                                 </p>
                                             </div>
                                         </div>
@@ -288,11 +288,6 @@ class StepFourSchema
                                     ->prefix('$')
                                     ->default(0)
                                     ->live(onBlur: true)
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if ($state == 800000) {
-                                            $component->state(0);
-                                        }
-                                    })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) use ($page) {
                                         if ($get('valor_convenio')) {
                                             $page->recalculateAllFinancials($set, $get);

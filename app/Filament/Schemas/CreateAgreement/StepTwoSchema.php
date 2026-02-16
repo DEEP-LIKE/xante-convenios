@@ -121,6 +121,9 @@ class StepTwoSchema
                                         '624' => '624 - Coordinados',
                                         '625' => '625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas',
                                         '626' => '626 - Régimen Simplificado de Confianza (RESICO)',
+                                        '628' => '628 - Hidrocarburos',
+                                        '629' => '629 - De los Regímenes Fiscales Preferentes y de las Empresas Multinacionales',
+                                        '630' => '630 - Enajenación de acciones en bolsa de valores',
                                     ])
                                     ->searchable(),
                                 TextInput::make('holder_rfc')
@@ -260,6 +263,9 @@ class StepTwoSchema
                                         '624' => '624 - Coordinados',
                                         '625' => '625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas',
                                         '626' => '626 - Régimen Simplificado de Confianza (RESICO)',
+                                        '628' => '628 - Hidrocarburos',
+                                        '629' => '629 - De los Regímenes Fiscales Preferentes y de las Empresas Multinacionales',
+                                        '630' => '630 - Enajenación de acciones en bolsa de valores',
                                     ])
                                     ->searchable(),
                                 TextInput::make('spouse_rfc')

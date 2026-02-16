@@ -65,6 +65,36 @@ class PreloadClientDataAction
         $set('private_president_name', $client->private_president_name);
         $set('private_president_phone', $client->private_president_phone);
         $set('private_president_quota', $client->private_president_quota);
+        
+        // Datos de la propiedad (Paso 3)
+        $set('domicilio_convenio', $client->domicilio_convenio);
+        $set('comunidad', $client->comunidad);
+        $set('tipo_vivienda', $client->tipo_vivienda);
+        $set('prototipo', $client->prototipo);
+        $set('lote', $client->lote);
+        $set('manzana', $client->manzana);
+        $set('etapa', $client->etapa);
+        $set('municipio_propiedad', $client->municipio_propiedad);
+        $set('estado_propiedad', $client->estado_propiedad);
+
+        // Precargar propuesta financiera si existe (Paso 4)
+        $proposalService = app(\App\Services\ProposalPreloadService::class);
+        $proposalData = $proposalService->preloadProposalData($clientId);
+
+        if ($proposalData) {
+            foreach ($proposalData as $key => $value) {
+                // Solo precargar campos financieros si no están vacíos en la propuesta
+                if (! empty($value) || $value === 0 || $value === '0') {
+                    $set($key, $value);
+                }
+            }
+
+            Notification::make()
+                ->title('Pre-cálculo Cargado')
+                ->body('Se han precargado los valores de la cotización previa del cliente.')
+                ->info()
+                ->send();
+        }
 
         Notification::make()
             ->title('Datos precargados')

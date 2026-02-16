@@ -89,16 +89,15 @@ return [
             'municipio_conyuge',
             'estado_conyuge',
 
-            // Datos de la propiedad
-            'domicilio_convenio',
-            'comunidad',
-            'tipo_vivienda',
-            'prototipo',
-            'lote',
-            'manzana',
-            'etapa',
-            'municipio_propiedad',
-            'estado_propiedad',
+            // Datos de la propiedad (nombres correctos de HubSpot API)
+            'nombre_del_desarrollo',    // Nombre del desarrollo (ej: Real Granada)
+            'calle_o_privada_',         // Calle / Privada y Número #
+            'tipo_de_inmueble_',        // Tipo de inmueble (Casa, Departamento, etc.)
+            'ciudad',                   // Ciudad
+            'state',                    // Estado/región
+            'hipotecada',               // Hipotecada (Sí/No)
+            'tipo_de_hipoteca',         // Tipo de hipoteca (Infonavit, Bancaria, etc.)
+            'niveles_casa',             // Niveles de la casa
 
             // Datos financieros
             'valor_convenio',

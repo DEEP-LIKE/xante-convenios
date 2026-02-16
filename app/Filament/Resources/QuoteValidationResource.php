@@ -16,9 +16,9 @@ class QuoteValidationResource extends Resource
 {
     protected static ?string $model = QuoteValidation::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Autorizaciones';
+    protected static ?string $navigationLabel = 'Validaciones';
 
     protected static ?string $modelLabel = 'Validación';
 

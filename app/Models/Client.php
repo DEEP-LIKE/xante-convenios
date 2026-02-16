@@ -39,6 +39,20 @@ class Client extends Model
         'municipality',
         'state',
 
+        // Datos de la propiedad
+        'domicilio_convenio',
+        'comunidad',
+        'tipo_vivienda',
+        'prototipo',
+        'lote',
+        'manzana',
+        'etapa',
+        'municipio_propiedad',
+        'estado_propiedad',
+        'hipotecado',
+        'tipo_hipoteca',
+        'niveles',
+
         // Contacto AC y/o Presidente de Privada
         'ac_name',
         'ac_phone',

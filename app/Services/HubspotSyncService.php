@@ -166,7 +166,7 @@ class HubspotSyncService
      * Empuja los datos del cliente y su convenio a HubSpot (Contact y Deal)
      * Este es el método principal usado por el Wizard.
      */
-    public function pushClientToHubspot(Client $client, ?Agreement $agreement = null): array
+    public function pushClientToHubspot(Client $client, ?Agreement $agreement = null, array $dirtyFields = []): array
     {
         $result = [
             'deal_updated' => false,
@@ -177,7 +177,9 @@ class HubspotSyncService
         try {
             // 1. Actualizar Contacto
             if ($client->hubspot_id) {
-                $contactUpdate = $this->updateContactInHubspot($client);
+                // Combinar cambios de cliente y cónyuge para el contacto si es necesario
+                // En este sistema, la mayoría de los cambios de contacto se manejan vía Deal o Contact
+                $contactUpdate = $this->updateContactInHubspot($client, $dirtyFields['client'] ?? []);
                 if ($contactUpdate['success']) {
                     $result['contact_updated'] = true;
                 } else {
@@ -187,7 +189,7 @@ class HubspotSyncService
 
             // 2. Actualizar Deal
             if ($client->hubspot_deal_id) {
-                $dealUpdate = $this->updateDealInHubspot($client, $agreement);
+                $dealUpdate = $this->updateDealInHubspot($client, $agreement, $dirtyFields);
                 if ($dealUpdate['success']) {
                     $result['deal_updated'] = true;
                 } else {
@@ -321,10 +323,14 @@ class HubspotSyncService
     /**
      * Actualizar Contacto en HubSpot
      */
-    private function updateContactInHubspot(Client $client): array
+    private function updateContactInHubspot(Client $client, array $dirtyFields = []): array
     {
         try {
-            $contactData = $this->mapClientToHubspotContact($client);
+            $contactData = $this->mapClientToHubspotContact($client, $dirtyFields);
+
+            if (empty($contactData)) {
+                return ['success' => true]; // Nada que actualizar
+            }
 
             $response = Http::timeout($this->config['sync']['timeout'] ?? 30)
                 ->withHeaders([
@@ -360,9 +366,13 @@ class HubspotSyncService
     /**
      * Actualizar Deal en HubSpot
      */
-    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null): array
+    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null, array $dirtyFields = []): array
     {
-        $dealData = $this->mapClientToHubspotDeal($client, $agreement);
+        $dealData = $this->mapClientToHubspotDeal($client, $agreement, $dirtyFields);
+
+        if (empty($dealData)) {
+            return ['success' => true]; // Nada que actualizar
+        }
 
         return $this->updateHubspotDeal($client->hubspot_deal_id, $dealData);
     }
@@ -370,9 +380,13 @@ class HubspotSyncService
     /**
      * Mapear datos de cliente a formato de Deal de HubSpot
      */
-    private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null): array
+    private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null, array $dirtyFields = []): array
     {
-        $dealData = [
+        $isDirtySync = ! empty($dirtyFields);
+        $dirtyClient = $dirtyFields['client'] ?? [];
+        $dirtySpouse = $dirtyFields['spouse'] ?? [];
+
+        $allData = [
             'dealname' => $client->name ?? 'Sin nombre',
             'xante_id' => $client->xante_id,
             'nombre_completo' => $client->name,
@@ -393,7 +407,7 @@ class HubspotSyncService
         // Cónyuge si existe
         if ($client->spouse) {
             $spouse = $client->spouse;
-            $dealData = array_merge($dealData, [
+            $allData = array_merge($allData, [
                 'nombre_completo_conyuge' => $spouse->name,
                 'email_conyuge' => $spouse->email,
                 'telefono_movil_conyuge' => $spouse->phone,
@@ -408,7 +422,7 @@ class HubspotSyncService
 
         // Agregar datos del convenio si existe o si el cliente los tiene (por si el wizard los guarda directamente en Agreement)
         if ($agreement) {
-            $dealData = array_merge($dealData, [
+            $allData = array_merge($allData, [
                 // Datos de la propiedad
                 'domicilio_convenio' => $agreement->domicilio_convenio ?? $agreement->wizard_data['domicilio_convenio'] ?? null,
                 'comunidad' => $agreement->comunidad ?? $agreement->wizard_data['comunidad'] ?? null,
@@ -417,8 +431,8 @@ class HubspotSyncService
                 'lote' => $agreement->wizard_data['lote'] ?? null,
                 'manzana' => $agreement->wizard_data['manzana'] ?? null,
                 'etapa' => $agreement->wizard_data['etapa'] ?? null,
-                'municipio_propiedad' => $agreement->wizard_data['municipio_propiedad'] ?? null,
-                'estado_propiedad' => $agreement->wizard_data['estado_propiedad'] ?? null,
+                'municipio_propiedad' => $agreement->municipio_propiedad ?? $agreement->wizard_data['municipio_propiedad'] ?? null,
+                'estado_propiedad' => $agreement->estado_propiedad ?? $agreement->wizard_data['estado_propiedad'] ?? null,
 
                 // Datos financieros
                 'valor_convenio' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
@@ -428,15 +442,84 @@ class HubspotSyncService
             ]);
         }
 
-        return $dealData;
+        // Si es Dirty Sync, filtrar solo los campos que cambiaron
+        if ($isDirtySync) {
+            $filteredData = [];
+            // Mapeo inverso para saber qué campo de HubSpot corresponde a qué campo local sucio
+            $mapping = [
+                'name' => ['dealname', 'nombre_completo'],
+                'email' => ['email'],
+                'phone' => ['phone'],
+                'curp' => ['curp'],
+                'rfc' => ['rfc'],
+                'civil_status' => ['estado_civil'],
+                'occupation' => ['ocupacion'],
+                'current_address' => ['domicilio_actual'],
+                'neighborhood' => ['colonia'],
+                'postal_code' => ['codigo_postal'],
+                'municipality' => ['municipio'],
+                'state' => ['estado'],
+                // Propiedad
+                'domicilio_convenio' => ['domicilio_convenio'],
+                'comunidad' => ['comunidad'],
+                'tipo_vivienda' => ['tipo_vivienda'],
+                'prototipo' => ['prototipo'],
+                'lote' => ['lote'],
+                'manzana' => ['manzana'],
+                'etapa' => ['etapa'],
+                'municipio_propiedad' => ['municipio_propiedad'],
+                'estado_propiedad' => ['estado_propiedad'],
+            ];
+
+            foreach ($mapping as $localField => $hubspotFields) {
+                if (array_key_exists($localField, $dirtyClient)) {
+                    foreach ($hubspotFields as $hsField) {
+                        if (isset($allData[$hsField])) {
+                            $filteredData[$hsField] = $allData[$hsField];
+                        }
+                    }
+                }
+            }
+
+            // Mapeo Cónyuge
+            if (! empty($dirtySpouse)) {
+                $spouseMapping = [
+                    'name' => ['nombre_completo_conyuge'],
+                    'email' => ['email_conyuge'],
+                    'phone' => ['telefono_movil_conyuge'],
+                    'curp' => ['curp_conyuge'],
+                    'current_address' => ['domicilio_actual_conyuge'],
+                    'neighborhood' => ['colonia_conyuge'],
+                    'codigo_postal' => ['codigo_postal_conyuge'],
+                    'municipality' => ['municipio_conyuge'],
+                    'state' => ['estado_conyuge'],
+                ];
+
+                foreach ($spouseMapping as $localField => $hubspotFields) {
+                    if (array_key_exists($localField, $dirtySpouse)) {
+                        foreach ($hubspotFields as $hsField) {
+                            if (isset($allData[$hsField])) {
+                                $filteredData[$hsField] = $allData[$hsField];
+                            }
+                        }
+                    }
+                }
+            }
+
+            return $filteredData;
+        }
+
+        return $allData;
     }
 
     /**
      * Mapear datos de cliente a formato de Contact de HubSpot
      */
-    private function mapClientToHubspotContact(Client $client): array
+    private function mapClientToHubspotContact(Client $client, array $dirtyClient = []): array
     {
-        return [
+        $isDirtySync = ! empty($dirtyClient);
+        
+        $allData = [
             'firstname' => $client->name ? explode(' ', $client->name)[0] : '',
             'lastname' => $client->name ? implode(' ', array_slice(explode(' ', $client->name), 1)) : ($client->name ?: ''),
             'email' => $client->email,
@@ -450,6 +533,27 @@ class HubspotSyncService
             'date_of_birth' => $client->birthdate ? $client->birthdate->format('Y-m-d') : null,
             'jobtitle' => $client->occupation,
         ];
+
+        if ($isDirtySync) {
+            $filteredData = [];
+            $mapping = config('hubspot.mapping.contact_fields');
+            
+            foreach ($mapping as $hubspotField => $localField) {
+                // Caso especial para name/firstname/lastname
+                if ($localField === 'name' && array_key_exists('name', $dirtyClient)) {
+                    $filteredData['firstname'] = $allData['firstname'];
+                    $filteredData['lastname'] = $allData['lastname'];
+                } elseif (array_key_exists($localField, $dirtyClient)) {
+                    if (isset($allData[$hubspotField])) {
+                        $filteredData[$hubspotField] = $allData[$hubspotField];
+                    }
+                }
+            }
+            
+            return $filteredData;
+        }
+
+        return $allData;
     }
 
     /**

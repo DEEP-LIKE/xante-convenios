@@ -18,7 +18,7 @@ class QuoteAuthorizationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Autorizaciones';
+    protected static ?string $navigationLabel = 'Validaciones';
 
     protected static ?string $modelLabel = 'Autorización';
 
@@ -294,7 +294,7 @@ class QuoteAuthorizationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() && in_array(auth()->user()->role, ['gerencia', 'coordinador_fi']);
+        return false;
     }
 
     public static function getNavigationBadge(): ?string
