@@ -294,7 +294,7 @@ class QuoteAuthorizationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() && in_array(auth()->user()->role, ['gerencia', 'coordinador_fi']);
+        return false;
     }
 
     public static function getNavigationBadge(): ?string

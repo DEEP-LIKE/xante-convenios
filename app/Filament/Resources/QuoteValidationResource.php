@@ -523,6 +523,6 @@ class QuoteValidationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check() && auth()->user()->role === 'coordinador_fi';
+        return auth()->check() && in_array(auth()->user()->role, ['coordinador_fi', 'gerencia']);
     }
 }
