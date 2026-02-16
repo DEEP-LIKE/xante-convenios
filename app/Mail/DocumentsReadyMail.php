@@ -14,9 +14,29 @@ class DocumentsReadyMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    protected array $tempFiles = [];
+
     public function __construct(
         public Agreement $agreement
     ) {}
+
+    public function __destruct()
+    {
+        // Limpiar archivos temporales después de enviar el email
+        foreach ($this->tempFiles as $tempPath) {
+            try {
+                if (\Storage::disk('local')->exists($tempPath)) {
+                    \Storage::disk('local')->delete($tempPath);
+                    \Log::debug('Temporary attachment file deleted', ['path' => $tempPath]);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to delete temporary attachment file', [
+                    'path' => $tempPath,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
 
     public function envelope(): Envelope
     {
@@ -53,36 +73,93 @@ class DocumentsReadyMail extends Mailable
         $attachments = [];
 
         try {
+            \Log::info('DocumentsReadyMail: Starting attachment process', [
+                'agreement_id' => $this->agreement->id,
+                'documents_count' => $this->agreement->generatedDocuments->count(),
+            ]);
+
             // Adjuntar documentos PDF generados (solo archivos menores a 4MB)
             $maxFileSize = 4 * 1024 * 1024; // 4MB en bytes
             $totalSize = 0;
+            $attachedCount = 0;
 
             foreach ($this->agreement->generatedDocuments as $document) {
-                if ($document->fileExists()) {
-                    $fileSize = 0;
-                    try {
-                        // Los documentos generados ahora están en S3
-                        $fileSize = \Storage::disk('s3')->size($document->file_path);
-                    } catch (\Exception $e) {
-                        \Log::warning('Error checking file size for attachment in email', [
-                            'path' => $document->file_path,
-                            'error' => $e->getMessage()
-                        ]);
-                    }
+                \Log::debug('Processing document for attachment', [
+                    'document_id' => $document->id,
+                    'document_name' => $document->document_name,
+                    'file_path' => $document->file_path,
+                ]);
+
+                if (!$document->fileExists()) {
+                    \Log::warning('Document file does not exist in S3', [
+                        'document_id' => $document->id,
+                        'file_path' => $document->file_path,
+                    ]);
+                    continue;
+                }
+
+                try {
+                    // Verificar tamaño del archivo en S3
+                    $fileSize = \Storage::disk('s3')->size($document->file_path);
+                    
+                    \Log::debug('Document file size checked', [
+                        'document_id' => $document->id,
+                        'file_size' => $fileSize,
+                        'file_size_mb' => round($fileSize / 1024 / 1024, 2),
+                    ]);
 
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
                     if ($fileSize > 0 && $fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
-                        $attachments[] = Attachment::fromStorageDisk('s3', $document->file_path)
-                            ->as($document->document_name.'.pdf')
+                        // SOLUCIÓN: Descargar archivo de S3 a almacenamiento temporal
+                        $tempPath = 'temp/email_attachments/' . uniqid() . '_' . $document->document_name . '.pdf';
+                        
+                        // Copiar de S3 a disco local temporal
+                        $fileContent = \Storage::disk('s3')->get($document->file_path);
+                        \Storage::disk('local')->put($tempPath, $fileContent);
+                        
+                        // Registrar para limpieza posterior
+                        $this->tempFiles[] = $tempPath;
+                        
+                        $localPath = storage_path('app/' . $tempPath);
+                        
+                        \Log::info('Document downloaded from S3 to temp storage', [
+                            'document_id' => $document->id,
+                            's3_path' => $document->file_path,
+                            'temp_path' => $tempPath,
+                            'local_path' => $localPath,
+                            'exists' => file_exists($localPath),
+                        ]);
+
+                        // Adjuntar desde el archivo temporal local
+                        $attachments[] = Attachment::fromPath($localPath)
+                            ->as($document->document_name . '.pdf')
                             ->withMime('application/pdf');
+                        
                         $totalSize += $fileSize;
+                        $attachedCount++;
+                        
+                        \Log::info('Document attached successfully', [
+                            'document_id' => $document->id,
+                            'document_name' => $document->document_name,
+                            'attached_count' => $attachedCount,
+                        ]);
                     } else {
-                        \Log::info('Skipping large or unreadable file attachment for email', [
-                            'document' => $document->document_name,
-                            'size' => $fileSize,
-                            'max_size' => $maxFileSize,
+                        \Log::warning('Skipping document - size limit exceeded', [
+                            'document_id' => $document->id,
+                            'document_name' => $document->document_name,
+                            'file_size' => $fileSize,
+                            'total_size' => $totalSize,
+                            'max_file_size' => $maxFileSize,
                         ]);
                     }
+                } catch (\Exception $e) {
+                    \Log::error('Error processing document attachment', [
+                        'document_id' => $document->id,
+                        'document_name' => $document->document_name,
+                        'file_path' => $document->file_path,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
             }
 
@@ -92,12 +169,23 @@ class DocumentsReadyMail extends Mailable
                 $attachments[] = Attachment::fromPath($ofertaImagePath)
                     ->as('Oferta_Especial_Xante.jpg')
                     ->withMime('image/jpeg');
+                
+                \Log::debug('Oferta image attached', ['path' => $ofertaImagePath]);
+            } else {
+                \Log::warning('Oferta image not found', ['path' => $ofertaImagePath]);
             }
+
+            \Log::info('DocumentsReadyMail: Attachment process completed', [
+                'agreement_id' => $this->agreement->id,
+                'total_attachments' => count($attachments),
+                'pdf_attachments' => $attachedCount,
+            ]);
+
         } catch (\Exception $e) {
-            // Log error but don't fail the email
-            \Log::error('Error adding attachments to email', [
+            \Log::error('Critical error in attachments() method', [
                 'agreement_id' => $this->agreement->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
 
