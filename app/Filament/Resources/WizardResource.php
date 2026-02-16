@@ -266,7 +266,7 @@ class WizardResource extends Resource
             ->actions([
                 // Botón único que se adapta al wizard actual
                 Action::make('continue')
-                    ->label(fn (Agreement $record): string => $record->status === 'completed' ? 'Ver' : 'Continuar'
+                    ->label(fn (Agreement $record): string => $record->status === 'completed' ? 'Ver / Recalcular' : 'Continuar'
                     )
                     ->icon(fn (Agreement $record): string => $record->status === 'completed' ? 'heroicon-o-eye' : 'heroicon-o-play'
                     )

@@ -32,16 +32,24 @@
     </div>
 
     @if($agreement->currentFinancials['is_recalculated'])
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #fef08a; display: flex; align-items: center; gap: 0.5rem;">
-            <span style="display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; background-color: #dbeafe; color: #1e40af;">
-                Recálculo #{{ $agreement->currentFinancials['recalculation_number'] }}
-            </span>
-            <span style="font-size: 0.75rem; color: #6b7280;">
-                Actualizado: {{ $agreement->currentFinancials['recalculation_date']->timezone('America/Mexico_City')->format('d/m/Y H:i') }}
-            </span>
-            <span style="font-size: 0.75rem; color: #6b7280; border-left: 1px solid #d1d5db; padding-left: 0.5rem; margin-left: 0.25rem;">
-                 Por: {{ $agreement->currentFinancials['user']->name ?? 'Usuario' }}
-            </span>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #fef08a;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; background-color: #dbeafe; color: #1e40af;">
+                    Recálculo #{{ $agreement->currentFinancials['recalculation_number'] }}
+                </span>
+                <span style="font-size: 0.75rem; color: #6b7280;">
+                    Actualizado: {{ $agreement->currentFinancials['recalculation_date']->timezone('America/Mexico_City')->format('d/m/Y H:i') }}
+                </span>
+                <span style="font-size: 0.75rem; color: #6b7280; border-left: 1px solid #d1d5db; padding-left: 0.5rem; margin-left: 0.25rem;">
+                     Por: {{ $agreement->currentFinancials['user']->name ?? 'Usuario' }}
+                </span>
+            </div>
+            
+            @if(!empty($agreement->currentFinancials['motivo']))
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #854d0e; background-color: rgba(254, 240, 138, 0.5); padding: 0.375rem 0.5rem; border-radius: 0.375rem; border: 1px dashed #eab308;">
+                    <strong>Motivo:</strong> {{ $agreement->currentFinancials['motivo'] }}
+                </div>
+            @endif
         </div>
     @endif
 </div>

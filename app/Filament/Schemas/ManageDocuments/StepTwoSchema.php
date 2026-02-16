@@ -58,23 +58,11 @@ class StepTwoSchema
                     Placeholder::make('confirmation_status')
                         ->label('Correo de Confirmación')
                         ->icon('heroicon-o-envelope')
-                        ->content(function () use ($page) {
-                            if ($page->agreement->documents_received_at) {
-                                $receivedDate = $page->agreement->documents_received_at->timezone('America/Mexico_City')->format('d/m/Y H:i');
-                                $clientEmail = $page->getClientEmail();
-                                $advisorEmail = auth()->user()->email ?? 'No disponible';
-
-                                 return new HtmlString('<strong>Correo de confirmación enviado exitosamente</strong><br>'.
-                                       "📅 Enviado el: {$receivedDate}<br>".
-                                       "📧 Destinatario: {$clientEmail}<br>".
-                                       "🏢 Enviado por: {$advisorEmail}<br>".
-                                       '📋 Estado: Documentación recibida y convenio completado.<br>'.
-                                       '🎯 <strong>Etapa actual: Proceso de Documentación Finalizado</strong>');
-                             } else {
-                                 return new HtmlString('<strong>Pendiente de envío</strong><br>'.
-                                        'El correo de confirmación se enviará automáticamente al cliente una vez que se complete la carga de todos los documentos obligatorios y se avance al siguiente paso.');
-                             }
-                        }),
+                        ->content(fn () => view('filament.components.confirmation-status', [
+                            'agreement' => $page->agreement,
+                            'clientEmail' => $page->getClientEmail(),
+                            'advisorEmail' => auth()->user()->email ?? 'No disponible',
+                        ])),
                 ]),
 
             Section::make('Documentos Requeridos del Cliente')
