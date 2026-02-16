@@ -40,30 +40,27 @@
     style="
         position: relative;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        justify-content: center;
-        padding: 32px 24px;
-        border: 3px solid {{ $theme['bg'] }};
-        border-radius: 16px;
+        justify-content: flex-start;
+        padding: 20px 24px;
+        border: 2px solid {{ $theme['bg'] }};
+        border-radius: 12px;
         background: linear-gradient(135deg, {{ $theme['bg_light'] }} 0%, {{ $theme['bg_gradient'] }} 100%);
-        box-shadow: 0 4px 20px {{ $theme['shadow'] }};
+        box-shadow: 0 4px 12px {{ $theme['shadow'] }};
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
         overflow: hidden;
-        min-height: 200px;
-        width: 100%; /* Make button take full width */
-        text-align: center; /* Ensure content is centered */
+        width: 100%;
+        text-align: left;
     "
     onmouseover="
-        this.style.transform = 'translateY(-8px) scale(1.02)';
-        this.style.boxShadow = '0 12px 40px {{ $theme['shadow'] }}';
-        this.querySelector('.icon-circle').style.transform = 'scale(1.15) rotate(360deg)';
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 8px 24px {{ $theme['shadow'] }}';
     "
     onmouseout="
-        this.style.transform = 'translateY(0) scale(1)';
-        this.style.boxShadow = '0 4px 20px {{ $theme['shadow'] }}';
-        this.querySelector('.icon-circle').style.transform = 'scale(1) rotate(0deg)';
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 4px 12px {{ $theme['shadow'] }}';
     "
 >
     <!-- Efecto de brillo decorativo -->
@@ -82,22 +79,23 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 64px; /* Reducido ligeramente para evitar desbordes visuales */
-        height: 64px;
-        margin-bottom: 16px;
+        width: 48px;
+        height: 48px;
+        margin-right: 16px;
+        margin-bottom: 0;
         border-radius: 50%;
         background: {{ $theme['bg'] }};
-        box-shadow: 0 8px 24px {{ $theme['shadow'] }};
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px {{ $theme['shadow'] }};
+        transition: all 0.3s ease;
         position: relative;
         z-index: 1;
-        flex-shrink: 0; /* Evitar que se aplaste */
+        flex-shrink: 0;
     ">
         <x-filament::icon 
             icon="{{ $icon }}" 
             style="
-                width: 32px;
-                height: 32px;
+                width: 24px;
+                height: 24px;
                 color: white;
                 filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
             "
@@ -106,28 +104,29 @@
     
     <!-- Contenedor de texto -->
     <div style="
-        text-align: center;
+        text-align: left;
         position: relative;
         z-index: 1;
+        flex: 1;
     ">
         <!-- Título principal -->
         <p style="
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             color: {{ $theme['text'] }};
-            margin: 0 0 8px 0;
-            letter-spacing: -0.5px;
-            line-height: 1.3;
+            margin: 0 0 4px 0;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
         ">
             {{ $label }}
         </p>
         
         <!-- Subtítulo -->
         <p style="
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             color: {{ $theme['text'] }};
-            opacity: 0.75;
+            opacity: 0.8;
             margin: 0;
             line-height: 1.4;
         ">
@@ -141,7 +140,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        height: 6px;
+        height: 4px;
         background: {{ $theme['bg'] }};
         opacity: 0.8;
     "></div>

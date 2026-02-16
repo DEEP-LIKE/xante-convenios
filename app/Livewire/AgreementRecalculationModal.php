@@ -107,7 +107,7 @@ class AgreementRecalculationModal extends Component
     {
         // Limpiar formato moneda si viene como string
         $valorConvenio = (float) str_replace(['$', ','], '', $this->valor_convenio);
-        $this->valor_convenio = $valorConvenio;
+        // No reasignar a $this->valor_convenio para evitar que livewire resetee el input del usuario
 
         if ($valorConvenio <= 0) {
             $this->precio_promocion = 0;
@@ -146,7 +146,19 @@ class AgreementRecalculationModal extends Component
 
     public function save()
     {
+        // Sanitizar antes de guardar
+        $this->valor_convenio = (float) str_replace(['$', ','], '', $this->valor_convenio);
+
         $this->validate();
+
+        if ($this->final_profit < 0) {
+            Notification::make()
+                ->title('❌ No se puede guardar')
+                ->body('La Ganancia Final no puede ser negativa. Por favor ajuste el valor del convenio.')
+                ->danger()
+                ->send();
+            return;
+        }
 
         // Preparar calculation_data (snapshot completo)
         $calculationData = [
