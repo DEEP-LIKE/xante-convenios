@@ -111,7 +111,14 @@ class DocumentsReadyMail extends Mailable
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
                     if ($fileSize > 0 && $fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
                         // SOLUCIÓN: Descargar archivo de S3 a almacenamiento temporal
-                        $tempPath = 'temp/email_attachments/' . uniqid() . '_' . $document->document_name . '.pdf';
+                        $tempDir = 'temp/email_attachments';
+                        $tempPath = $tempDir . '/' . uniqid() . '_' . $document->document_name . '.pdf';
+                        
+                        // Asegurar que el directorio existe
+                        if (!\Storage::disk('local')->exists($tempDir)) {
+                            \Storage::disk('local')->makeDirectory($tempDir);
+                            \Log::debug('Created temp directory for email attachments', ['dir' => $tempDir]);
+                        }
                         
                         // Copiar de S3 a disco local temporal
                         $fileContent = \Storage::disk('s3')->get($document->file_path);
