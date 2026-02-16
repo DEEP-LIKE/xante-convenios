@@ -29,7 +29,11 @@
 
 <button 
     type="button"
-    wire:click="{{ $prevent ? 'prevent.' : '' }}{{ $action }}"
+    @if(isset($alpine_action))
+        x-on:click="{{ $alpine_action }}"
+    @else
+        wire:click="{{ $prevent ? 'prevent.' : '' }}{{ $action }}"
+    @endif
     @if(isset($confirm))
     wire:confirm="{{ $confirm }}"
     @endif

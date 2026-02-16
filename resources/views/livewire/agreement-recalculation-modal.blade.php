@@ -4,9 +4,7 @@
             Actualizar Calculadora Financiera
             <span class="ml-2 text-sm font-normal text-gray-500">Recálculo #{{ $recalculationNumber }}</span>
         </h2>
-        <button wire:click="$dispatch('close-modal', {id: 'recalculation-modal'})" class="text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+
     </div>
 
     <!-- Calculadora -->

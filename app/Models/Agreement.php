@@ -260,11 +260,13 @@ class Agreement extends Model
             ];
         }
 
+        $wizardData = $this->wizard_data ?? [];
+
         return [
-            'agreement_value' => $this->agreement_value,
-            'proposal_value' => $this->proposal_value,
-            'commission_total' => $this->commission_total,
-            'final_profit' => $this->final_profit,
+            'agreement_value' => $this->agreement_value > 0 ? $this->agreement_value : ($wizardData['valor_convenio'] ?? 0),
+            'proposal_value' => $this->proposal_value > 0 ? $this->proposal_value : ($wizardData['precio_promocion'] ?? 0),
+            'commission_total' => $this->commission_total > 0 ? $this->commission_total : ($wizardData['comision_total_pagar'] ?? 0),
+            'final_profit' => $this->final_profit != 0 ? $this->final_profit : ($wizardData['ganancia_final'] ?? 0),
             'is_recalculated' => false,
             'recalculation_date' => null,
             'recalculation_number' => 0,

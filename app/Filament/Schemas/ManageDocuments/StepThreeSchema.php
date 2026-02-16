@@ -61,45 +61,10 @@ class StepThreeSchema
                         ]),
                 ]),
 
-            // RESUMEN FINANCIERO (Dinámico)
-            Section::make('Resumen Financiero')
-                ->icon('heroicon-o-currency-dollar')
-                ->description('Valores financieros actuales del convenio')
-                ->schema([
-                     Grid::make(3)
-                        ->schema([
-                            Placeholder::make('financial_agreement_value')
-                                ->label('Valor Convenio')
-                                ->content(fn () => '$ ' . number_format($agreement->currentFinancials['agreement_value'], 2)),
-                            
-                            Placeholder::make('financial_proposal_value')
-                                ->label('Precio Promoción')
-                                ->content(fn () => '$ ' . number_format($agreement->currentFinancials['proposal_value'], 2)),
-
-                            Placeholder::make('financial_final_profit')
-                                ->label('Ganancia Final')
-                                ->content(fn () => '$ ' . number_format($agreement->currentFinancials['final_profit'], 2))
-                                ->extraAttributes(['class' => 'font-bold text-green-600']),
-                        ]),
-                     
-                     Placeholder::make('financial_status_badge')
-                        ->content(function () use ($agreement) {
-                             if ($agreement->currentFinancials['is_recalculated']) {
-                                return new HtmlString('
-                                    <div class="flex items-center gap-2 mt-2">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            Recálculo #' . $agreement->currentFinancials['recalculation_number'] . '
-                                        </span>
-                                        <span class="text-xs text-gray-500">
-                                            Actualizado: ' . $agreement->currentFinancials['recalculation_date']->timezone('America/Mexico_City')->format('d/m/Y H:i') . '
-                                        </span>
-                                    </div>
-                                ');
-                             }
-                             return null;
-                        })
-                        ->hiddenLabel(),
-                ]),
+            // RESUMEN FINANCIERO (Dinámico y Estilizado)
+            Placeholder::make('financial_summary_card')
+                ->hiddenLabel()
+                ->content(fn () => view('filament.components.financial-summary', ['agreement' => $agreement])),
 
             // ACCIONES DISPONIBLES
             Section::make('Acciones Disponibles')
@@ -127,8 +92,8 @@ class StepThreeSchema
                                     'icon' => 'heroicon-o-calculator',
                                     'label' => 'Recalcular',
                                     'sublabel' => 'Modificar Financieros',
-                                    'action' => "\$dispatch('open-recalculation-modal')",
-                                    'color' => 'warning', // Color distintivo
+                                    'alpine_action' => "\$dispatch('open-recalculation-modal')",
+                                    'color' => 'primary', // Cambio a primary para coincidir con la imagen (morado)
                                 ])),
                         ]),
                 ]),

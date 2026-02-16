@@ -53,20 +53,23 @@ class AgreementRecalculationModal extends Component
     public function loadInitialValues()
     {
         $latest = $this->agreement->latestRecalculation;
-        $financials = $this->agreement->currentFinancials;
+        // Usar el accessor robusto que ya incluye lógica de fallback
+        $financials = $this->agreement->currentFinancials; 
         
         // Si hay recálculo previo, usar sus datos (incluyendo calculation_data para restaurar estado)
         if ($latest && $latest->calculation_data) {
             $data = $latest->calculation_data;
             $this->recalculationNumber = $latest->recalculation_number + 1;
         } else {
-            // Si es el primero, usar datos del convenio original (wizard_data o columnas directas)
+            // Si es el primero, usar datos del wizard (inputs) + financials (resultados)
             $data = $this->agreement->wizard_data ?? [];
-            
-            // Fallbacks a columnas directas si no hay wizard_data completo
-            $data['valor_convenio'] = $data['valor_convenio'] ?? $this->agreement->agreement_value;
-            // Otros valores pueden necesitar ser inferidos o cargados de la config si es null
             $this->recalculationNumber = 1;
+
+            // Asegurar que los valores financieros base vengan del accessor si no están en wizard_data
+            if (empty($data['valor_convenio'])) $data['valor_convenio'] = $financials['agreement_value'];
+            if (empty($data['precio_promocion'])) $data['precio_promocion'] = $financials['proposal_value'];
+            if (empty($data['comision_total_pagar'])) $data['comision_total_pagar'] = $financials['commission_total'];
+            if (empty($data['ganancia_final'])) $data['ganancia_final'] = $financials['final_profit'];
         }
 
         // Asignar propiedades
@@ -75,9 +78,9 @@ class AgreementRecalculationModal extends Component
         $this->commission_total = $data['comision_total_pagar'] ?? $data['comision_total'] ?? 0;
         $this->final_profit = $data['ganancia_final'] ?? 0;
 
-        // Variables de cálculo
+        // Variables de cálculo (Inputs)
         $this->state_commission_percentage = $data['state_commission_percentage'] ?? 0;
-        $this->porcentaje_comision_sin_iva = $data['porcentaje_comision_sin_iva'] ?? 6.50; // Default
+        $this->porcentaje_comision_sin_iva = $data['porcentaje_comision_sin_iva'] ?? 6.50;
         $this->isr = $data['isr'] ?? 0;
         $this->cancelacion_hipoteca = $data['cancelacion_hipoteca'] ?? 0;
         $this->monto_credito = $data['monto_credito'] ?? 0;
@@ -87,6 +90,11 @@ class AgreementRecalculationModal extends Component
         if (($this->state_commission_percentage == 0) && $this->estado_propiedad) {
              $rate = \App\Models\StateCommissionRate::where('state_name', $this->estado_propiedad)->first();
              $this->state_commission_percentage = $rate ? (float) $rate->commission_percentage : 0;
+        }
+
+        // Si valor convenio sigue siendo 0 (caso extremo), intentar tomarlo de la columna directamente por si acaso
+        if ($this->valor_convenio == 0 && $this->agreement->agreement_value > 0) {
+            $this->valor_convenio = $this->agreement->agreement_value;
         }
     }
 
