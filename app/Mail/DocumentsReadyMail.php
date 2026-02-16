@@ -124,25 +124,28 @@ class DocumentsReadyMail extends Mailable
                             // Sanitizar nombre de archivo
                             $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $document->document_name);
                             $fileName = uniqid() . '_' . $safeName . '.pdf';
-                            $tempPath = $tempDir . '/' . $fileName;
+                            $localPath = $fullTempDir . '/' . $fileName;
                             
-                            // Copiar de S3 a disco local temporal
+                            // Descargar de S3 y guardar directamente con file_put_contents
                             $fileContent = \Storage::disk('s3')->get($document->file_path);
-                            \Storage::disk('local')->put($tempPath, $fileContent);
+                            file_put_contents($localPath, $fileContent);
                             
-                            // Registrar para limpieza posterior
-                            $this->tempFiles[] = $tempPath;
-                            
-                            $localPath = storage_path('app/' . $tempPath);
+                            // Registrar ruta relativa para limpieza posterior
+                            $this->tempFiles[] = $tempDir . '/' . $fileName;
                             
                             \Log::info('Document downloaded from S3 to temp storage', [
                                 'document_id' => $document->id,
                                 's3_path' => $document->file_path,
-                                'temp_path' => $tempPath,
                                 'local_path' => $localPath,
                                 'exists' => file_exists($localPath),
                                 'readable' => is_readable($localPath),
+                                'file_size' => file_exists($localPath) ? filesize($localPath) : 0,
                             ]);
+
+                            // Verificar que el archivo existe antes de adjuntar
+                            if (!file_exists($localPath) || !is_readable($localPath)) {
+                                throw new \Exception("File not accessible after download: {$localPath}");
+                            }
 
                             // Adjuntar desde el archivo temporal local
                             $attachments[] = Attachment::fromPath($localPath)
