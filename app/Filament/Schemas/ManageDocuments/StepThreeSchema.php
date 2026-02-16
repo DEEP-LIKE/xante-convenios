@@ -61,6 +61,46 @@ class StepThreeSchema
                         ]),
                 ]),
 
+            // RESUMEN FINANCIERO (Dinámico)
+            Section::make('Resumen Financiero')
+                ->icon('heroicon-o-currency-dollar')
+                ->description('Valores financieros actuales del convenio')
+                ->schema([
+                     Grid::make(3)
+                        ->schema([
+                            Placeholder::make('financial_agreement_value')
+                                ->label('Valor Convenio')
+                                ->content(fn () => '$ ' . number_format($agreement->currentFinancials['agreement_value'], 2)),
+                            
+                            Placeholder::make('financial_proposal_value')
+                                ->label('Precio Promoción')
+                                ->content(fn () => '$ ' . number_format($agreement->currentFinancials['proposal_value'], 2)),
+
+                            Placeholder::make('financial_final_profit')
+                                ->label('Ganancia Final')
+                                ->content(fn () => '$ ' . number_format($agreement->currentFinancials['final_profit'], 2))
+                                ->extraAttributes(['class' => 'font-bold text-green-600']),
+                        ]),
+                     
+                     Placeholder::make('financial_status_badge')
+                        ->content(function () use ($agreement) {
+                             if ($agreement->currentFinancials['is_recalculated']) {
+                                return new HtmlString('
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            Recálculo #' . $agreement->currentFinancials['recalculation_number'] . '
+                                        </span>
+                                        <span class="text-xs text-gray-500">
+                                            Actualizado: ' . $agreement->currentFinancials['recalculation_date']->timezone('America/Mexico_City')->format('d/m/Y H:i') . '
+                                        </span>
+                                    </div>
+                                ');
+                             }
+                             return null;
+                        })
+                        ->hiddenLabel(),
+                ]),
+
             // ACCIONES DISPONIBLES
             Section::make('Acciones Disponibles')
                 ->icon('heroicon-o-wrench-screwdriver')
@@ -80,18 +120,39 @@ class StepThreeSchema
                                     'color' => 'success',
                                 ])),
 
-                            // Card: Regresar a Inicio
-                            Placeholder::make('action_home')
-                                ->label('Regresar al Dashboard')
-                                ->content(fn () => view('components.action-link-button', [
-                                    'icon' => 'heroicon-o-home',
-                                    'label' => 'Volver al Inicio',
-                                    'sublabel' => 'Dashboard Principal',
-                                    'url' => '/admin',
-                                    'color' => 'primary',
+                            // Card: Recalcular (Reemplaza a Volver al Inicio)
+                            Placeholder::make('action_recalculate')
+                                ->label('Actualizar Valores')
+                                ->content(fn () => view('components.action-button', [
+                                    'icon' => 'heroicon-o-calculator',
+                                    'label' => 'Recalcular',
+                                    'sublabel' => 'Modificar Financieros',
+                                    'action' => "\$dispatch('open-recalculation-modal')",
+                                    'color' => 'warning', // Color distintivo
                                 ])),
                         ]),
                 ]),
+
+            // HISTORIAL DE ACTUALIZACIONES
+            Section::make('Historial de Actualizaciones')
+                ->description('Registro de recálculos financieros realizados')
+                ->collapsed(fn () => $agreement->recalculations->isEmpty())
+                ->schema([
+                    Placeholder::make('history_table')
+                        ->hiddenLabel()
+                        ->content(function () use ($agreement) {
+                            // Cargar relación si no está cargada
+                            if (!$agreement->relationLoaded('recalculations')) {
+                                $agreement->load('recalculations.user');
+                            }
+                            
+                            return view('filament.components.recalculation-history', [
+                                'recalculations' => $agreement->recalculations,
+                                'original' => $agreement, 
+                            ]);
+                        }),
+                ])
+                ->visible(fn () => true), // Siempre visible la sección, aunque vacía inicialmente
         ];
     }
 }

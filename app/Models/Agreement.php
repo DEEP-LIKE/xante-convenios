@@ -225,6 +225,54 @@ class Agreement extends Model
         return $this->belongsTo(FinalPriceAuthorization::class);
     }
 
+    // ========================================
+    // RECALCULATIONS
+    // ========================================
+
+    public function recalculations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AgreementRecalculation::class)->orderBy('created_at', 'desc');
+    }
+
+    public function latestRecalculation(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(AgreementRecalculation::class)->latestOfMany();
+    }
+
+    /**
+     * Obtiene los valores financieros actuales (ya sea del recálculo más reciente o del original)
+     */
+    public function getCurrentFinancialsAttribute(): array
+    {
+        $latest = $this->latestRecalculation;
+
+        if ($latest) {
+            return [
+                'agreement_value' => $latest->agreement_value,
+                'proposal_value' => $latest->proposal_value,
+                'commission_total' => $latest->commission_total,
+                'final_profit' => $latest->final_profit,
+                'is_recalculated' => true,
+                'recalculation_date' => $latest->created_at,
+                'recalculation_number' => $latest->recalculation_number,
+                'motivo' => $latest->motivo,
+                'user' => $latest->user,
+            ];
+        }
+
+        return [
+            'agreement_value' => $this->agreement_value,
+            'proposal_value' => $this->proposal_value,
+            'commission_total' => $this->commission_total,
+            'final_profit' => $this->final_profit,
+            'is_recalculated' => false,
+            'recalculation_date' => null,
+            'recalculation_number' => 0,
+            'motivo' => null,
+            'user' => null,
+        ];
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
