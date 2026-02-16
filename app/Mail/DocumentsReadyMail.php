@@ -110,46 +110,60 @@ class DocumentsReadyMail extends Mailable
 
                     // Solo adjuntar si el archivo es menor a 4MB y el total no excede 4MB
                     if ($fileSize > 0 && $fileSize < $maxFileSize && ($totalSize + $fileSize) < $maxFileSize) {
-                        // SOLUCIÓN: Descargar archivo de S3 a almacenamiento temporal
-                        $tempDir = 'temp/email_attachments';
-                        $tempPath = $tempDir . '/' . uniqid() . '_' . $document->document_name . '.pdf';
-                        
-                        // Asegurar que el directorio existe
-                        if (!\Storage::disk('local')->exists($tempDir)) {
-                            \Storage::disk('local')->makeDirectory($tempDir);
-                            \Log::debug('Created temp directory for email attachments', ['dir' => $tempDir]);
-                        }
-                        
-                        // Copiar de S3 a disco local temporal
-                        $fileContent = \Storage::disk('s3')->get($document->file_path);
-                        \Storage::disk('local')->put($tempPath, $fileContent);
-                        
-                        // Registrar para limpieza posterior
-                        $this->tempFiles[] = $tempPath;
-                        
-                        $localPath = storage_path('app/' . $tempPath);
-                        
-                        \Log::info('Document downloaded from S3 to temp storage', [
-                            'document_id' => $document->id,
-                            's3_path' => $document->file_path,
-                            'temp_path' => $tempPath,
-                            'local_path' => $localPath,
-                            'exists' => file_exists($localPath),
-                        ]);
+                        try {
+                            // SOLUCIÓN: Descargar archivo de S3 a almacenamiento temporal
+                            $tempDir = 'temp/email_attachments';
+                            $fullTempDir = storage_path('app/' . $tempDir);
+                            
+                            // Asegurar que el directorio existe usando mkdir nativo
+                            if (!file_exists($fullTempDir)) {
+                                mkdir($fullTempDir, 0755, true);
+                                \Log::debug('Created temp directory', ['dir' => $fullTempDir]);
+                            }
+                            
+                            // Sanitizar nombre de archivo
+                            $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $document->document_name);
+                            $fileName = uniqid() . '_' . $safeName . '.pdf';
+                            $tempPath = $tempDir . '/' . $fileName;
+                            
+                            // Copiar de S3 a disco local temporal
+                            $fileContent = \Storage::disk('s3')->get($document->file_path);
+                            \Storage::disk('local')->put($tempPath, $fileContent);
+                            
+                            // Registrar para limpieza posterior
+                            $this->tempFiles[] = $tempPath;
+                            
+                            $localPath = storage_path('app/' . $tempPath);
+                            
+                            \Log::info('Document downloaded from S3 to temp storage', [
+                                'document_id' => $document->id,
+                                's3_path' => $document->file_path,
+                                'temp_path' => $tempPath,
+                                'local_path' => $localPath,
+                                'exists' => file_exists($localPath),
+                                'readable' => is_readable($localPath),
+                            ]);
 
-                        // Adjuntar desde el archivo temporal local
-                        $attachments[] = Attachment::fromPath($localPath)
-                            ->as($document->document_name . '.pdf')
-                            ->withMime('application/pdf');
-                        
-                        $totalSize += $fileSize;
-                        $attachedCount++;
-                        
-                        \Log::info('Document attached successfully', [
-                            'document_id' => $document->id,
-                            'document_name' => $document->document_name,
-                            'attached_count' => $attachedCount,
-                        ]);
+                            // Adjuntar desde el archivo temporal local
+                            $attachments[] = Attachment::fromPath($localPath)
+                                ->as($document->document_name . '.pdf')
+                                ->withMime('application/pdf');
+                            
+                            $totalSize += $fileSize;
+                            $attachedCount++;
+                            
+                            \Log::info('Document attached successfully', [
+                                'document_id' => $document->id,
+                                'document_name' => $document->document_name,
+                                'attached_count' => $attachedCount,
+                            ]);
+                        } catch (\Exception $e) {
+                            \Log::error('Error attaching document', [
+                                'document_id' => $document->id,
+                                'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString(),
+                            ]);
+                        }
                     } else {
                         \Log::warning('Skipping document - size limit exceeded', [
                             'document_id' => $document->id,

@@ -98,57 +98,20 @@ class StepOneSchema
                 ])
                 ->visible(fn () => $page->agreement->generatedDocuments->isEmpty()),
 
-            Section::make('Enviar al Cliente')
-                ->description('Enviar documentos por correo electrónico')
-                ->icon('heroicon-o-paper-airplane')
-                ->iconColor('success')
+            Section::make('Correo de Confirmación')
+                ->description('Información sobre el correo de confirmación')
+                ->icon(fn () => $page->agreement->documents_sent_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
+                ->iconColor(fn () => $page->agreement->documents_sent_at ? 'success' : 'warning')
                 ->schema([
-                    Grid::make(2)
-                        ->schema([
-                            Placeholder::make('send_summary')
-                                ->label('Resumen del Envío')
-                                ->icon('heroicon-o-clipboard-document-list')
-                                ->content(function () use ($page) {
-                                    $clientName = $page->getClientName();
-                                    $clientEmail = $page->getClientEmail();
-                                    $docsCount = $page->agreement->generatedDocuments->count();
-                                    $propertyAddress = $page->getPropertyAddress();
-
-                                    return new HtmlString("Cliente: {$clientName}<br>Email: {$clientEmail}<br>Documentos: {$docsCount} PDFs<br>Propiedad: {$propertyAddress}");
-                                }),
-
-                            Placeholder::make('agreement_summary')
-                                ->label('Datos del Convenio')
-                                ->icon('heroicon-o-currency-dollar')
-                                ->content(function () use ($page) {
-                                    $agreementValue = $page->getAgreementValue();
-                                    $community = $page->getPropertyCommunity();
-                                    $createdDate = $page->agreement->created_at->timezone('America/Mexico_City')->format('d/m/Y');
-
-                                    $content = "Valor: {$agreementValue}<br>Comunidad: {$community}<br>Creado: {$createdDate}";
-
-                                    if ($page->agreement->documents_sent_at) {
-                                        $sentDate = $page->agreement->documents_sent_at->timezone('America/Mexico_City')->format('d/m/Y H:i');
-                                        $content .= "<br><span style='color: #10b981; font-weight: 600;'>📧 Enviado: {$sentDate}</span>";
-                                    }
-
-                                    return new HtmlString($content);
-                                }),
-                        ]),
-
-                    Placeholder::make('sent_info')
-                        ->label('Documentos Enviados')
-                        ->icon('heroicon-o-check-circle')
-                        ->content(function () use ($page) {
-                            $sentDate = $page->agreement->documents_sent_at ?
-                                $page->agreement->documents_sent_at->timezone('America/Mexico_City')->format('d/m/Y H:i') :
-                                'Fecha no disponible';
-
-                            return "Los documentos fueron enviados exitosamente el {$sentDate}";
-                        })
-                        ->visible(fn () => in_array($page->agreement->status, ['documents_sent', 'completed']) && !empty($page->agreement->documents_sent_at)),
+                    Placeholder::make('email_confirmation_status')
+                        ->label('')
+                        ->content(fn () => view('filament.components.email-confirmation-status', [
+                            'agreement' => $page->agreement,
+                            'clientEmail' => $page->getClientEmail(),
+                            'docsCount' => $page->agreement->generatedDocuments->count(),
+                        ])),
                 ])
-                ->visible(fn () => $page->agreement->generatedDocuments->isNotEmpty() && !in_array($page->agreement->status, ['documents_sent', 'completed'])),
+                ->visible(fn () => $page->agreement->generatedDocuments->isNotEmpty()),
 
             Section::make('Documentos Enviados')
                 ->description('Los documentos han sido enviados al cliente exitosamente')
