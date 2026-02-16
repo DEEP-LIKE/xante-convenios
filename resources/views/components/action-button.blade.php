@@ -82,21 +82,22 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 80px;
-        height: 80px;
-        margin-bottom: 20px;
+        width: 64px; /* Reducido ligeramente para evitar desbordes visuales */
+        height: 64px;
+        margin-bottom: 16px;
         border-radius: 50%;
         background: {{ $theme['bg'] }};
         box-shadow: 0 8px 24px {{ $theme['shadow'] }};
         transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         z-index: 1;
+        flex-shrink: 0; /* Evitar que se aplaste */
     ">
         <x-filament::icon 
             icon="{{ $icon }}" 
             style="
-                width: 40px;
-                height: 40px;
+                width: 32px;
+                height: 32px;
                 color: white;
                 filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
             "

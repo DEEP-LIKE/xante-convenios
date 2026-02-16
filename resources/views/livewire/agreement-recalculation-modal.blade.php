@@ -1,86 +1,107 @@
-<div class="p-6 bg-white rounded-lg shadow-xl">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold text-gray-800">
-            Actualizar Calculadora Financiera
-            <span class="ml-2 text-sm font-normal text-gray-500">Recálculo #{{ $recalculationNumber }}</span>
-        </h2>
-
+<div style="background-color: white; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; font-family: sans-serif;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: white; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <svg style="width: 1.5rem; height: 1.5rem; opacity: 0.9;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                Actualizar Calculadora
+            </h2>
+            <p style="color: #ddd6fe; font-size: 0.875rem; margin-top: 0.25rem;">Recálculo #{{ $recalculationNumber }}</p>
+        </div>
+        <button type="button" @click="$dispatch('close-modal', {id: 'recalculation-modal'})" style="color: #ede9fe; background: rgba(255,255,255,0.1); border: none; border-radius: 9999px; padding: 0.5rem; cursor: pointer; transition: background 0.2s;">
+            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
     </div>
 
-    <!-- Calculadora -->
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <!-- Columna Izquierda: Inputs Editables -->
-        <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Valores Editables</h3>
+    <div style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; @media (min-width: 768px) { grid-template-columns: 1fr 1fr; }">
             
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Valor Convenio</label>
-                <div class="relative mt-1 rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span class="text-gray-500 sm:text-sm">$</span>
-                    </div>
-                    <input type="number" step="0.01" wire:model.live.debounce.500ms="valor_convenio" 
-                           class="block w-full pl-7 pr-12 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="0.00">
+            <!-- Columna Izquierda: Inputs -->
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #374151; margin: 0;">Valores Editables</h3>
                 </div>
-                @error('valor_convenio') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+
+                <div>
+                    <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Valor Convenio</label>
+                    <div style="position: relative; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                        <div style="position: absolute; top: 0; bottom: 0; left: 0; padding-left: 0.75rem; display: flex; align-items: center; pointer-events: none;">
+                            <span style="color: #6b7280; font-size: 0.875rem;">$</span>
+                        </div>
+                        <input type="number" step="0.01" wire:model.live.debounce.500ms="valor_convenio" 
+                               style="display: block; width: 100%; padding: 0.625rem 0.75rem 0.625rem 2rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; color: #111827; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
+                               onfocus="this.style.borderColor='#8b5cf6'; this.style.boxShadow='0 0 0 3px rgba(139, 92, 246, 0.2)';"
+                               onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+                               placeholder="0.00">
+                    </div>
+                    @error('valor_convenio') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
+                </div>
+
+                <div style="background-color: #f9fafb; border-radius: 0.5rem; padding: 1rem; font-size: 0.75rem; color: #6b7280; border: 1px solid #f3f4f6;">
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 600;">Valores de Configuración:</p>
+                    <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.5; list-style-type: disc;">
+                        <li>Comisión Estatal: {{ $state_commission_percentage }}%</li>
+                        <li>ISR: ${{ number_format($isr, 2) }}</li>
+                        <li>Cancelación Hipoteca: ${{ number_format($cancelacion_hipoteca, 2) }}</li>
+                        <li>Monto Crédito: ${{ number_format($monto_credito, 2) }}</li>
+                    </ul>
+                </div>
             </div>
 
-            <!-- Aquí podrían ir otros campos editables si se requieren en el futuro (ISR, Cancelación, etc) -->
-             <div class="p-4 bg-gray-50 rounded-md text-xs text-gray-500">
-                <p><strong>Info:</strong> Los porcentajes de comisión e impuestos se toman de la configuración original del convenio/estado.</p>
-                <ul class="list-disc ml-4 mt-1">
-                    <li>Comisión Estatal: {{ $state_commission_percentage }}%</li>
-                    <li>ISR: ${{ number_format($isr, 2) }}</li>
-                    <li>Cancelación Hipoteca: ${{ number_format($cancelacion_hipoteca, 2) }}</li>
-                    <li>Monto Crédito: ${{ number_format($monto_credito, 2) }}</li>
-                </ul>
+            <!-- Columna Derecha: Resultados -->
+            <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+                <div style="padding-bottom: 0.75rem; border-bottom: 1px solid #ddd6fe;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #5b21b6; margin: 0;">Resultados Calculados</h3>
+                </div>
+
+                <div style="display: flex; justify-between; align-items: center;">
+                    <span style="font-size: 0.875rem; font-weight: 500; color: #4b5563;">Precio Promoción:</span>
+                    <span style="font-size: 1.125rem; font-weight: 700; color: #111827;">${{ number_format($precio_promocion, 2) }}</span>
+                </div>
+
+                <div style="display: flex; justify-between; align-items: center;">
+                    <span style="font-size: 0.875rem; font-weight: 500; color: #4b5563;">Comisión Total:</span>
+                    <span style="font-size: 1.125rem; font-weight: 700; color: #111827;">${{ number_format($commission_total, 2) }}</span>
+                </div>
+
+                <div style="height: 1px; background-color: #ddd6fe; margin: 0.25rem 0;"></div>
+
+                <div style="background-color: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #c4b5fd; display: flex; flex-direction: column; gap: 0.25rem;">
+                    <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6d28d9;">Ganancia Final</span>
+                    <span style="font-size: 1.5rem; font-weight: 800; color: #6d28d9;">${{ number_format($final_profit, 2) }}</span>
+                </div>
             </div>
         </div>
 
-        <!-- Columna Derecha: Resultados Calculados -->
-        <div class="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Resultados (Automático)</h3>
-            
-            <div class="flex justify-between items-center">
-                <span class="text-sm font-medium text-gray-600">Precio Promoción:</span>
-                <span class="text-lg font-bold text-gray-900">${{ number_format($precio_promocion, 2) }}</span>
-            </div>
-
-            <div class="flex justify-between items-center">
-                <span class="text-sm font-medium text-gray-600">Comisión Total:</span>
-                <span class="text-lg font-bold text-gray-900">${{ number_format($commission_total, 2) }}</span>
-            </div>
-
-            <hr class="border-gray-300">
-
-            <div class="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
-                <span class="text-sm font-bold text-green-700">Ganancia Final:</span>
-                <span class="text-xl font-black text-green-700">${{ number_format($final_profit, 2) }}</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Motivo -->
-    <div class="mt-6">
-        <label class="block text-sm font-medium text-gray-700">Motivo del recálculo <span class="text-red-500">*</span></label>
-        <div class="mt-1">
-            <textarea wire:model="motivo" rows="3" 
-                      class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" 
+        <!-- Motivo -->
+        <div style="margin-top: 1.5rem;">
+            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                Motivo del recálculo <span style="color: #ef4444;">*</span>
+            </label>
+            <textarea wire:model="motivo" rows="2" 
+                      style="display: block; width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; color: #111827; outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: vertical; min-height: 80px;"
+                      onfocus="this.style.borderColor='#8b5cf6'; this.style.boxShadow='0 0 0 3px rgba(139, 92, 246, 0.2)';"
+                      onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
                       placeholder="Describe el motivo de esta actualización..."></textarea>
+            @error('motivo') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
         </div>
-        @error('motivo') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-    </div>
 
-    <!-- Acciones -->
-    <div class="mt-6 flex justify-end space-x-3">
-        <button type="button" wire:click="$dispatch('close-modal', {id: 'recalculation-modal'})"
-                class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Cancelar
-        </button>
-        <button type="button" wire:click="save" wire:loading.attr="disabled"
-                class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
-            <span wire:loading.remove>Guardar Actualización</span>
-            <span wire:loading>Guardando...</span>
-        </button>
+        <!-- Actions -->
+        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+            <button type="button" @click="$dispatch('close-modal', {id: 'recalculation-modal'})"
+                    style="padding: 0.5rem 1rem; background-color: white; border: 1px solid #d1d5db; color: #374151; font-weight: 500; font-size: 0.875rem; border-radius: 0.375rem; cursor: pointer; transition: background 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f9fafb'"
+                    onmouseout="this.style.backgroundColor='white'">
+                Cancelar
+            </button>
+            <button type="button" wire:click="save" wire:loading.attr="disabled"
+                    style="padding: 0.5rem 1.25rem; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; font-weight: 500; font-size: 0.875rem; border-radius: 0.375rem; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3); transition: transform 0.1s; display: flex; align-items: center; gap: 0.5rem;"
+                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 8px -1px rgba(124, 58, 237, 0.4)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(124, 58, 237, 0.3)';"
+                    onmousedown="this.style.transform='translateY(1px)';">
+                <span wire:loading.remove>Guardar Actualización</span>
+                <span wire:loading>Guardando...</span>
+            </button>
+        </div>
     </div>
 </div>
