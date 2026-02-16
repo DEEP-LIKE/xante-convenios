@@ -52,8 +52,8 @@ class StepTwoSchema
         return [
             Section::make('Estado de Confirmación')
                 ->description('Información sobre el correo de confirmación')
-                ->icon(fn () => $page->agreement->documents_received_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
-                ->iconColor(fn () => $page->agreement->documents_received_at ? 'success' : 'warning')
+                // ->icon(fn () => $page->agreement->documents_received_at ? 'heroicon-o-envelope-open' : 'heroicon-o-envelope')
+                // ->iconColor(fn () => $page->agreement->documents_received_at ? 'success' : 'warning')
                 ->schema([
                     Placeholder::make('confirmation_status')
                         ->label('Correo de Confirmación')
