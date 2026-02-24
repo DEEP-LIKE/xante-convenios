@@ -164,9 +164,9 @@ class QuoteAuthorization extends Model
                 }
 
                 $validation->calculator_snapshot = $snapshot;
-                // Cambiar estado de vuelta a pending para que el coordinador pueda aprobar
-                $validation->status = 'pending';
-                $validation->save();
+                // Al ser aprobado por gerencia, aprobamos directamente la validación
+                // para que los cambios se apliquen al convenio inmediatamente.
+                $validation->approve($authorizedById);
             }
         }
 
@@ -186,9 +186,8 @@ class QuoteAuthorization extends Model
         if ($saved && $this->quote_validation_id) {
             $validation = $this->quoteValidation;
             if ($validation) {
-                // Cambiar estado a rejected para que el coordinador sepa que fue rechazada la solicitud
-                $validation->status = 'rejected';
-                $validation->save();
+                // Al ser rechazado por gerencia, rechazamos también la validación
+                $validation->reject($authorizedById, "Autorización de recalculo rechazada: " . $reason);
             }
         }
 

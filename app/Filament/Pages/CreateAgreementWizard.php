@@ -370,15 +370,19 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
 
         $stateCommission = $sanitizeFloat($rawStateCommission);
 
-        $stateCommission = $sanitizeFloat($rawStateCommission);
+        // SOURCE OF TRUTH: Si el convenio aún no tiene documentos generados, siempre intentar refrescar desde la BD
+        // esto asegura que si cambiaron la tasa en el admin, se refleje aquí al recalcular.
+        $agreement = $this->agreementId ? \App\Models\Agreement::find($this->agreementId) : null;
+        $isFinalized = $agreement && in_array($agreement->status, ['documents_generating', 'documents_generated', 'validado']);
 
-        // Si es 0 o nulo, intentar obtenerlo del estado de la propiedad
-        if ($rawStateCommission === null || $rawStateCommission === '' || $stateCommission == 0) {
+        if (! $isFinalized) {
             $stateName = $get('estado_propiedad');
             if ($stateName) {
-                $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
-                $stateCommission = $rate ? (float) $rate->commission_percentage : 0;
-                $set('state_commission_percentage', $stateCommission);
+                $latestRate = $this->calculatorService->getLatestRateForState($stateName);
+                if (isset($latestRate)) {
+                    $stateCommission = $latestRate;
+                    $set('state_commission_percentage', $stateCommission);
+                }
             }
         }
 

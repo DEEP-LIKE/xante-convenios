@@ -60,13 +60,8 @@ class StepThreeSchema
                                 ->content(new HtmlString('<span style="color: #10b981; font-weight: 600;">Completado</span>')),
                         ]),
                 ]),
-
-            // RESUMEN FINANCIERO (Dinámico y Estilizado)
-            Placeholder::make('financial_summary_card')
-                ->hiddenLabel()
-                ->content(fn () => view('filament.components.financial-summary', ['agreement' => $agreement])),
-
-            // ACCIONES DISPONIBLES
+            
+             // ACCIONES DISPONIBLES
             Section::make('Acciones Disponibles')
                 ->icon('heroicon-o-wrench-screwdriver')
                 ->iconColor('primary')
@@ -88,15 +83,26 @@ class StepThreeSchema
                             // Card: Recalcular (Reemplaza a Volver al Inicio)
                             Placeholder::make('action_recalculate')
                                 ->label('Actualizar Valores')
-                                ->content(fn () => view('components.action-button', [
-                                    'icon' => 'heroicon-o-calculator',
-                                    'label' => 'Recalcular',
-                                    'sublabel' => 'Modificar Financieros',
-                                    'alpine_action' => "\$dispatch('open-recalculation-modal')",
-                                    'color' => 'primary', // Cambio a primary para coincidir con la imagen (morado)
-                                ])),
+                                ->content(function() use ($agreement) {
+                                    $isPending = $agreement->hasPendingValidation() || $agreement->hasPendingAuthorization();
+                                    
+                                    return view('components.action-button', [
+                                        'icon' => $isPending ? 'heroicon-o-clock' : 'heroicon-o-calculator',
+                                        'label' => $isPending ? 'Esperando validación' : 'Recalcular',
+                                        'sublabel' => $isPending ? 'Pendiente de aprobación' : 'Modificar Financieros',
+                                        'alpine_action' => $isPending ? "window.location.href = '/admin/quote-authorizations'" : "\$dispatch('open-recalculation-modal')",
+                                        'color' => $isPending ? 'warning' : 'primary',
+                                    ]);
+                                }),
                         ]),
                 ]),
+
+            // RESUMEN FINANCIERO (Dinámico y Estilizado)
+            Placeholder::make('financial_summary_card')
+                ->hiddenLabel()
+                ->content(fn () => view('filament.components.financial-summary', ['agreement' => $agreement])),
+
+           
 
             // HISTORIAL DE ACTUALIZACIONES
             Section::make('Historial de Actualizaciones')

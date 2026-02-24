@@ -34,7 +34,7 @@ return new class extends Migration
             [
                 'key' => 'comision_iva_incluido_default',
                 'value' => '9',
-                'description' => 'Porcentaje de comisión con IVA incluido por defecto',
+                'description' => 'Porcentaje de Comisión TOTAL (IVA incluido) incluido por defecto',
                 'type' => 'number',
                 'created_at' => now(),
                 'updated_at' => now(),

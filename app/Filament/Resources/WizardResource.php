@@ -109,13 +109,20 @@ class WizardResource extends Resource
                         return "Etapa {$etapaNumero}: {$wizardName}";
                     })
                     ->badge()
-                    ->color(function ($state) {
+                    ->color(function ($state, $record) {
+                        if ($record->status === 'completed') {
+                            return 'success';
+                        }
                         return ($state ?? 1) === 1 ? 'info' : 'success';
                     }),
 
                 TextColumn::make('current_step')
                     ->label('Paso Actual')
                     ->formatStateUsing(function ($state, $record) {
+                        if ($record->status === 'completed') {
+                            return "Completado";
+                        }
+
                         if (($record->current_wizard ?? 1) === 1) {
                             return "Paso {$state}: ".($record->getCurrentStepName() ?? 'Desconocido');
                         } else {

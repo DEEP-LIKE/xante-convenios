@@ -22,6 +22,6 @@ return new class extends Migration
     {
         DB::table('configurations')
             ->where('key', 'comision_iva_incluido_default')
-            ->update(['description' => 'Porcentaje de comisión con IVA incluido por defecto']);
+            ->update(['description' => 'Porcentaje de Comisión TOTAL (IVA incluido) incluido por defecto']);
     }
 };

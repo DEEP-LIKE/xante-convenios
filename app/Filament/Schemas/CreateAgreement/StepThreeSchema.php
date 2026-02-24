@@ -78,8 +78,8 @@ class StepThreeSchema
                                     ->live()
                                     ->afterStateUpdated(function ($state, callable $set) {
                                         if ($state) {
-                                            $rate = \App\Models\StateCommissionRate::where('state_name', $state)->first();
-                                            $set('state_commission_percentage', $rate ? $rate->commission_percentage : 0);
+                                            $rate = app(\App\Services\AgreementCalculatorService::class)->getLatestRateForState($state);
+                                            $set('state_commission_percentage', $rate);
                                             // Limpiar la cuenta bancaria seleccionada cuando cambia el estado
                                             $set('bank_account_id', null);
                                         } else {
@@ -91,20 +91,18 @@ class StepThreeSchema
                                     ->default(function (callable $get) {
                                         $stateName = $get('estado_propiedad');
                                         if ($stateName) {
-                                            $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
-
-                                            return $rate ? $rate->commission_percentage : 0;
+                                            return app(\App\Services\AgreementCalculatorService::class)->getLatestRateForState($stateName);
                                         }
 
                                         return 0;
                                     })
                                     ->afterStateHydrated(function (\Filament\Forms\Components\Hidden $component, $state, callable $get) {
-                                        // Si el campo está vacío (convenio existente sin este dato), calcularlo
-                                        if (! $state || $state == 0) {
-                                            $stateName = $get('estado_propiedad');
-                                            if ($stateName) {
-                                                $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
-                                                $component->state($rate ? $rate->commission_percentage : 0);
+                                        // Si el campo está vacío (convenio existente sin este dato) o si queremos forzar el source of truth
+                                        $stateName = $get('estado_propiedad');
+                                        if ($stateName) {
+                                            $latestRate = app(\App\Services\AgreementCalculatorService::class)->getLatestRateForState($stateName);
+                                            if (isset($latestRate)) {
+                                                $component->state($latestRate);
                                             }
                                         }
                                     }),

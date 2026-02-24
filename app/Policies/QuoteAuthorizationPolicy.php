@@ -12,8 +12,8 @@ class QuoteAuthorizationPolicy
      */
     public function viewAny(User $user): bool
     {
-        // Coordinador FI y Gerencia pueden ver autorizaciones
-        return in_array($user->role, ['coordinador_fi', 'gerencia']);
+        // Ejecutivos, Coordinador FI y Gerencia pueden ver autorizaciones
+        return in_array($user->role, ['ejecutivo', 'coordinador_fi', 'gerencia']);
     }
 
     /**

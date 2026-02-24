@@ -161,6 +161,7 @@ class AgreementCalculatorServiceTest extends TestCase
             'comision_total_pagar' => 75400.75,
             'total_gastos_fi_venta' => 20000,
             'ganancia_final' => 104599.25,
+            'comision_iva_incluido' => 7.54,
         ];
 
         $formatted = $this->service->formatCalculationsForUI($calculations);
@@ -186,7 +187,7 @@ class AgreementCalculatorServiceTest extends TestCase
 
         // Porcentaje de IVA inválido
         $errors = $this->service->validateParameters(100000, ['iva_percentage' => 150]);
-        $this->assertContains('El porcentaje de comisión con IVA debe estar entre 0 y 100', $errors);
+        $this->assertContains('El porcentaje de Comisión TOTAL (IVA incluido) debe estar entre 0 y 100', $errors);
 
         // Multiplicador inválido
         $errors = $this->service->validateParameters(100000, ['precio_promocion_multiplicador' => 0]);
@@ -268,5 +269,36 @@ class AgreementCalculatorServiceTest extends TestCase
 
         $expectedComisionTotal = round(($valorConvenio * 7.54) / 100, 2);
         $this->assertEquals($expectedComisionTotal, $calculations['comision_total_pagar']);
+    }
+
+    #[Test]
+    public function it_gets_latest_rate_for_state()
+    {
+        // 1. Crear un estado con comisión
+        \App\Models\StateCommissionRate::create([
+            'state_name' => 'QUERÉTARO',
+            'state_code' => 'QT',
+            'commission_percentage' => 6.50,
+            'is_active' => true,
+        ]);
+
+        $rate = $this->service->getLatestRateForState('QUERÉTARO');
+        $this->assertEquals(6.50, $rate);
+
+        // 2. Cambiar la comisión (Simular cambio en el admin)
+        \App\Models\StateCommissionRate::where('state_name', 'QUERÉTARO')->update([
+            'commission_percentage' => 7.00,
+        ]);
+
+        // 3. Simular un estado con 0% (Caso Hidalgo)
+        \App\Models\StateCommissionRate::create([
+            'state_name' => 'HIDALGO',
+            'state_code' => 'HGO',
+            'commission_percentage' => 0.00,
+            'is_active' => true,
+        ]);
+
+        $hidalgoRate = $this->service->getLatestRateForState('HIDALGO');
+        $this->assertEquals(0.00, $hidalgoRate);
     }
 }

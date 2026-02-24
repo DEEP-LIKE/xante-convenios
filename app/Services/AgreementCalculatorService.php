@@ -20,6 +20,10 @@ class AgreementCalculatorService
         $configValues = ConfigurationCalculator::whereIn('key', [
             'comision_sin_iva_default',
             'iva_valor',
+            'precio_promocion_multiplicador_default',
+            'isr_default',
+            'cancelacion_hipoteca_default',
+            'monto_credito_default',
         ])->pluck('value', 'key');
 
         $ivaPercentage = (float) ($configValues['iva_valor'] ?? 16.00);
@@ -29,11 +33,24 @@ class AgreementCalculatorService
             'porcentaje_comision_sin_iva' => (float) ($configValues['comision_sin_iva_default'] ?? 6.50),
             'iva_multiplier' => $ivaMultiplier,
             'base_iva_percentage' => $ivaPercentage,
-            'precio_promocion_multiplicador' => 1.0,
-            'isr' => 0,
-            'cancelacion_hipoteca' => 0,
-            'monto_credito' => 0,
+            'iva_percentage' => $ivaPercentage, // Para compatibilidad con tests
+            'precio_promocion_multiplicador' => (float) ($configValues['precio_promocion_multiplicador_default'] ?? 1.0),
+            'isr' => (float) ($configValues['isr_default'] ?? 0),
+            'cancelacion_hipoteca' => (float) ($configValues['cancelacion_hipoteca_default'] ?? 0),
+            'monto_credito' => (float) ($configValues['monto_credito_default'] ?? 0),
         ];
+    }
+
+    /**
+     * Obtiene la tasa de comisión más reciente para un estado específico
+     */
+    public function getLatestRateForState(string $stateName): float
+    {
+        $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)
+            ->where('is_active', true)
+            ->first();
+
+        return $rate ? (float) $rate->commission_percentage : 0;
     }
 
     /**
@@ -54,8 +71,14 @@ class AgreementCalculatorService
         $params = array_merge($defaults, $parameters);
 
         $porcentajeComision = (float) ($params['porcentaje_comision_sin_iva'] ?? 6.50);
-        $ivaPercentage = (float) ($params['base_iva_percentage'] ?? $params['iva_percentage'] ?? 16.00);
+        $ivaPercentage = (float) ($params['iva_percentage'] ?? $params['base_iva_percentage'] ?? 16.00);
+        
+        // Soportar tanto el factor (1.095) como el porcentaje (9.5)
         $multiplicadorPrecioPromocion = (float) ($params['precio_promocion_multiplicador'] ?? 1.0);
+        if (isset($params['multiplicador_estado']) && $multiplicadorPrecioPromocion == 1.0) {
+            $multiplicadorPrecioPromocion = 1 + ((float) $params['multiplicador_estado'] / 100);
+        }
+
         $isr = (float) ($params['isr'] ?? 0);
         $cancelacion = (float) ($params['cancelacion_hipoteca'] ?? 0);
         $montoCredito = (float) ($params['monto_credito'] ?? 0);
@@ -63,7 +86,7 @@ class AgreementCalculatorService
         // Calcular multiplicador de IVA basado en el porcentaje
         $ivaMultiplier = 1 + ($ivaPercentage / 100);
 
-        // Calcular porcentaje de comisión con IVA incluido dinámicamente
+        // Calcular porcentaje de Comisión TOTAL (IVA incluido) incluido dinámicamente
         $porcentajeComisionIvaIncluido = round($porcentajeComision * $ivaMultiplier, 2);
 
         // Realizar cálculos
@@ -90,7 +113,7 @@ class AgreementCalculatorService
         // 6. Ganancia Final = Valor Convenio - ISR - Cancelación Hipoteca - Comisión Total - Monto de Crédito
         $calculations['ganancia_final'] = round($valorConvenio - $isr - $cancelacion - $calculations['comision_total_pagar'] - $montoCredito, 2);
 
-        // 7. Porcentaje Comisión con IVA (para visualizar en UI)
+        // 7. Porcentaje Comisión TOTAL (IVA incluido) (para visualizar en UI)
         $calculations['comision_iva_incluido'] = $porcentajeComisionIvaIncluido;
 
         // Agregar parámetros utilizados para referencia
@@ -176,7 +199,7 @@ class AgreementCalculatorService
         if (isset($parameters['iva_percentage'])) {
             $porcentaje = (float) $parameters['iva_percentage'];
             if ($porcentaje < 0 || $porcentaje > 100) {
-                $errors[] = 'El porcentaje de comisión con IVA debe estar entre 0 y 100';
+                $errors[] = 'El porcentaje de Comisión TOTAL (IVA incluido) debe estar entre 0 y 100';
             }
         }
 

@@ -17,6 +17,9 @@
                     </h4>
                     <p style="font-size: 0.875rem; color: #6d28d9; margin: 0.25rem 0 0 0;">
                         {{ $recalc->created_at->timezone('America/Mexico_City')->format('d/m/Y H:i') }} • Por: {{ $recalc->user->name ?? 'Sistema' }}
+                        @if($recalc->authorized_by && $recalc->authorized_by !== $recalc->user_id)
+                            • Autorizado por: {{ $recalc->authorizedBy->name ?? 'N/A' }}
+                        @endif
                     </p>
                 </div>
                 

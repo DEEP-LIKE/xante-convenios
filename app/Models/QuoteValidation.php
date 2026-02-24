@@ -159,6 +159,20 @@ class QuoteValidation extends Model
                 'can_generate_documents' => true,
                 'wizard_data' => array_merge($currentWizardData, $updates),
             ]);
+
+            // Crear registro en el historial de recálculos
+            \App\Models\AgreementRecalculation::create([
+                'agreement_id' => $this->agreement_id,
+                'user_id' => $this->requested_by,
+                'authorized_by' => $validatorId,
+                'recalculation_number' => $this->agreement->recalculations()->count() + 1,
+                'agreement_value' => $updates['valor_convenio'],
+                'proposal_value' => $updates['precio_promocion'],
+                'commission_total' => $updates['comision_total_pagar'],
+                'final_profit' => $updates['ganancia_final'],
+                'calculation_data' => $snapshot,
+                'motivo' => $snapshot['motivo'] ?? 'Recálculo autorizado por validación',
+            ]);
         }
 
         return $saved;
@@ -240,11 +254,17 @@ class QuoteValidation extends Model
         ?float $explicitOldCommission = null
     ): QuoteAuthorization {
         // Determinar tipo de cambio
-        $changeType = 'both';
-        if ($newPrice && ! $newCommissionPercentage) {
+        $priceChanged = abs(($newPrice ?? 0) - ($oldPrice ?? 0)) > 0.01;
+        $commissionChanged = abs(($newCommissionPercentage ?? 0) - ($oldCommission ?? 0)) > 0.01;
+
+        if ($priceChanged && $commissionChanged) {
+            $changeType = 'both';
+        } elseif ($priceChanged) {
             $changeType = 'price';
-        } elseif (! $newPrice && $newCommissionPercentage) {
+        } elseif ($commissionChanged) {
             $changeType = 'commission';
+        } else {
+            $changeType = 'recalculation';
         }
 
         // Obtener valores originales

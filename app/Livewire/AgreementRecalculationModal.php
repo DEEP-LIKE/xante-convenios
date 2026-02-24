@@ -36,6 +36,10 @@ class AgreementRecalculationModal extends Component
 
     protected $rules = [
         'valor_convenio' => 'required|numeric|min:0',
+        'porcentaje_comision_sin_iva' => 'required|numeric|min:0|max:100',
+        'isr' => 'required|numeric|min:0',
+        'cancelacion_hipoteca' => 'required|numeric|min:0',
+        'monto_credito' => 'required|numeric|min:0',
         'motivo' => 'required|string|min:10',
     ];
 
@@ -103,6 +107,26 @@ class AgreementRecalculationModal extends Component
         $this->recalculate();
     }
 
+    public function updatedPorcentajeComisionSinIva()
+    {
+        $this->recalculate();
+    }
+
+    public function updatedIsr()
+    {
+        $this->recalculate();
+    }
+
+    public function updatedCancelacionHipoteca()
+    {
+        $this->recalculate();
+    }
+
+    public function updatedMontoCredito()
+    {
+        $this->recalculate();
+    }
+
     public function recalculate()
     {
         // Limpiar formato moneda si viene como string
@@ -154,13 +178,44 @@ class AgreementRecalculationModal extends Component
         if ($this->final_profit < 0) {
             Notification::make()
                 ->title('❌ No se puede guardar')
-                ->body('La Ganancia Final no puede ser negativa. Por favor ajuste el valor del convenio.')
+                ->body('La Ganancia Final no puede ser negativa. Por favor ajuste los valores.')
                 ->danger()
                 ->send();
             return;
         }
 
-        // Preparar calculation_data (snapshot completo)
+        // Determinar si se requiere aprobación
+        $user = auth()->user();
+        $isGerencia = $user->role === 'gerencia';
+        
+        // Obtener valores originales para comparar
+        $latest = $this->agreement->latestRecalculation;
+        $originalData = $latest ? $latest->calculation_data : ($this->agreement->wizard_data ?? []);
+        
+        $originalPrice = (float) ($originalData['valor_convenio'] ?? 0);
+        $originalCommission = (float) ($originalData['porcentaje_comision_sin_iva'] ?? 0);
+        $originalIsr = (float) ($originalData['isr'] ?? 0);
+        $originalCancelacion = (float) ($originalData['cancelacion_hipoteca'] ?? 0);
+        
+        $priceChanged = abs($this->valor_convenio - $originalPrice) > 0.01;
+        $commissionChanged = abs($this->porcentaje_comision_sin_iva - $originalCommission) > 0.01;
+        $isrChanged = abs($this->isr - $originalIsr) > 0.01;
+        $cancelacionChanged = abs($this->cancelacion_hipoteca - $originalCancelacion) > 0.01;
+
+        $needsApproval = $priceChanged || $commissionChanged || $isrChanged || $cancelacionChanged;
+
+        // Si es gerencia, puede guardar directamente siempre
+        if ($isGerencia || !$needsApproval) {
+            $this->performDirectSave();
+            return;
+        }
+
+        // Si no es gerencia y hay cambios, requerir aprobación
+        $this->requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $originalPrice, $originalCommission);
+    }
+
+    protected function performDirectSave()
+    {
         $calculationData = [
             'valor_convenio' => $this->valor_convenio,
             'precio_promocion' => $this->precio_promocion,
@@ -180,6 +235,7 @@ class AgreementRecalculationModal extends Component
         AgreementRecalculation::create([
             'agreement_id' => $this->agreementId,
             'user_id' => auth()->id(),
+            'authorized_by' => auth()->id(),
             'recalculation_number' => $this->agreement->recalculations()->count() + 1,
             'agreement_value' => $this->valor_convenio,
             'proposal_value' => $this->precio_promocion,
@@ -195,13 +251,50 @@ class AgreementRecalculationModal extends Component
             ->send();
 
         $this->dispatch('close-modal', id: 'recalculation-modal');
-        $this->dispatch('recalculation-saved'); // Para actualizar la vista padre
+        $this->dispatch('recalculation-saved');
+        $this->redirect(request()->header('Referer'));
+    }
+
+    protected function requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $originalPrice, $originalCommission)
+    {
+        // Usar el servicio de validación para crear la solicitud
+        $validation = $this->agreement->requestValidation(auth()->id());
         
-        // Reset (opcional, si se mantuviera abierto)
-        $this->motivo = '';
-        $this->loadInitialValues();
+        // Actualizar el snapshot con los nuevos valores del modal
+        $snapshot = $validation->calculator_snapshot;
+        $snapshot['valor_convenio'] = $this->valor_convenio;
+        // Asegurar que el snapshot tenga las claves necesarias para el servicio de cálculo
+        $snapshot['multiplicador_estado'] = $this->state_commission_percentage;
+        $snapshot['porcentaje_comision_sin_iva'] = $this->porcentaje_comision_sin_iva;
+        $snapshot['isr'] = $this->isr;
+        $snapshot['cancelacion_hipoteca'] = $this->cancelacion_hipoteca;
+        $snapshot['monto_credito'] = $this->monto_credito;
         
-        $this->redirect(request()->header('Referer')); // Recargar para ver cambios
+        // Recalcular el snapshot completo usando el servicio actualizado
+        $calculatorService = app(AgreementCalculatorService::class);
+        $recalculated = $calculatorService->calculateAllFinancials($this->valor_convenio, $snapshot);
+        $snapshot = array_merge($snapshot, $recalculated);
+        
+        $validation->update(['calculator_snapshot' => $snapshot]);
+
+        // Si es un recálculo desde el popup, siempre creamos una autorización vinculada
+        $validation->requestAuthorization(
+            auth()->id(),
+            $this->valor_convenio,
+            $this->porcentaje_comision_sin_iva,
+            $this->motivo,
+            $originalPrice,
+            $originalCommission
+        );
+        
+        Notification::make()
+            ->title('📋 Recálculo enviado para autorización')
+            ->body('Los cambios han sido enviados a gerencia para su revisión.')
+            ->warning()
+            ->send();
+
+        $this->dispatch('close-modal', id: 'recalculation-modal');
+        $this->redirect('/admin/quote-authorizations'); // Redirect to recalculation authorizations
     }
 
     public function render()

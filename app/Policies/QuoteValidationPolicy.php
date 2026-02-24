@@ -12,8 +12,8 @@ class QuoteValidationPolicy
      */
     public function viewAny(User $user): bool
     {
-        // Coordinadores FI y Gerencia pueden ver todas las validaciones
-        return in_array($user->role, ['coordinador_fi', 'gerencia']);
+        // Ejecutivos, Coordinadores FI y Gerencia pueden ver las validaciones
+        return in_array($user->role, ['ejecutivo', 'coordinador_fi', 'gerencia']);
     }
 
     /**
@@ -54,8 +54,8 @@ class QuoteValidationPolicy
             return true;
         }
 
-        // Coordinadores FI también pueden actualizar (para editar valores)
-        return $user->role === 'coordinador_fi';
+        // Coordinadores FI y Gerencia también pueden actualizar (para editar valores)
+        return in_array($user->role, ['coordinador_fi', 'gerencia']);
     }
 
     /**
@@ -68,13 +68,11 @@ class QuoteValidationPolicy
             && $quoteValidation->isPending();
     }
 
-    /**
-     * Determine whether the user can approve the validation.
-     */
     public function approve(User $user, QuoteValidation $quoteValidation): bool
     {
-        // No puede aprobar su propia solicitud
-        if ($user->id === $quoteValidation->requested_by) {
+        // Solo ejecutivos tienen prohibido de aprobar su propia solicitud
+        // Gerencia y Coordinadores pueden auto-aprobarse
+        if ($user->id === $quoteValidation->requested_by && $user->role === 'ejecutivo') {
             return false;
         }
 

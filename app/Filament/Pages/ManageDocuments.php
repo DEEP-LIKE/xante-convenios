@@ -263,6 +263,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                         'status' => 'completed',
                                         'documents_received_at' => now(),
                                         'completion_percentage' => 100,
+                                        'wizard2_current_step' => 3,
                                     ]);
 
                                     \Log::info('Agreement marked as completed in Step 2 afterValidation', ['id' => $this->agreement->id]);
@@ -307,7 +308,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                                 }
                             }
 
-                            $this->saveStepData(2);
+                            $this->saveStepData(3);
                         }),
 
                     Step::make('Cierre Exitoso')

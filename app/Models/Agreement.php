@@ -257,6 +257,8 @@ class Agreement extends Model
                 'recalculation_number' => $latest->recalculation_number,
                 'motivo' => $latest->motivo,
                 'user' => $latest->user,
+                'authorized_by' => $latest->authorized_by,
+                'authorized_user' => $latest->authorizedBy,
             ];
         }
 
@@ -603,5 +605,14 @@ class Agreement extends Model
             'with_observations' => 'info',
             default => 'gray',
         };
+    }
+
+    /**
+     * Verifica si hay una autorización de precio final/comisión pendiente
+     */
+    public function hasPendingAuthorization(): bool
+    {
+        return $this->finalPriceAuthorizations()->where('status', 'pending')->exists() || 
+               $this->validations()->where('status', 'awaiting_management_authorization')->exists();
     }
 }

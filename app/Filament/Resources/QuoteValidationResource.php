@@ -18,11 +18,11 @@ class QuoteValidationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Validaciones';
+    protected static ?string $navigationLabel = 'Aprobación de convenio';
 
-    protected static ?string $modelLabel = 'Validación';
+    protected static ?string $modelLabel = 'Aprobación de convenio';
 
-    protected static ?string $pluralModelLabel = 'Validaciones';
+    protected static ?string $pluralModelLabel = 'Aprobaciones de convenio';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Cotizaciones';
 
@@ -268,7 +268,7 @@ class QuoteValidationResource extends Resource
                                     ->disabled()
                                     ->dehydrated()
                                     ->formatStateUsing(fn ($state) => number_format((float) str_replace([',', '$'], '', $state), 2))
-                                    ->helperText('Monto Comisión (Sin IVA) + IVA'),
+                                    ->helperText('Monto Comisión '),
                             ]),
                     ]),
 
@@ -396,10 +396,10 @@ class QuoteValidationResource extends Resource
                     ->modalDescription('¿Está seguro de que desea aprobar esta validación?')
                     ->visible(fn (QuoteValidation $record): bool => $record->isPending() &&
                         auth()->user()->can('approve', $record) &&
-                        ! $record->hasValueChanges(
+                        (auth()->user()->role === 'gerencia' || ! $record->hasValueChanges(
                             (float) ($record->calculator_snapshot['valor_convenio'] ?? 0),
                             (float) ($record->calculator_snapshot['porcentaje_comision_sin_iva'] ?? 0)
-                        ))
+                        )))
                     ->action(function (QuoteValidation $record) {
                         app(ValidationService::class)->approveValidation($record, auth()->user());
 
@@ -499,7 +499,16 @@ class QuoteValidationResource extends Resource
                     }),
             ])
             ->bulkActions([])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(function (\Illuminate\Database\Eloquent\Builder $query) {
+                $user = auth()->user();
+
+                if ($user->role === 'ejecutivo') {
+                    $query->where('requested_by', $user->id);
+                }
+
+                return $query;
+            });
     }
 
     public static function getRelations(): array

@@ -221,6 +221,11 @@ class StepFourSchema
                                             $page->clearCalculatedFields($set);
                                         }
                                     })
+                                    ->afterStateHydrated(function ($state, callable $set, callable $get) use ($page) {
+                                        if ($state && $state > 0) {
+                                            $page->recalculateAllFinancials($set, $get);
+                                        }
+                                    })
                                     ->helperText('Ingrese el valor del convenio para activar todos los cálculos automáticos')
                                     ->extraAttributes(['class' => 'text-lg font-semibold']),
                             ]),
@@ -248,7 +253,7 @@ class StepFourSchema
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->helperText('Valor fijo desde configuración'),
                                 TextInput::make('comision_iva_incluido')
-                                    ->label('% Comisión con IVA')
+                                    ->label('% Comisión TOTAL (IVA incluido)')
                                     ->numeric()
                                     ->suffix('%')
                                     ->step(0.01)
@@ -274,11 +279,11 @@ class StepFourSchema
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
                                     ->afterStateHydrated(function ($component, $state, callable $get) {
-                                        if (! $state || $state == 0) {
-                                            $stateName = $get('estado_propiedad');
-                                            if ($stateName) {
-                                                $rate = \App\Models\StateCommissionRate::where('state_name', $stateName)->first();
-                                                $component->state($rate ? $rate->commission_percentage : 0);
+                                        $stateName = $get('estado_propiedad');
+                                        if ($stateName) {
+                                            $latestRate = app(\App\Services\AgreementCalculatorService::class)->getLatestRateForState($stateName);
+                                            if (isset($latestRate)) {
+                                                $component->state($latestRate);
                                             }
                                         }
                                     }),
@@ -333,12 +338,12 @@ class StepFourSchema
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
                                     ->helperText('Valor Convenio × % Comisión'),
                                 TextInput::make('comision_total_pagar')
-                                    ->label('Comisión con IVA')
+                                    ->label('Comisión TOTAL (IVA incluido)')
                                     ->prefix('$')
                                     ->disabled()
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
-                                    ->helperText('Monto Comisión (Sin IVA) + IVA'),
+                                    ->helperText('Monto Comisión '),
                             ]),
                     ])
                     ->collapsible(),

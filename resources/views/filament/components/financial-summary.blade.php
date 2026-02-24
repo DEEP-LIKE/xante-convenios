@@ -9,6 +9,18 @@
         </div>
     </div>
 
+    @if($agreement->hasPendingValidation() || $agreement->hasPendingAuthorization())
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="background-color: #fef3c7; color: #d97706; padding: 0.375rem; border-radius: 9999px;">
+                <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div>
+                <span style="display: block; font-size: 0.875rem; font-weight: 700; color: #92400e;">Actualización Pendiente</span>
+                <span style="display: block; font-size: 0.75rem; color: #b45309;">La próxima actualización del resumen financiero está en proceso de validación por un superior.</span>
+            </div>
+        </div>
+    @endif
+
     <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between;">
         <div style="flex: 1; min-width: 140px;">
             <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Valor Convenio</span>
@@ -43,6 +55,11 @@
                 <span style="font-size: 0.75rem; color: #6b7280; border-left: 1px solid #d1d5db; padding-left: 0.5rem; margin-left: 0.25rem;">
                      Por: {{ $agreement->currentFinancials['user']->name ?? 'Usuario' }}
                 </span>
+                @if(!empty($agreement->currentFinancials['authorized_user']) && $agreement->currentFinancials['authorized_by'] !== ($agreement->currentFinancials['user']->id ?? null))
+                    <span style="font-size: 0.75rem; color: #6b7280; border-left: 1px solid #d1d5db; padding-left: 0.5rem; margin-left: 0.25rem;">
+                        Autorizado por: {{ $agreement->currentFinancials['authorized_user']->name }}
+                    </span>
+                @endif
             </div>
             
             @if(!empty($agreement->currentFinancials['motivo']))

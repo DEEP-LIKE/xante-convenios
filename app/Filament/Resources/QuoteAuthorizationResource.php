@@ -18,11 +18,11 @@ class QuoteAuthorizationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Autorizaciones';
+    protected static ?string $navigationLabel = 'Autorización de recálculo';
 
-    protected static ?string $modelLabel = 'Autorización';
+    protected static ?string $modelLabel = 'Autorización de recálculo';
 
-    protected static ?string $pluralModelLabel = 'Autorizaciones';
+    protected static ?string $pluralModelLabel = 'Autorizaciones de recálculo';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Cotizaciones';
 
@@ -131,27 +131,6 @@ class QuoteAuthorizationResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-                \Filament\Tables\Columns\TextColumn::make('quoteValidation.status')
-                    ->label('Estado Validación')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'approved' => 'success',
-                        'rejected' => 'danger',
-                        'with_observations' => 'info',
-                        'awaiting_management_authorization' => 'primary',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending' => 'Pendiente',
-                        'approved' => 'Aprobada',
-                        'rejected' => 'Rechazada',
-                        'with_observations' => 'Con Observaciones',
-                        'awaiting_management_authorization' => 'Esperando Autorización',
-                        default => $state,
-                    })
-                    ->toggleable(),
-
                 \Filament\Tables\Columns\TextColumn::make('requestedBy.name')
                     ->label('Solicitado por')
                     ->searchable()
@@ -164,12 +143,14 @@ class QuoteAuthorizationResource extends Resource
                         'commission' => 'info',
                         'price' => 'warning',
                         'both' => 'primary',
+                        'recalculation' => 'success',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'commission' => 'Comisión',
                         'price' => 'Precio',
                         'both' => 'Ambos',
+                        'recalculation' => 'Recálculo',
                         default => $state,
                     }),
 
@@ -294,7 +275,7 @@ class QuoteAuthorizationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return true;
     }
 
     public static function getNavigationBadge(): ?string

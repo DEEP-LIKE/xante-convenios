@@ -10,6 +10,7 @@ class AgreementRecalculation extends Model
     protected $fillable = [
         'agreement_id',
         'user_id',
+        'authorized_by',
         'recalculation_number',
         'agreement_value',
         'proposal_value',
@@ -35,5 +36,10 @@ class AgreementRecalculation extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function authorizedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'authorized_by');
     }
 }

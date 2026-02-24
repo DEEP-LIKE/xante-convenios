@@ -151,6 +151,11 @@ class QuoteCalculatorPage extends Page implements HasForms
                                         $this->clearCalculatedFields();
                                     }
                                 })
+                                ->afterStateHydrated(function ($state) {
+                                    if ($state && $state > 0) {
+                                        $this->recalculateAllFinancials();
+                                    }
+                                })
                                 ->helperText('Ingrese el valor del convenio para activar todos los cálculos automáticos')
                                 ->extraAttributes(['class' => 'text-lg font-semibold'])
                                 ->inputMode('numeric'),
@@ -172,10 +177,8 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->live()
                                 ->afterStateUpdated(function ($state, callable $set) {
                                     if ($state) {
-                                        $stateRate = StateCommissionRate::where('state_name', $state)->where('is_active', true)->first();
-                                        if ($stateRate) {
-                                            $set('state_commission_percentage', $stateRate->commission_percentage);
-                                        }
+                                        $rate = app(\App\Services\AgreementCalculatorService::class)->getLatestRateForState($state);
+                                        $set('state_commission_percentage', $rate);
                                     }
                                     if ($this->data['valor_convenio'] ?? false) {
                                         $this->recalculateAllFinancials();
@@ -192,7 +195,7 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->extraAttributes(['class' => 'bg-gray-50'])
                                 ->helperText('Valor fijo desde configuración'),
                             TextInput::make('comision_iva_incluido')
-                                ->label('% Comisión con IVA')
+                                ->label('% Comisión TOTAL (IVA incluido)')
                                 ->numeric()
                                 ->suffix('%')
                                 ->step(0.01)
@@ -274,12 +277,12 @@ class QuoteCalculatorPage extends Page implements HasForms
                                 ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
                                 ->helperText('Valor Convenio × % Comisión'),
                             TextInput::make('comision_total_pagar')
-                                ->label('Comisión con IVA')
+                                ->label('Comisión TOTAL (IVA incluido)')
                                 ->prefix('$')
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->extraAttributes(['class' => 'bg-yellow-50 text-yellow-800 font-semibold'])
-                                ->helperText('Monto Comisión (Sin IVA) + IVA'),
+                                ->helperText('Monto Comisión '),
                         ]),
                 ])
                 ->collapsible(),

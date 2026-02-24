@@ -178,7 +178,7 @@ class AgreementResource extends Resource
                                         ->columnSpan(1),
 
                                     Forms\Components\TextInput::make('comision_iva_incluido')
-                                        ->label('Comisión con IVA')
+                                        ->label('Comisión TOTAL (IVA incluido)')
                                         ->suffix('%')
                                         ->numeric()
                                         ->disabled()

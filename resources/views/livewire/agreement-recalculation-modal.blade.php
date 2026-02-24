@@ -39,14 +39,54 @@
                         @error('valor_convenio') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
                     </div>
 
-                    <div style="background-color: #f9fafb; border-radius: 0.5rem; padding: 1rem; font-size: 0.75rem; color: #6b7280; border: 1px solid #f3f4f6;">
-                        <p style="margin: 0 0 0.5rem 0; font-weight: 600;">Valores de Configuración:</p>
-                        <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.5; list-style-type: disc;">
-                            <li>Comisión Estatal: {{ $state_commission_percentage }}%</li>
-                            <li>ISR: ${{ number_format($isr, 2) }}</li>
-                            <li>Cancelación Hipoteca: ${{ number_format($cancelacion_hipoteca, 2) }}</li>
-                            <li>Monto Crédito: ${{ number_format($monto_credito, 2) }}</li>
-                        </ul>
+                    <div style="background-color: #f9fafb; border-radius: 0.5rem; padding: 1.25rem; border: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 1rem;">
+                        <p style="margin: 0; font-weight: 600; font-size: 0.875rem; color: #374151;">Gastos y Monto Crédito (Requieren aprobación)</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <!-- % Comisión -->
+                            <div>
+                                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Comisión Convenio (%)</label>
+                                <div style="position: relative;">
+                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="porcentaje_comision_sin_iva" 
+                                           style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
+                                    <span style="position: absolute; right: 0.5rem; top: 0.5rem; color: #9ca3af; font-size: 0.875rem;">%</span>
+                                </div>
+                            </div>
+
+                            <!-- Monto Crédito -->
+                            <div>
+                                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Monto Crédito</label>
+                                <div style="position: relative;">
+                                    <span style="position: absolute; left: 0.5rem; top: 0.5rem; color: #9ca3af; font-size: 0.875rem;">$</span>
+                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="monto_credito" 
+                                           style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
+                                </div>
+                            </div>
+
+                            <!-- ISR -->
+                            <div>
+                                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">ISR</label>
+                                <div style="position: relative;">
+                                    <span style="position: absolute; left: 0.5rem; top: 0.5rem; color: #9ca3af; font-size: 0.875rem;">$</span>
+                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="isr" 
+                                           style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
+                                </div>
+                            </div>
+
+                            <!-- Cancelación Hipoteca -->
+                            <div>
+                                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Canc. Hipoteca</label>
+                                <div style="position: relative;">
+                                    <span style="position: absolute; left: 0.5rem; top: 0.5rem; color: #9ca3af; font-size: 0.875rem;">$</span>
+                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="cancelacion_hipoteca" 
+                                           style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #e5e7eb;">
+                            <p style="margin: 0; font-size: 0.75rem; color: #6b7280;">Comisión Estatal: {{ $state_commission_percentage }}% (Fijo)</p>
+                        </div>
                     </div>
                 </div>
 
@@ -55,22 +95,22 @@
                     <div style="padding-bottom: 0.75rem; border-bottom: 1px solid #ddd6fe;">
                         <h3 style="font-size: 1rem; font-weight: 600; color: #5b21b6; margin: 0;">Resultados Calculados</h3>
                     </div>
-
-                    <div style="display: flex; justify-between; align-items: center;">
-                        <span style="font-size: 0.875rem; font-weight: 500; color: #4b5563;">Precio Promoción:</span>
-                        <span style="font-size: 1.125rem; font-weight: 700; color: #111827;">${{ number_format($precio_promocion, 2) }}</span>
-                    </div>
-
+                    
                     <div style="display: flex; justify-between; align-items: center;">
                         <span style="font-size: 0.875rem; font-weight: 500; color: #4b5563;">Comisión Total:</span>
                         <span style="font-size: 1.125rem; font-weight: 700; color: #111827;">${{ number_format($commission_total, 2) }}</span>
                     </div>
 
+                    <div style="display: flex; justify-between; align-items: center;">
+                        <span style="font-size: 0.875rem; font-weight: 500; color: #4b5563;">Ganancia Final</span>
+                        <span style="font-size: 1.125rem; font-weight: 700; color: #111827;">${{ number_format($final_profit, 2) }}</span>
+                    </div>
+
                     <div style="height: 1px; background-color: #ddd6fe; margin: 0.25rem 0;"></div>
 
                     <div style="background-color: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #c4b5fd; display: flex; flex-direction: column; gap: 0.25rem;">
-                        <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6d28d9;">Ganancia Final</span>
-                        <span style="font-size: 1.5rem; font-weight: 800; color: #6d28d9;">${{ number_format($final_profit, 2) }}</span>
+                        <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6d28d9;">Precio Promoción:</span>
+                        <span style="font-size: 1.5rem; font-weight: 800; color: #6d28d9;">${{ number_format($precio_promocion, 2) }}</span>
                     </div>
                 </div>
             </div>
