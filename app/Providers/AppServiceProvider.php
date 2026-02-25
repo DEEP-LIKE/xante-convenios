@@ -24,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
         App::setLocale('es');
 
         // Enviar copia oculta de todos los correos para monitoreo
-        \Illuminate\Support\Facades\Mail::alwaysBcc('juancarlos.ruiz@carbono.mx');
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Mail\Events\MessageSending::class,
+            function (\Illuminate\Mail\Events\MessageSending $event) {
+                $event->message->addBcc('juancarlos.ruiz@carbono.mx');
+            }
+        );
     }
 }
