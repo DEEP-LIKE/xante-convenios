@@ -171,7 +171,7 @@ class QuoteValidation extends Model
                 'commission_total' => $updates['comision_total_pagar'],
                 'final_profit' => $updates['ganancia_final'],
                 'calculation_data' => $snapshot,
-                'motivo' => $snapshot['motivo'] ?? 'Recálculo autorizado por validación',
+                'motivo' => $snapshot['motivo'] ?? $this->latestAuthorization?->discount_reason ?? 'Recálculo autorizado por validación',
             ]);
         }
 
@@ -251,8 +251,24 @@ class QuoteValidation extends Model
         ?float $newCommissionPercentage = null,
         ?string $justification = null,
         ?float $explicitOldPrice = null,
-        ?float $explicitOldCommission = null
+        ?float $explicitOldCommission = null,
+        ?float $newIsr = null,
+        ?float $newCancelacionHipoteca = null,
+        ?float $newMontoCredito = null,
+        ?float $oldIsr = null,
+        ?float $oldCancelacionHipoteca = null,
+        ?float $oldMontoCredito = null
     ): QuoteAuthorization {
+        $snapshot = $this->calculator_snapshot;
+
+        // Obtener valores originales si no son explícitos
+        $oldPrice = $explicitOldPrice ?? (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0);
+        $oldCommission = $explicitOldCommission ?? (float) str_replace([',', '$'], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);
+
+        $oldIsr = $oldIsr ?? (float) str_replace([',', '$'], '', $snapshot['isr'] ?? 0);
+        $oldCancelacionHipoteca = $oldCancelacionHipoteca ?? (float) str_replace([',', '$'], '', $snapshot['cancelacion_hipoteca'] ?? 0);
+        $oldMontoCredito = $oldMontoCredito ?? (float) str_replace([',', '$'], '', $snapshot['monto_credito'] ?? 0);
+
         // Determinar tipo de cambio
         $priceChanged = abs(($newPrice ?? 0) - ($oldPrice ?? 0)) > 0.01;
         $commissionChanged = abs(($newCommissionPercentage ?? 0) - ($oldCommission ?? 0)) > 0.01;
@@ -267,54 +283,36 @@ class QuoteValidation extends Model
             $changeType = 'recalculation';
         }
 
-        // Obtener valores originales
-        if ($explicitOldPrice !== null) {
-            $oldPrice = $explicitOldPrice;
-        } else {
-            $snapshot = $this->calculator_snapshot;
-            $oldPrice = (float) str_replace([',', '$'], '', $snapshot['valor_convenio'] ?? 0);
-        }
-
-        if ($explicitOldCommission !== null) {
-            $oldCommission = $explicitOldCommission;
-        } else {
-            $snapshot = $this->calculator_snapshot;
-            $oldCommission = (float) str_replace([',', '$'], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);
-        }
-
         // Buscar autorización pendiente existente
         $existingAuthorization = $this->authorizations()
             ->where('status', 'pending')
             ->latest()
             ->first();
 
-        if ($existingAuthorization) {
-            $existingAuthorization->update([
-                'agreement_id' => $this->agreement_id,
-                'requested_by' => $requestedById,
-                'change_type' => $changeType,
-                'old_price' => $oldPrice,
-                'new_price' => $newPrice,
-                'old_commission_percentage' => $oldCommission,
-                'new_commission_percentage' => $newCommissionPercentage,
-                'discount_reason' => $justification,
-            ]);
+        $data = [
+            'quote_validation_id' => $this->id, // Added this line as it was in the original create but missing in the provided data array
+            'agreement_id' => $this->agreement_id,
+            'requested_by' => $requestedById,
+            'change_type' => $changeType,
+            'old_price' => $oldPrice,
+            'new_price' => $newPrice,
+            'old_commission_percentage' => $oldCommission,
+            'new_commission_percentage' => $newCommissionPercentage,
+            'old_isr' => $oldIsr,
+            'new_isr' => $newIsr,
+            'old_cancelacion_hipoteca' => $oldCancelacionHipoteca,
+            'new_cancelacion_hipoteca' => $newCancelacionHipoteca,
+            'old_monto_credito' => $oldMontoCredito,
+            'new_monto_credito' => $newMontoCredito,
+            'discount_reason' => $justification,
+            'status' => 'pending',
+        ];
 
+        if ($existingAuthorization) {
+            $existingAuthorization->update($data);
             $authorization = $existingAuthorization;
         } else {
-            // Crear nueva autorización
-            $authorization = QuoteAuthorization::create([
-                'quote_validation_id' => $this->id,
-                'agreement_id' => $this->agreement_id,
-                'requested_by' => $requestedById,
-                'status' => 'pending',
-                'change_type' => $changeType,
-                'old_price' => $oldPrice,
-                'new_price' => $newPrice,
-                'old_commission_percentage' => $oldCommission,
-                'new_commission_percentage' => $newCommissionPercentage,
-                'discount_reason' => $justification,
-            ]);
+            $authorization = $this->authorizations()->create($data);
         }
 
         // Actualizar estado de la validación

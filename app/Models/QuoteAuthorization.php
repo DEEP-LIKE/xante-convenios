@@ -24,8 +24,13 @@ class QuoteAuthorization extends Model
         'new_price',
         'discount_amount',
         'discount_reason',
-        'rejection_reason',
-        'authorized_at',
+        'delete_at',
+        'old_isr',
+        'new_isr',
+        'old_cancelacion_hipoteca',
+        'new_cancelacion_hipoteca',
+        'old_monto_credito',
+        'new_monto_credito',
     ];
 
     protected function casts(): array
@@ -37,6 +42,12 @@ class QuoteAuthorization extends Model
             'old_price' => 'decimal:2',
             'new_price' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'old_isr' => 'decimal:2',
+            'new_isr' => 'decimal:2',
+            'old_cancelacion_hipoteca' => 'decimal:2',
+            'new_cancelacion_hipoteca' => 'decimal:2',
+            'old_monto_credito' => 'decimal:2',
+            'new_monto_credito' => 'decimal:2',
         ];
     }
 
@@ -140,12 +151,16 @@ class QuoteAuthorization extends Model
                     $snapshot['porcentaje_comision_sin_iva'] = $this->new_commission_percentage;
                 }
 
+                // Actualizar otros campos si aplica
+                if ($this->new_isr !== null) $snapshot['isr'] = $this->new_isr;
+                if ($this->new_cancelacion_hipoteca !== null) $snapshot['cancelacion_hipoteca'] = $this->new_cancelacion_hipoteca;
+                if ($this->new_monto_credito !== null) $snapshot['monto_credito'] = $this->new_monto_credito;
+
                 // Recalcular valores con el servicio de calculadora
-                if ($this->isPriceChange() || $this->isCommissionChange()) {
+                if ($this->isPriceChange() || $this->isCommissionChange() || $this->change_type === 'recalculation') {
                     $calculatorService = app(\App\Services\AgreementCalculatorService::class);
 
                     // Preparar parámetros para el cálculo
-                    // Aseguramos que los valores sean float/int correctos
                     $params = $snapshot;
 
                     // Si cambió la comisión, asegurarse que el nuevo valor se use en el cálculo

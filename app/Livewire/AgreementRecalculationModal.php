@@ -214,7 +214,10 @@ class AgreementRecalculationModal extends Component
         }
 
         // Si no es gerencia y hay cambios, requerir aprobación
-        $this->requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $montoCreditoChanged, $originalPrice, $originalCommission);
+        $this->requestApproval(
+            $priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $montoCreditoChanged, 
+            $originalPrice, $originalCommission, $originalIsr, $originalCancelacion, $originalMontoCredito
+        );
     }
 
     protected function performDirectSave()
@@ -258,7 +261,10 @@ class AgreementRecalculationModal extends Component
         $this->redirect(request()->header('Referer'));
     }
 
-    protected function requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $montoCreditoChanged, $originalPrice, $originalCommission)
+    protected function requestApproval(
+        $priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $montoCreditoChanged, 
+        $originalPrice, $originalCommission, $originalIsr, $originalCancelacion, $originalMontoCredito
+    )
     {
         // Usar el servicio de validación para crear la solicitud
         $validation = $this->agreement->requestValidation(auth()->id());
@@ -272,6 +278,7 @@ class AgreementRecalculationModal extends Component
         $snapshot['isr'] = $this->isr;
         $snapshot['cancelacion_hipoteca'] = $this->cancelacion_hipoteca;
         $snapshot['monto_credito'] = $this->monto_credito;
+        $snapshot['motivo'] = $this->motivo;
         
         // Recalcular el snapshot completo usando el servicio actualizado
         $calculatorService = app(AgreementCalculatorService::class);
@@ -280,14 +287,23 @@ class AgreementRecalculationModal extends Component
         
         $validation->update(['calculator_snapshot' => $snapshot]);
 
+        // Los valores originales ya vienen como parámetros desde save()
+        // No es necesario intentar obtenerlos de nuevo de wizard_data con rutas potentially incorrectas
+
         // Si es un recálculo desde el popup, siempre creamos una autorización vinculada
         $validation->requestAuthorization(
-            auth()->id(),
-            $this->valor_convenio,
-            $this->porcentaje_comision_sin_iva,
-            $this->motivo,
-            $originalPrice,
-            $originalCommission
+            requestedById: auth()->id(),
+            newPrice: $this->valor_convenio,
+            newCommissionPercentage: $this->porcentaje_comision_sin_iva,
+            justification: $this->motivo,
+            explicitOldPrice: $originalPrice,
+            explicitOldCommission: $originalCommission,
+            newIsr: $this->isr,
+            newCancelacionHipoteca: $this->cancelacion_hipoteca,
+            newMontoCredito: $this->monto_credito,
+            oldIsr: $originalIsr,
+            oldCancelacionHipoteca: $originalCancelacion,
+            oldMontoCredito: $originalMontoCredito
         );
         
         Notification::make()

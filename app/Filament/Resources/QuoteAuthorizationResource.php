@@ -40,6 +40,7 @@ class QuoteAuthorizationResource extends Resource
                                 'commission' => 'Comisión',
                                 'price' => 'Precio',
                                 'both' => 'Ambos',
+                                'recalculation' => 'Recálculo',
                             ])
                             ->required()
                             ->disabled(fn ($record) => $record !== null),
@@ -55,7 +56,8 @@ class QuoteAuthorizationResource extends Resource
                                     ->label('% Comisión Nueva')
                                     ->numeric()
                                     ->suffix('%'),
-                            ]),
+                            ])
+                            ->visible(fn ($record) => $record && abs(($record->old_commission_percentage ?? 0) - ($record->new_commission_percentage ?? 0)) > 0.01),
 
                         \Filament\Schemas\Components\Grid::make(2)
                             ->schema([
@@ -68,7 +70,50 @@ class QuoteAuthorizationResource extends Resource
                                     ->label('Valor Convenio Nuevo')
                                     ->numeric()
                                     ->prefix('$'),
-                            ]),
+                            ])
+                            ->visible(fn ($record) => $record && abs(($record->old_price ?? 0) - ($record->new_price ?? 0)) > 0.01),
+
+                        \Filament\Schemas\Components\Grid::make(2)
+                            ->schema([
+                                \Filament\Forms\Components\TextInput::make('old_monto_credito')
+                                    ->label('Monto Crédito Anterior')
+                                    ->numeric()
+                                    ->prefix('$')
+                                    ->disabled(),
+                                \Filament\Forms\Components\TextInput::make('new_monto_credito')
+                                    ->label('Monto Crédito Nuevo')
+                                    ->numeric()
+                                    ->prefix('$'),
+                            ])
+                            ->visible(fn ($record) => $record && abs(($record->old_monto_credito ?? 0) - ($record->new_monto_credito ?? 0)) > 0.01),
+
+                        \Filament\Schemas\Components\Grid::make(2)
+                            ->schema([
+                                \Filament\Forms\Components\TextInput::make('old_cancelacion_hipoteca')
+                                    ->label('Canc. Hipoteca Anterior')
+                                    ->numeric()
+                                    ->prefix('$')
+                                    ->disabled(),
+                                \Filament\Forms\Components\TextInput::make('new_cancelacion_hipoteca')
+                                    ->label('Canc. Hipoteca Nueva')
+                                    ->numeric()
+                                    ->prefix('$'),
+                            ])
+                            ->visible(fn ($record) => $record && abs(($record->old_cancelacion_hipoteca ?? 0) - ($record->new_cancelacion_hipoteca ?? 0)) > 0.01),
+
+                        \Filament\Schemas\Components\Grid::make(2)
+                            ->schema([
+                                \Filament\Forms\Components\TextInput::make('old_isr')
+                                    ->label('ISR Anterior')
+                                    ->numeric()
+                                    ->prefix('$')
+                                    ->disabled(),
+                                \Filament\Forms\Components\TextInput::make('new_isr')
+                                    ->label('ISR Nuevo')
+                                    ->numeric()
+                                    ->prefix('$'),
+                            ])
+                            ->visible(fn ($record) => $record && abs(($record->old_isr ?? 0) - ($record->new_isr ?? 0)) > 0.01),
 
                         \Filament\Forms\Components\Textarea::make('discount_reason')
                             ->label('Motivo del Descuento')
@@ -200,6 +245,7 @@ class QuoteAuthorizationResource extends Resource
                         'commission' => 'Comisión',
                         'price' => 'Precio',
                         'both' => 'Ambos',
+                        'recalculation' => 'Recálculo',
                     ]),
             ])
             ->actions([
