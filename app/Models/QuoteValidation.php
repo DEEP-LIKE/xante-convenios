@@ -336,9 +336,10 @@ class QuoteValidation extends Model
         $originalCommission = (float) str_replace([',', '$', ' '], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);
 
         // Comparar con tolerancia de 0.01 para evitar problemas de precisión de punto flotante
-        $priceChanged = abs($currentPrice - $originalPrice) > 0.01;
         $commissionChanged = abs($currentCommission - $originalCommission) > 0.01;
 
-        return $priceChanged || $commissionChanged;
+        // Según requerimiento, solo los cambios de comisión requieren el desvío de autorización de gerencia
+        // El valor de convenio y gastos pueden ser aprobados directamente por el coordinador
+        return $commissionChanged;
     }
 }

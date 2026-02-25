@@ -80,7 +80,11 @@ class QuoteAuthorizationPolicy
         }
 
         // Para otras solicitudes (ej. de ejecutivos), Coordinador FI o Gerencia pueden aprobar
-        // dependiendo del tipo de cambio si se desea, por ahora mantenemos simple:
+        // pero solo Gerencia puede aprobar cambios de comisión
+        if ($quoteAuthorization->isCommissionChange()) {
+            return $user->role === 'gerencia';
+        }
+
         return in_array($user->role, ['coordinador_fi', 'gerencia']);
     }
 

@@ -196,13 +196,16 @@ class AgreementRecalculationModal extends Component
         $originalCommission = (float) ($originalData['porcentaje_comision_sin_iva'] ?? 0);
         $originalIsr = (float) ($originalData['isr'] ?? 0);
         $originalCancelacion = (float) ($originalData['cancelacion_hipoteca'] ?? 0);
+        $originalMontoCredito = (float) ($originalData['monto_credito'] ?? 0);
         
         $priceChanged = abs($this->valor_convenio - $originalPrice) > 0.01;
         $commissionChanged = abs($this->porcentaje_comision_sin_iva - $originalCommission) > 0.01;
         $isrChanged = abs($this->isr - $originalIsr) > 0.01;
         $cancelacionChanged = abs($this->cancelacion_hipoteca - $originalCancelacion) > 0.01;
+        $montoCreditoChanged = abs($this->monto_credito - $originalMontoCredito) > 0.01;
 
-        $needsApproval = $priceChanged || $commissionChanged || $isrChanged || $cancelacionChanged;
+        // Valor convenio no requiere aprobación por sí solo según requerimiento
+        $needsApproval = $commissionChanged || $isrChanged || $cancelacionChanged || $montoCreditoChanged;
 
         // Si es gerencia, puede guardar directamente siempre
         if ($isGerencia || !$needsApproval) {
@@ -211,7 +214,7 @@ class AgreementRecalculationModal extends Component
         }
 
         // Si no es gerencia y hay cambios, requerir aprobación
-        $this->requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $originalPrice, $originalCommission);
+        $this->requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $montoCreditoChanged, $originalPrice, $originalCommission);
     }
 
     protected function performDirectSave()
@@ -255,7 +258,7 @@ class AgreementRecalculationModal extends Component
         $this->redirect(request()->header('Referer'));
     }
 
-    protected function requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $originalPrice, $originalCommission)
+    protected function requestApproval($priceChanged, $commissionChanged, $isrChanged, $cancelacionChanged, $montoCreditoChanged, $originalPrice, $originalCommission)
     {
         // Usar el servicio de validación para crear la solicitud
         $validation = $this->agreement->requestValidation(auth()->id());
@@ -289,7 +292,7 @@ class AgreementRecalculationModal extends Component
         
         Notification::make()
             ->title('📋 Recálculo enviado para autorización')
-            ->body('Los cambios han sido enviados a gerencia para su revisión.')
+            ->body('Los cambios han sido enviados para su revisión y autorización.')
             ->warning()
             ->send();
 
