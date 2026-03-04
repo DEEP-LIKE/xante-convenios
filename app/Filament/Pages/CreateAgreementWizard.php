@@ -609,8 +609,28 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
         // 2. Sincronizar con HubSpot (Push)
         $agreement = Agreement::find($this->agreementId);
         if ($agreement && $agreement->client) {
+            $extraProperties = [];
+            
+            // Si es la primera vez que se oficializa el convenio (precio inicial)
+            // Verificamos si ya pasó por los estados de generación de documentos
+            $hasOfficialPrice = in_array($agreement->status, [
+                'documents_generating', 
+                'documents_generated', 
+                'documents_sent', 
+                'wizard2_in_progress', 
+                'wizard2_completed', 
+                'completed'
+            ]);
+
+            if (!$hasOfficialPrice) {
+                $extraProperties['fecha_cambio_precio_convenio'] = now()->format('Y-m-d');
+            }
+
+            // Siempre marcar la fecha de oferta actual al finalizar el wizard
+            $extraProperties['fecha_cambio_oferta_convenio'] = now()->format('Y-m-d');
+
             $syncAction = app(\App\Actions\Agreements\SyncClientToHubspotAction::class);
-            $syncErrors = $syncAction->execute($agreement, $this->data);
+            $syncErrors = $syncAction->execute($agreement, $this->data, $extraProperties);
 
             // Si hay errores críticos en la sincronización, DETENER el proceso
             if (! empty($syncErrors) && isset($syncErrors['error'])) {

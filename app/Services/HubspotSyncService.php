@@ -166,7 +166,7 @@ class HubspotSyncService
      * Empuja los datos del cliente y su convenio a HubSpot (Contact y Deal)
      * Este es el método principal usado por el Wizard.
      */
-    public function pushClientToHubspot(Client $client, ?Agreement $agreement = null, array $dirtyFields = []): array
+    public function pushClientToHubspot(Client $client, ?Agreement $agreement = null, array $dirtyFields = [], array $extraProperties = []): array
     {
         $result = [
             'deal_updated' => false,
@@ -189,7 +189,7 @@ class HubspotSyncService
 
             // 2. Actualizar Deal
             if ($client->hubspot_deal_id) {
-                $dealUpdate = $this->updateDealInHubspot($client, $agreement, $dirtyFields);
+                $dealUpdate = $this->updateDealInHubspot($client, $agreement, $dirtyFields, $extraProperties);
                 if ($dealUpdate['success']) {
                     $result['deal_updated'] = true;
                 } else {
@@ -366,9 +366,9 @@ class HubspotSyncService
     /**
      * Actualizar Deal en HubSpot
      */
-    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null, array $dirtyFields = []): array
+    private function updateDealInHubspot(Client $client, ?Agreement $agreement = null, array $dirtyFields = [], array $extraProperties = []): array
     {
-        $dealData = $this->mapClientToHubspotDeal($client, $agreement, $dirtyFields);
+        $dealData = $this->mapClientToHubspotDeal($client, $agreement, $dirtyFields, $extraProperties);
 
         if (empty($dealData)) {
             return ['success' => true]; // Nada que actualizar
@@ -380,7 +380,7 @@ class HubspotSyncService
     /**
      * Mapear datos de cliente a formato de Deal de HubSpot
      */
-    private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null, array $dirtyFields = []): array
+    private function mapClientToHubspotDeal(Client $client, ?Agreement $agreement = null, array $dirtyFields = [], array $extraProperties = []): array
     {
         $isDirtySync = ! empty($dirtyFields);
         $dirtyClient = $dirtyFields['client'] ?? [];
@@ -434,12 +434,16 @@ class HubspotSyncService
                 'municipio_propiedad' => $agreement->municipio_propiedad ?? $agreement->wizard_data['municipio_propiedad'] ?? null,
                 'estado_propiedad' => $agreement->estado_propiedad ?? $agreement->wizard_data['estado_propiedad'] ?? null,
 
-                // Datos financieros
-                'valor_convenio' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
-                'precio_promocion' => $agreement->precio_promocion ?? $agreement->wizard_data['precio_promocion'] ?? null,
-                'comision_total_pagar' => $agreement->comision_total_pagar ?? $agreement->wizard_data['comision_total_pagar'] ?? null,
-                'ganancia_final' => $agreement->ganancia_final ?? $agreement->wizard_data['ganancia_final'] ?? null,
+                // Datos financieros (Mapeo corregido: HubSpot usa 'amount' y 'precio_comercial')
+                'amount' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
+                'precio_comercial' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
+                'precio_promocion_xante' => $agreement->precio_promocion ?? $agreement->wizard_data['precio_promocion'] ?? null,
             ]);
+        }
+
+        // Agregar propiedades extra (fechas de cambio, etc.)
+        if (!empty($extraProperties)) {
+            $allData = array_merge($allData, $extraProperties);
         }
 
         // Si es Dirty Sync, filtrar solo los campos que cambiaron
@@ -469,7 +473,15 @@ class HubspotSyncService
                 'etapa' => ['etapa'],
                 'municipio_propiedad' => ['municipio_propiedad'],
                 'estado_propiedad' => ['estado_propiedad'],
+                // Financieros
+                'valor_convenio' => ['amount', 'precio_comercial'],
+                'precio_promocion' => ['precio_promocion_xante'],
             ];
+
+            // Forzar inclusión de extraProperties si vienen en el push
+            foreach ($extraProperties as $key => $value) {
+                $filteredData[$key] = $value;
+            }
 
             foreach ($mapping as $localField => $hubspotFields) {
                 if (array_key_exists($localField, $dirtyClient)) {

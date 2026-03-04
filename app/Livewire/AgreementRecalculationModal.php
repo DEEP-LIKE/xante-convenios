@@ -256,6 +256,19 @@ class AgreementRecalculationModal extends Component
             ->success()
             ->send();
 
+        // Sincronizar con HubSpot proactivamente
+        try {
+            $hubspotService = app(\App\Services\HubspotSyncService::class);
+            $hubspotService->pushClientToHubspot(
+                $this->agreement->client,
+                $this->agreement,
+                [], // No dirty fields, enviaremos todo o lo definido en extraProperties
+                ['fecha_cambio_oferta_convenio' => now()->format('Y-m-d')]
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error sincronizando recálculo a HubSpot: ' . $e->getMessage());
+        }
+
         $this->dispatch('close-modal', id: 'recalculation-modal');
         $this->dispatch('recalculation-saved');
         $this->redirect(request()->header('Referer'));

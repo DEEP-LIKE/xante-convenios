@@ -173,6 +173,19 @@ class QuoteValidation extends Model
                 'calculation_data' => $snapshot,
                 'motivo' => $snapshot['motivo'] ?? $this->latestAuthorization?->discount_reason ?? 'Recálculo autorizado por validación',
             ]);
+
+            // Sincronizar con HubSpot proactivamente
+            try {
+                $hubspotService = app(\App\Services\HubspotSyncService::class);
+                $hubspotService->pushClientToHubspot(
+                    $this->agreement->client,
+                    $this->agreement,
+                    [], // Enviar estado actual completo
+                    ['fecha_cambio_oferta_convenio' => now()->format('Y-m-d')]
+                );
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error sincronizando aprobación de validación a HubSpot: ' . $e->getMessage());
+            }
         }
 
         return $saved;

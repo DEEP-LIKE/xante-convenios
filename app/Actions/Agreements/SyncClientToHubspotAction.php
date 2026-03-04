@@ -17,7 +17,7 @@ class SyncClientToHubspotAction
      * Ejecuta la sincronización hacia HubSpot
      * Retorna un array con los campos no sincronizados (o errores)
      */
-    public function execute(Agreement $agreement, array $wizardData): array
+    public function execute(Agreement $agreement, array $wizardData, array $extraProperties = []): array
     {
         $client = $agreement->client;
         if (! $client || ! $client->hubspot_id) {
@@ -36,7 +36,7 @@ class SyncClientToHubspotAction
         // 2. Ejecutar Push a HubSpot usando el servicio centralizado
         Log::info('Iniciando Push a HubSpot desde Wizard (Dirty Sync)', ['client_id' => $client->id, 'dirty_count' => count($dirtyFields)]);
 
-        $result = $this->hubspotService->pushClientToHubspot($client, $agreement, $dirtyFields);
+        $result = $this->hubspotService->pushClientToHubspot($client, $agreement, $dirtyFields, $extraProperties);
 
         // 3. Procesar resultados
         $errors = $result['errors'] ?? [];
