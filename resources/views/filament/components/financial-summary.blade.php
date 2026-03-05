@@ -24,22 +24,22 @@
     <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between;">
         <div style="flex: 1; min-width: 140px;">
             <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Valor Convenio</span>
-            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format($agreement->currentFinancials['agreement_value'], 2) }}</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format((float) $agreement->currentFinancials['agreement_value'], 2) }}</span>
         </div>
         
         <div style="flex: 1; min-width: 140px;">
             <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Precio Promoción</span>
-            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format($agreement->currentFinancials['proposal_value'], 2) }}</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format((float) $agreement->currentFinancials['proposal_value'], 2) }}</span>
         </div>
 
         <div style="flex: 1; min-width: 140px;">
             <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Comisión Total</span>
-            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format($agreement->currentFinancials['commission_total'], 2) }}</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #111827;">$ {{ number_format((float) $agreement->currentFinancials['commission_total'], 2) }}</span>
         </div>
 
         <div style="flex: 1; min-width: 140px;">
             <span style="display: block; font-size: 0.875rem; font-weight: 500; color: #6b7280; margin-bottom: 0.25rem;">Ganancia Final</span>
-            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #16a34a;">$ {{ number_format($agreement->currentFinancials['final_profit'], 2) }}</span>
+            <span style="display: block; font-size: 1.25rem; font-weight: 700; color: #16a34a;">$ {{ number_format((float) $agreement->currentFinancials['final_profit'], 2) }}</span>
         </div>
     </div>
 

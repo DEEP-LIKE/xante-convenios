@@ -37,18 +37,18 @@
                 
                 <div style="flex: 1; min-width: 140px;">
                     <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #7c3aed; margin-bottom: 0.25rem;">Valor Convenio</span>
-                    <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #111827;">$ {{ number_format($recalc->agreement_value, 2) }}</span>
+                    <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #111827;">$ {{ number_format((float) $recalc->agreement_value, 2) }}</span>
                 </div>
 
                 <div style="flex: 1; min-width: 140px;">
                     <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #7c3aed; margin-bottom: 0.25rem;">Precio Promoción</span>
-                    <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #111827;">$ {{ number_format($recalc->proposal_value, 2) }}</span>
+                    <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #111827;">$ {{ number_format((float) $recalc->proposal_value, 2) }}</span>
                 </div>
 
                 <div style="flex: 1; min-width: 140px;">
                     <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #7c3aed; margin-bottom: 0.25rem;">Ganancia Final</span>
                     <span style="display: block; font-size: 1.125rem; font-weight: 700; color: {{ $recalc->final_profit >= 0 ? '#16a34a' : '#ef4444' }};">
-                        $ {{ number_format($recalc->final_profit, 2) }}
+                        $ {{ number_format((float) $recalc->final_profit, 2) }}
                     </span>
                 </div>
 
@@ -67,21 +67,21 @@
              <div style="flex: 1; min-width: 140px;">
                 <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 0.25rem;">Valor Convenio</span>
                 <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #4b5563;">
-                    $ {{ number_format($original->wizard_data['valor_convenio'] ?? 0, 2) }}
+                    $ {{ number_format((float) ($original->wizard_data['valor_convenio'] ?? 0), 2) }}
                 </span>
             </div>
 
             <div style="flex: 1; min-width: 140px;">
                 <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 0.25rem;">Precio Promoción</span>
                 <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #4b5563;">
-                    $ {{ number_format($original->wizard_data['precio_promocion'] ?? 0, 2) }}
+                    $ {{ number_format((float) ($original->wizard_data['precio_promocion'] ?? 0), 2) }}
                 </span>
             </div>
 
              <div style="flex: 1; min-width: 140px;">
                 <span style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 0.25rem;">Ganancia Final</span>
                 <span style="display: block; font-size: 1.125rem; font-weight: 700; color: #4b5563;">
-                    $ {{ number_format($original->wizard_data['ganancia_final'] ?? 0, 2) }}
+                    $ {{ number_format((float) ($original->wizard_data['ganancia_final'] ?? 0), 2) }}
                 </span>
             </div>
         </div>
