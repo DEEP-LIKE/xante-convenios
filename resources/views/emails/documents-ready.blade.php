@@ -16,11 +16,21 @@
         }
         .header {
             background: linear-gradient(135deg, #6C2582, #7C4794); /* Morado Principal a Morado Medio */
-            color: white;
+            color: #ffffff !important;
             padding: 30px 20px;
             text-align: center;
             border-radius: 12px 12px 0 0;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            color: #ffffff !important;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+        .header p {
+            color: #ffffff !important;
+            font-weight: 600;
+            margin: 0;
         }
         .logo {
             font-family: 'Bitcheese', sans-serif; /* Fuente display para títulos */
@@ -208,7 +218,7 @@
                         $tooLarge = false;
                         try {
                             // Los documentos generados ahora están en S3
-                            $tooLarge = \Storage::disk('s3')->size($document->file_path) > 4 * 1024 * 1024;
+                            $tooLarge = \Storage::disk('s3')->size($document->file_path) > 10 * 1024 * 1024;
                         } catch (\Exception $e) {
                             \Log::warning('Error checking file size in email view', ['path' => $document->file_path, 'error' => $e->getMessage()]);
                         }

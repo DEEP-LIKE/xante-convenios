@@ -260,7 +260,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                             if (! $this->agreement->documents_received_at) {
                                 try {
                                     $this->agreement->update([
-                                        'status' => 'completed',
+                                        'status' => 'completado',
                                         'documents_received_at' => now(),
                                         'completion_percentage' => 100,
                                         'wizard2_current_step' => 3,

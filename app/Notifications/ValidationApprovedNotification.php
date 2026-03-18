@@ -31,15 +31,23 @@ class ValidationApprovedNotification extends Notification implements ShouldQueue
                 ->line('La validación solicitada ya no está disponible.');
         }
 
+        $roleLabel = match ($notifiable->role) {
+            'gerencia' => 'Administrador',
+            'coordinador_fi' => 'Coordinador FI',
+            'ejecutivo' => 'Asesor',
+            default => 'Usuario',
+        };
+
         return (new MailMessage)
             ->subject('✓ Validación Aprobada - Convenio #'.$validation->agreement_id)
-            ->greeting('¡Excelente noticia, '.$notifiable->name.'!')
+            ->greeting('¡Excelente noticia, '.$roleLabel.'!')
             ->line('Tu calculadora ha sido **aprobada** por el Coordinador FI.')
             ->line('**Convenio ID:** #'.$validation->agreement_id)
             ->line('**Aprobado por:** '.$validation->validatedBy->name)
             ->line('**Fecha:** '.$validation->validated_at->format('d/m/Y H:i'))
             ->action('Continuar con el Convenio', url('/wizard/'.$validation->agreement_id))
-            ->line('Ya puedes continuar con la generación de documentos.');
+            ->line('Ya puedes continuar con la generación de documentos.')
+            ->salutation('Saludos, Xante');
     }
 
     public function toDatabase(object $notifiable): array

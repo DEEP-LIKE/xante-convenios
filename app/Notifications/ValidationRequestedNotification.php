@@ -32,15 +32,23 @@ class ValidationRequestedNotification extends Notification implements ShouldQueu
                 ->line('La validación solicitada ya no está disponible.');
         }
 
+        $roleLabel = match ($notifiable->role) {
+            'gerencia' => 'Administrador',
+            'coordinador_fi' => 'Coordinador FI',
+            'ejecutivo' => 'Asesor',
+            default => 'Usuario',
+        };
+
         return (new MailMessage)
             ->subject('Nueva Validación Pendiente - Convenio #'.$validation->agreement_id)
-            ->greeting('¡Hola '.$notifiable->name.'!')
+            ->greeting('¡Hola '.$roleLabel.'!')
             ->line('Hay una nueva calculadora pendiente de validación.')
             ->line('**Ejecutivo:** '.$validation->requestedBy->name)
             ->line('**Convenio ID:** #'.$validation->agreement_id)
             ->line('**Revisión:** #'.$validation->revision_number)
-            ->action('Revisar Validación', url('/admin/quote-validations/'.$validation->id.'/view'))
-            ->line('Por favor revisa los cálculos y aprueba o solicita cambios.');
+            ->action('Revisar Validación', url('/admin/quote-validations/'.$validation->id.'/edit'))
+            ->line('Por favor revisa los cálculos y aprueba o solicita cambios.')
+            ->salutation('Saludos, Xante');
     }
 
     public function toArray(object $notifiable): array

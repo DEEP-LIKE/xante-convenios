@@ -248,32 +248,44 @@ class Agreement extends Model
 
         if ($latest) {
             return [
-                'agreement_value' => $latest->agreement_value,
-                'proposal_value' => $latest->proposal_value,
-                'commission_total' => $latest->commission_total,
-                'final_profit' => $latest->final_profit,
-                'is_recalculated' => true,
-                'recalculation_date' => $latest->created_at,
                 'recalculation_number' => $latest->recalculation_number,
-                'motivo' => $latest->motivo,
+                'recalculation_date' => $latest->created_at,
                 'user' => $latest->user,
+                'agreement_value' => (float) str_replace([',', '$', ' ', 'MXN'], '', $latest->agreement_value),
+                'proposal_value' => (float) str_replace([',', '$', ' ', 'MXN'], '', $latest->proposal_value),
+                'commission_total' => (float) str_replace([',', '$', ' ', 'MXN'], '', $latest->commission_total),
+                'final_profit' => (float) str_replace([',', '$', ' ', 'MXN'], '', $latest->final_profit),
+                'motivo' => $latest->motivo,
+                'calculation_data' => $latest->calculation_data,
                 'authorized_by' => $latest->authorized_by,
                 'authorized_user' => $latest->authorizedBy,
+                'is_recalculated' => true,
             ];
         }
 
+        // Si no hay recálculo, usar datos base
         $wizardData = $this->wizard_data ?? [];
+        $toMatch = ['agreement_value' => 'valor_convenio', 'proposal_value' => 'precio_promocion', 'commission_total' => 'comision_total_pagar', 'final_profit' => 'ganancia_final'];
+        $data = [];
+
+        foreach ($toMatch as $key => $wizardKey) {
+            $val = $this->$wizardKey > 0 ? $this->$wizardKey : ($wizardData[$wizardKey] ?? 0);
+            $data[$key] = (float) str_replace([',', '$', ' ', 'MXN'], '', (string) $val);
+        }
 
         return [
-            'agreement_value' => $this->agreement_value > 0 ? $this->agreement_value : ($wizardData['valor_convenio'] ?? 0),
-            'proposal_value' => $this->proposal_value > 0 ? $this->proposal_value : ($wizardData['precio_promocion'] ?? 0),
-            'commission_total' => $this->commission_total > 0 ? $this->commission_total : ($wizardData['comision_total_pagar'] ?? 0),
-            'final_profit' => $this->final_profit != 0 ? $this->final_profit : ($wizardData['ganancia_final'] ?? 0),
             'is_recalculated' => false,
+            'agreement_value' => $data['agreement_value'],
+            'proposal_value' => $data['proposal_value'],
+            'commission_total' => $data['commission_total'],
+            'final_profit' => $data['final_profit'],
+            'user' => $this->createdBy,
             'recalculation_date' => null,
             'recalculation_number' => 0,
             'motivo' => null,
-            'user' => null,
+            'authorized_by' => null,
+            'authorized_user' => null,
+            'calculation_data' => null,
         ];
     }
 
@@ -466,8 +478,9 @@ class Agreement extends Model
 
         // Helper para sanitizar valores numéricos (convertir strings formateados a float)
         $toFloat = function ($value) {
+            if (is_numeric($value)) return (float) $value;
             if (is_string($value)) {
-                return (float) str_replace([',', '$', ' '], '', $value);
+                return (float) str_replace([',', '$', ' ', 'MXN'], '', $value);
             }
 
             return (float) ($value ?? 0);

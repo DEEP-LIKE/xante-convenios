@@ -57,11 +57,11 @@ class DocumentsReadyMail extends Mailable
                 'clientName' => $this->agreement->wizard_data['holder_name'] ?? 'Cliente',
                 'propertyAddress' => $this->agreement->wizard_data['domicilio_convenio'] ?? 'N/A',
                 'valorConvenio' => number_format(
-                    floatval(str_replace(',', '', $this->agreement->wizard_data['valor_convenio'] ?? 0)),
+                    $this->agreement->current_financials['agreement_value'] ?? 0,
                     2
                 ),
                 'gananciaFinal' => number_format(
-                    floatval(str_replace(',', '', $this->agreement->wizard_data['ganancia_final'] ?? 0)),
+                    $this->agreement->current_financials['final_profit'] ?? 0,
                     2
                 ),
             ]
@@ -78,8 +78,8 @@ class DocumentsReadyMail extends Mailable
                 'documents_count' => $this->agreement->generatedDocuments->count(),
             ]);
 
-            // Adjuntar documentos PDF generados (solo archivos menores a 4MB)
-            $maxFileSize = 4 * 1024 * 1024; // 4MB en bytes
+            // Adjuntar documentos PDF generados (solo archivos menores a 10MB)
+            $maxFileSize = 10 * 1024 * 1024; // 10MB en bytes
             $totalSize = 0;
             $attachedCount = 0;
 

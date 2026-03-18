@@ -51,6 +51,7 @@
                                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
                                     <span style="position: absolute; right: 0.5rem; top: 0.5rem; color: #9ca3af; font-size: 0.875rem;">%</span>
                                 </div>
+                                @error('porcentaje_comision_sin_iva') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- Monto Crédito -->
@@ -61,6 +62,7 @@
                                     <input type="number" step="0.01" wire:model.live.debounce.500ms="monto_credito" 
                                            style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
                                 </div>
+                                @error('monto_credito') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- ISR -->
@@ -71,6 +73,7 @@
                                     <input type="number" step="0.01" wire:model.live.debounce.500ms="isr" 
                                            style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
                                 </div>
+                                @error('isr') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- Cancelación Hipoteca -->
@@ -81,6 +84,7 @@
                                     <input type="number" step="0.01" wire:model.live.debounce.500ms="cancelacion_hipoteca" 
                                            style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.25rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem;">
                                 </div>
+                                @error('cancelacion_hipoteca') <span style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: block;">{{ $message }}</span> @enderror
                             </div>
                         </div>
 

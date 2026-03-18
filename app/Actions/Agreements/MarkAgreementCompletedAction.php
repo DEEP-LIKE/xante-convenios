@@ -17,7 +17,7 @@ class MarkAgreementCompletedAction
     {
         try {
             $agreement->update([
-                'status' => 'completed',
+                'status' => 'completado',
                 'completed_at' => now(),
                 'wizard2_current_step' => 3,
                 'completion_percentage' => 100,

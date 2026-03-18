@@ -170,10 +170,19 @@ class AgreementRecalculationModal extends Component
 
     public function save()
     {
-        // Sanitizar antes de guardar
-        $this->valor_convenio = (float) str_replace(['$', ','], '', $this->valor_convenio);
+        // Limpiar formatos antes de validar (muy importante para evitar fallos de validación numeric)
+        $this->valor_convenio = (float) str_replace(['$', ',', ' ', 'MXN'], '', (string)$this->valor_convenio);
+        $this->porcentaje_comision_sin_iva = (float) str_replace(['$', ',', ' ', 'MXN'], '', (string)$this->porcentaje_comision_sin_iva);
+        $this->monto_credito = (float) str_replace(['$', ',', ' ', 'MXN'], '', (string)$this->monto_credito);
+        $this->isr = (float) str_replace(['$', ',', ' ', 'MXN'], '', (string)$this->isr);
+        $this->cancelacion_hipoteca = (float) str_replace(['$', ',', ' ', 'MXN'], '', (string)$this->cancelacion_hipoteca);
 
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::error('Validación de recálculo falló', ['errors' => $e->errors()]);
+            throw $e;
+        }
 
         if ($this->final_profit < 0) {
             Notification::make()
