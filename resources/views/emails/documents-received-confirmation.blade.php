@@ -24,7 +24,7 @@
             text-align: center;
             margin-bottom: 30px;
             padding: 20px;
-            background: linear-gradient(135deg, #6C2582 0%, #7C4794 100%);
+            background: #6C2582;
             border-radius: 8px;
             color: white;
         }
