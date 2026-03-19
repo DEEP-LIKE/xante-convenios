@@ -45,7 +45,7 @@ class ValidationApprovedNotification extends Notification implements ShouldQueue
             ->line('**Convenio ID:** #'.$validation->agreement_id)
             ->line('**Aprobado por:** '.$validation->validatedBy->name)
             ->line('**Fecha:** '.$validation->validated_at->format('d/m/Y H:i'))
-            ->action('Continuar con el Convenio', url('/wizard/'.$validation->agreement_id))
+            ->action('Continuar con el Convenio', url('/admin/convenios/crear?agreement='.$validation->agreement_id.'&step=form.data%3A%3Awizard.validacion%3A%3Adata%3A%3Awizard-step'))
             ->line('Ya puedes continuar con la generación de documentos.')
             ->salutation('Saludos, Xante');
     }
@@ -69,7 +69,7 @@ class ValidationApprovedNotification extends Notification implements ShouldQueue
             ->actions([
                 \Filament\Notifications\Actions\Action::make('view')
                     ->label('Ver Convenio')
-                    ->url(url('/admin/convenios/crear?agreement='.$validation->agreement_id), shouldOpenInNewTab: true),
+                    ->url(url('/admin/convenios/crear?agreement='.$validation->agreement_id.'&step=form.data%3A%3Awizard.validacion%3A%3Adata%3A%3Awizard-step'), shouldOpenInNewTab: true),
             ])
             ->getDatabaseMessage();
     }
