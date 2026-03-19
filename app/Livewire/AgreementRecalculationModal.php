@@ -260,6 +260,14 @@ class AgreementRecalculationModal extends Component
             'motivo' => $this->motivo,
         ]);
 
+        // Sincronizar columnas en el modelo Agreement para que el "Cálculo Original" bubble y accesores funcionen bien
+        $this->agreement->update([
+            'agreement_value' => $this->valor_convenio,
+            'proposal_value' => $this->precio_promocion,
+            'commission_total' => $this->commission_total,
+            'final_profit' => $this->final_profit,
+        ]);
+
         Notification::make()
             ->title('✓ Recálculo guardado exitosamente')
             ->success()

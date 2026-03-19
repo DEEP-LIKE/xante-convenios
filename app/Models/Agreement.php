@@ -112,6 +112,11 @@ class Agreement extends Model
         'final_price_authorization_id',
         'final_offer_price',
         'co_borrower_id',
+        // Real financial columns (from DB)
+        'agreement_value',
+        'proposal_value',
+        'commission_total',
+        'final_profit',
     ];
 
     protected function casts(): array
@@ -265,12 +270,31 @@ class Agreement extends Model
 
         // Si no hay recálculo, usar datos base
         $wizardData = $this->wizard_data ?? [];
-        $toMatch = ['agreement_value' => 'valor_convenio', 'proposal_value' => 'precio_promocion', 'commission_total' => 'comision_total_pagar', 'final_profit' => 'ganancia_final'];
-        $data = [];
+        
+        // Mapeo entre claves del sistema y (Columna DB => Clave Wizard)
+        $toMatch = [
+            'agreement_value' => ['col' => 'agreement_value', 'wiz' => 'valor_convenio'],
+            'proposal_value' => ['col' => 'proposal_value', 'wiz' => 'precio_promocion'],
+            'commission_total' => ['col' => 'commission_total', 'wiz' => 'comision_total_pagar'],
+            'final_profit' => ['col' => 'final_profit', 'wiz' => 'ganancia_final'],
+        ];
 
-        foreach ($toMatch as $key => $wizardKey) {
-            $val = $this->$wizardKey > 0 ? $this->$wizardKey : ($wizardData[$wizardKey] ?? 0);
-            $data[$key] = (float) str_replace([',', '$', ' ', 'MXN'], '', (string) $val);
+        $data = [];
+        $toFloat = function ($value) {
+            if (is_numeric($value)) return (float) $value;
+            if (is_string($value)) {
+                return (float) str_replace([',', '$', ' ', 'MXN'], '', $value);
+            }
+            return (float) ($value ?? 0);
+        };
+
+        foreach ($toMatch as $key => $keys) {
+            $col = $keys['col'];
+            $wiz = $keys['wiz'];
+            
+            // Prioridad: Columna DB > Wizard Data
+            $val = ($this->$col > 0) ? $this->$col : ($wizardData[$wiz] ?? 0);
+            $data[$key] = $toFloat($val);
         }
 
         return [

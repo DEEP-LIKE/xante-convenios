@@ -60,11 +60,29 @@ class SaveWizardStepAction
 
             // Actualizar datos del convenio
             try {
-                $updated = $agreement->update([
+                $updateData = [
                     'current_step' => $step,
                     'wizard_data' => $data,
                     'updated_at' => now(),
-                ]);
+                ];
+
+                // Sincronizar columnas financieras si estamos en el paso 4 (Calculadora)
+                if ($step >= 4) {
+                    $toFloat = function ($value) {
+                        if (is_numeric($value)) return (float) $value;
+                        if (is_string($value)) {
+                            return (float) str_replace([',', '$', ' ', 'MXN'], '', $value);
+                        }
+                        return (float) ($value ?? 0);
+                    };
+
+                    $updateData['agreement_value'] = $toFloat($data['valor_convenio'] ?? 0);
+                    $updateData['proposal_value'] = $toFloat($data['precio_promocion'] ?? 0);
+                    $updateData['commission_total'] = $toFloat($data['comision_total_pagar'] ?? 0);
+                    $updateData['final_profit'] = $toFloat($data['ganancia_final'] ?? 0);
+                }
+
+                $updated = $agreement->update($updateData);
             } catch (\Exception $e) {
                 Notification::make()
                     ->title('⚠️ Error de guardado')

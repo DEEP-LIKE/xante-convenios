@@ -435,9 +435,9 @@ class HubspotSyncService
                 'estado_propiedad' => $agreement->estado_propiedad ?? $agreement->wizard_data['estado_propiedad'] ?? null,
 
                 // Datos financieros (Mapeo corregido: HubSpot usa 'amount' y 'precio_comercial')
-                'amount' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
-                'precio_comercial' => $agreement->valor_convenio ?? $agreement->wizard_data['valor_convenio'] ?? null,
-                'precio_promocion_xante' => $agreement->precio_promocion ?? $agreement->wizard_data['precio_promocion'] ?? null,
+                'amount' => $agreement->agreement_value ?? $agreement->wizard_data['valor_convenio'] ?? null,
+                'precio_comercial' => $agreement->agreement_value ?? $agreement->wizard_data['valor_convenio'] ?? null,
+                'precio_promocion_xante' => $agreement->proposal_value ?? $agreement->wizard_data['precio_promocion'] ?? null,
             ]);
         }
 
@@ -474,8 +474,8 @@ class HubspotSyncService
                 'municipio_propiedad' => ['municipio_propiedad'],
                 'estado_propiedad' => ['estado_propiedad'],
                 // Financieros
-                'valor_convenio' => ['amount', 'precio_comercial'],
-                'precio_promocion' => ['precio_promocion_xante'],
+                'agreement_value' => ['amount', 'precio_comercial'],
+                'proposal_value' => ['precio_promocion_xante'],
             ];
 
             // Forzar inclusión de extraProperties si vienen en el push

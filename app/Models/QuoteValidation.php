@@ -158,6 +158,11 @@ class QuoteValidation extends Model
                 'validation_status' => 'approved',
                 'can_generate_documents' => true,
                 'wizard_data' => array_merge($currentWizardData, $updates),
+                // Sincronizar columnas reales de la base de datos
+                'agreement_value' => $updates['valor_convenio'],
+                'proposal_value' => $updates['precio_promocion'],
+                'commission_total' => $updates['comision_total_pagar'],
+                'final_profit' => $updates['ganancia_final'],
             ]);
 
             // Crear registro en el historial de recálculos
