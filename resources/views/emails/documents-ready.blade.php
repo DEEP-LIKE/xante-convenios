@@ -15,7 +15,7 @@
             background-color: #f4f4f4; /* Fondo ligero */
         }
         .header {
-            background: linear-gradient(135deg, #6C2582, #7C4794); /* Morado Principal a Morado Medio */
+            background: #6C2582; /* Morado Principal a Morado Medio */
             color: #ffffff !important;
             padding: 30px 20px;
             text-align: center;

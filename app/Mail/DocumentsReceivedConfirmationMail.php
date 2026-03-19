@@ -34,7 +34,6 @@ class DocumentsReceivedConfirmationMail extends Mailable
     {
         return new Envelope(
             subject: '🎉 Convenio Completado - Documentos Recibidos Satisfactoriamente',
-            from: 'hello@xante.mx',
         );
     }
 
