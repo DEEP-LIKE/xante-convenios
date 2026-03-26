@@ -66,6 +66,21 @@ class SaveWizardStepAction
                     'updated_at' => now(),
                 ];
 
+                // Sincronizar columnas de propiedad si estamos en el paso 3 o superior
+                if ($step >= 3) {
+                    $propertyFields = [
+                        'domicilio_convenio', 'comunidad', 'tipo_vivienda', 'prototipo',
+                        'lote', 'manzana', 'etapa', 'municipio_propiedad', 'estado_propiedad',
+                        'hipotecado', 'tipo_hipoteca', 'niveles',
+                    ];
+                    // Solo sincronizar campos que existan en $fillable del Agreement
+                    foreach ($propertyFields as $field) {
+                        if (isset($data[$field])) {
+                            $updateData[$field] = $data[$field];
+                        }
+                    }
+                }
+
                 // Sincronizar columnas financieras si estamos en el paso 4 (Calculadora)
                 if ($step >= 4) {
                     $toFloat = function ($value) {

@@ -46,6 +46,31 @@ class StepThreeSchema
                     ])
                     ->collapsible(),
 
+                Section::make('HIPOTECA Y CARACTERÍSTICAS')
+                    ->description('Información sobre hipoteca y características de la vivienda')
+                    ->schema([
+                        Grid::make(3)
+                            ->schema([
+                                \Filament\Forms\Components\Select::make('hipotecado')
+                                    ->label('¿Hipotecada?')
+                                    ->options([
+                                        'Sí' => 'Sí',
+                                        'No' => 'No',
+                                    ])
+                                    ->searchable()
+                                    ->live(),
+                                TextInput::make('tipo_hipoteca')
+                                    ->label('Tipo de Hipoteca')
+                                    ->maxLength(100)
+                                    ->placeholder('Ej: Infonavit, Bancaria, etc.')
+                                    ->visible(fn (callable $get) => $get('hipotecado') === 'Sí'),
+                                TextInput::make('niveles')
+                                    ->label('Niveles de la Casa')
+                                    ->maxLength(50),
+                            ]),
+                    ])
+                    ->collapsible(),
+
                 Section::make('DATOS ADICIONALES')
                     ->description('Información complementaria de la propiedad')
                     ->schema([

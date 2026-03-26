@@ -76,6 +76,9 @@ class PreloadClientDataAction
         $set('etapa', $client->etapa);
         $set('municipio_propiedad', $client->municipio_propiedad);
         $set('estado_propiedad', $client->estado_propiedad);
+        $set('hipotecado', $client->hipotecado);
+        $set('tipo_hipoteca', $client->tipo_hipoteca);
+        $set('niveles', $client->niveles);
 
         // Precargar propuesta financiera si existe (Paso 4)
         $proposalService = app(\App\Services\ProposalPreloadService::class);

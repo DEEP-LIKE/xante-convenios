@@ -104,6 +104,20 @@ class WizardStateManager
                 $data['municipality'] = $client->municipality;
                 $data['state'] = $client->state;
 
+                // Precargar datos de la propiedad desde el Cliente
+                $data['domicilio_convenio'] = $client->domicilio_convenio;
+                $data['comunidad'] = $client->comunidad;
+                $data['tipo_vivienda'] = $client->tipo_vivienda;
+                $data['prototipo'] = $client->prototipo;
+                $data['lote'] = $client->lote;
+                $data['manzana'] = $client->manzana;
+                $data['etapa'] = $client->etapa;
+                $data['municipio_propiedad'] = $client->municipio_propiedad;
+                $data['estado_propiedad'] = $client->estado_propiedad;
+                $data['hipotecado'] = $client->hipotecado;
+                $data['tipo_hipoteca'] = $client->tipo_hipoteca;
+                $data['niveles'] = $client->niveles;
+
                 // Precargar datos del cónyuge si existe
                 if ($client->spouse) {
                     $data['spouse_name'] = $client->spouse->name;
@@ -117,28 +131,27 @@ class WizardStateManager
                     $data['spouse_state'] = $client->spouse->state;
                 }
 
-                // --- NUEVO: Precargar datos de Propiedad y Financieros desde el último convenio ---
+                // --- Precargar datos de Propiedad y Financieros desde el último convenio ---
                 $latestAgreement = \App\Models\Agreement::where('client_id', $client->id)
                     ->latest()
                     ->first();
 
                 if ($latestAgreement && ! empty($latestAgreement->wizard_data)) {
-                    // Mezclar datos del convenio (Propiedad, Financieros) con los datos actuales
-                    // Usamos array_merge para que los datos del convenio NO sobrescriban los del cliente
-                    // (aunque en teoría son complementarios)
                     $agreementData = $latestAgreement->wizard_data;
 
                     // Filtrar solo campos relevantes para evitar sobrescribir IDs o datos sensibles
                     $allowedFields = [
                         // Propiedad
-                        'property_address', 'community', 'housing_type', 'prototype',
-                        'lot', 'block', 'stage', 'property_municipality', 'property_state',
+                        'domicilio_convenio', 'comunidad', 'tipo_vivienda', 'prototipo',
+                        'lote', 'manzana', 'etapa', 'municipio_propiedad', 'estado_propiedad',
+                        'hipotecado', 'tipo_hipoteca', 'niveles',
                         // Financieros
-                        'agreement_value', 'promotion_price', 'total_commission', 'final_profit',
+                        'valor_convenio', 'precio_promocion', 'comision_total_pagar', 'ganancia_final',
                     ];
 
                     foreach ($allowedFields as $field) {
-                        if (isset($agreementData[$field]) && ! empty($agreementData[$field])) {
+                        // Solo sobrescribir si el dato del convenio existe y el campo aún está vacío
+                        if (isset($agreementData[$field]) && ! empty($agreementData[$field]) && empty($data[$field])) {
                             $data[$field] = $agreementData[$field];
                         }
                     }

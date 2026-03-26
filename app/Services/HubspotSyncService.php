@@ -434,6 +434,10 @@ class HubspotSyncService
                 'municipio_propiedad' => $agreement->municipio_propiedad ?? $agreement->wizard_data['municipio_propiedad'] ?? null,
                 'estado_propiedad' => $agreement->estado_propiedad ?? $agreement->wizard_data['estado_propiedad'] ?? null,
 
+                // Datos de hipoteca
+                'hipotecada' => $agreement->hipotecado ?? $agreement->wizard_data['hipotecado'] ?? null,
+                'tipo_de_hipoteca' => $agreement->tipo_hipoteca ?? $agreement->wizard_data['tipo_hipoteca'] ?? null,
+
                 // Datos financieros (Mapeo corregido: HubSpot usa 'amount' y 'precio_comercial')
                 'amount' => $agreement->agreement_value ?? $agreement->wizard_data['valor_convenio'] ?? null,
                 'precio_comercial' => $agreement->agreement_value ?? $agreement->wizard_data['valor_convenio'] ?? null,
@@ -473,6 +477,9 @@ class HubspotSyncService
                 'etapa' => ['etapa'],
                 'municipio_propiedad' => ['municipio_propiedad'],
                 'estado_propiedad' => ['estado_propiedad'],
+                // Hipoteca
+                'hipotecado' => ['hipotecada'],
+                'tipo_hipoteca' => ['tipo_de_hipoteca'],
                 // Financieros
                 'agreement_value' => ['amount', 'precio_comercial'],
                 'proposal_value' => ['precio_promocion_xante'],
