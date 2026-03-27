@@ -30,8 +30,9 @@ class EditQuoteValidation extends EditRecord
                         )
                     ))
                 ->action(function () {
-                    // Guardar primero por si hubo cambios menores no detectados (aunque debería estar bloqueado)
-                    $this->save();
+                    // NO llamar $this->save() aquí - los campos con formatStateUsing() escriben
+                    // strings formateados (ej: "2,000,000.00") al snapshot, corrompiendo los datos numéricos.
+                    // La aprobación debe trabajar con el snapshot original intacto.
 
                     app(\App\Services\ValidationService::class)->approveValidation($this->record, auth()->user());
 

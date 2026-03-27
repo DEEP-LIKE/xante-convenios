@@ -700,6 +700,13 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
             auth()->user()
         );
 
+        // Recargar datos del agreement desde la BD para que el resumen financiero
+        // muestre los valores actualizados por approve()
+        $agreement->refresh();
+        $freshWizardData = $agreement->wizard_data ?? [];
+        $this->data = array_merge($this->data, $freshWizardData);
+        $this->form->fill($this->data);
+
         Notification::make()
             ->title('Convenio Aprobado')
             ->success()

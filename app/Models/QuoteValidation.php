@@ -146,7 +146,7 @@ class QuoteValidation extends Model
                 'isr' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['isr'] ?? 0),
                 'cancelacion_hipoteca' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['cancelacion_hipoteca'] ?? 0),
                 'monto_comision_sin_iva' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['monto_comision_sin_iva'] ?? 0),
-                'comision_total_pagar' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['comision_total_pagar'] ?? 0),
+                'comision_total_pagar' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['comision_total_pagar'] ?? $snapshot['comision_total'] ?? 0),
                 'ganancia_final' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['ganancia_final'] ?? 0),
                 'total_gastos_fi_venta' => (float) str_replace([',', '$', ' ', 'MXN'], '', $snapshot['total_gastos_fi_venta'] ?? 0),
                 'state_commission_percentage' => (float) ($snapshot['multiplicador_estado'] ?? 0),
