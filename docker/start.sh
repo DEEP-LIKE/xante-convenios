@@ -37,11 +37,12 @@ else
     echo "⚠️  ADVERTENCIA: No se pudo conectar a la base de datos."
 fi
 
-# 5. Cachear configuración si no existe (Acelera el primer arranque)
-if [ ! -f /var/www/html/bootstrap/cache/config.php ]; then
-    echo "📦 Generando caché de configuración..."
-    sudo -u www-data php /var/www/html/artisan optimize
-fi
+# 5. Forzar la generación de caché de configuración al arrancar
+# Esto es vital para que Laravel reconozca el .env que montamos en el deploy
+echo "📦 Generando caché de configuración fresca..."
+sudo -u www-data php /var/www/html/artisan config:clear
+sudo -u www-data php /var/www/html/artisan optimize
+
 
 # 6. Ejecutar Supervisor en primer plano
 # NOTA: Supervisor debe manejar Apache y los Workers de Laravel
