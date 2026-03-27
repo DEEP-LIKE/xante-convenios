@@ -14,30 +14,28 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agreements', function (Blueprint $table) {
-            // Solo agregar columnas que no existan ya
-            if (! Schema::hasColumn('agreements', 'lote')) {
-                $table->string('lote')->nullable()->after('prototipo');
-            }
-            if (! Schema::hasColumn('agreements', 'manzana')) {
-                $table->string('manzana')->nullable()->after('lote');
-            }
-            if (! Schema::hasColumn('agreements', 'etapa')) {
-                $table->string('etapa')->nullable()->after('manzana');
-            }
-            if (! Schema::hasColumn('agreements', 'municipio_propiedad')) {
-                $table->string('municipio_propiedad')->nullable()->after('etapa');
-            }
-            if (! Schema::hasColumn('agreements', 'estado_propiedad')) {
-                $table->string('estado_propiedad')->nullable()->after('municipio_propiedad');
-            }
-            if (! Schema::hasColumn('agreements', 'hipotecado')) {
-                $table->string('hipotecado')->nullable()->after('estado_propiedad');
-            }
-            if (! Schema::hasColumn('agreements', 'tipo_hipoteca')) {
-                $table->string('tipo_hipoteca')->nullable()->after('hipotecado');
-            }
-            if (! Schema::hasColumn('agreements', 'niveles')) {
-                $table->string('niveles')->nullable()->after('tipo_hipoteca');
+            $afterColumn = 'wizard_data';
+
+            $columns = [
+                'domicilio_convenio',
+                'comunidad',
+                'tipo_vivienda',
+                'prototipo',
+                'lote',
+                'manzana',
+                'etapa',
+                'municipio_propiedad',
+                'estado_propiedad',
+                'hipotecado',
+                'tipo_hipoteca',
+                'niveles',
+            ];
+
+            foreach ($columns as $column) {
+                if (! Schema::hasColumn('agreements', $column)) {
+                    $table->string($column)->nullable()->after($afterColumn);
+                    $afterColumn = $column; // Mantiene el orden
+                }
             }
         });
     }
@@ -49,9 +47,9 @@ return new class extends Migration
     {
         Schema::table('agreements', function (Blueprint $table) {
             $columns = [
-                'lote', 'manzana', 'etapa',
-                'municipio_propiedad', 'estado_propiedad',
-                'hipotecado', 'tipo_hipoteca', 'niveles',
+                'domicilio_convenio', 'comunidad', 'tipo_vivienda', 'prototipo',
+                'lote', 'manzana', 'etapa', 'municipio_propiedad', 
+                'estado_propiedad', 'hipotecado', 'tipo_hipoteca', 'niveles',
             ];
 
             foreach ($columns as $column) {
