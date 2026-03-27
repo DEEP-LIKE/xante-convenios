@@ -47,7 +47,7 @@ class SyncHubspotClientsJob implements ShouldQueue
         Cache::put('hubspot_sync_started_at', now(), 600);
 
         try {
-            $syncService = new HubspotSyncService;
+            $syncService = app(HubspotSyncService::class);
 
             // Verificar conexión primero
             $connectionTest = $syncService->testConnection();
