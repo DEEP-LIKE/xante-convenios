@@ -84,7 +84,7 @@ class HubspotSuite extends Command
     {
         $this->info('🧪 Probando Integración General...');
 
-        $syncService = new HubspotSyncService;
+        $syncService = app(HubspotSyncService::class);
 
         // 1. Configuración
         $this->info("\n1️⃣ Verificando configuración...");
@@ -157,11 +157,17 @@ class HubspotSuite extends Command
 
         // Estrategia 1: Propiedades
         $this->info("\n📦 Analizando propiedades del Deal...");
-        $response = Http::withToken($this->token)->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}");
+        $syncProperties = implode(',', config('hubspot.deal_sync.properties'));
+        $response = Http::withToken($this->token)->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}?properties={$syncProperties}");
+        
         if ($response->successful()) {
             $props = $response->json()['properties'] ?? [];
             $this->line('   • Nombre: '.($props['dealname'] ?? 'N/A'));
             $this->line('   • Monto: '.($props['amount'] ?? 'N/A'));
+            $this->line('   • Estatus Convenio (estatus_de_convenio): '.($props['estatus_de_convenio'] ?? '⚠️  VACÍO'));
+            $this->line('   • Domicilio Actual: '.($props['domicilio_actual'] ?? '⚠️  VACÍO'));
+            $this->line('   • Nombre del Desarrollo: '.($props['nombre_del_desarrollo'] ?? '⚠️  VACÍO'));
+            $this->line('   • Calle/Privada: '.($props['calle_o_privada_'] ?? '⚠️  VACÍO'));
 
             // Buscar campos de contacto ocultos
             $contactFields = [];
@@ -186,7 +192,30 @@ class HubspotSuite extends Command
             if ($results) {
                 $this->info('   ✅ '.count($results).' asociaciones encontradas.');
                 foreach ($results as $assoc) {
-                    $this->line('     - Contact ID: '.($assoc['id'] ?? $assoc['toObjectId']));
+                    $contactId = $assoc['id'] ?? $assoc['toObjectId'];
+                    $this->line("     - Contact ID: {$contactId}");
+                    
+                    // Verificamos propiedades del contacto
+                    $contactPropsToFetch = implode(',', [
+                        'firstname', 'lastname', 'email', 'xante_id', 'xante_client_id', 'id_xante', 'client_xante_id'
+                    ]);
+                    $contactResp = Http::withToken($this->token)->get($this->baseUrl."/crm/v3/objects/contacts/{$contactId}?properties={$contactPropsToFetch}");
+                    if ($contactResp->successful()) {
+                        $cProps = $contactResp->json()['properties'] ?? [];
+                        $this->line("       • Email: ".($cProps['email'] ?? 'N/A'));
+                        
+                        // Verificar Xante IDs
+                        $foundId = null;
+                        foreach (['xante_id', 'xante_client_id', 'id_xante', 'client_xante_id'] as $f) {
+                            if (!empty($cProps[$f])) {
+                                $this->line("       • ID Encontrado ({$f}): {$cProps[$f]}");
+                                $foundId = $cProps[$f];
+                            }
+                        }
+                        if (!$foundId) {
+                            $this->warn("       ⚠️  No se encontró ningún ID de Xante en este contacto.");
+                        }
+                    }
                 }
             } else {
                 $this->warn('   ⚠️  Sin asociaciones directas.');

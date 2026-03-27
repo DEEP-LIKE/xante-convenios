@@ -302,6 +302,20 @@
                     <span class="property-label">Precio de venta:</span>
                     <span class="property-value">${{ number_format($precio_promocion ?? 0, 2, '.', ',') }}</span>
                 </div>
+                <div class="property-data">
+                    <span class="property-label">Municipio:</span>
+                    <span class="property-value">{{ $municipio_propiedad ?? '' }}</span>
+                </div>
+                <div class="property-data">
+                    <span class="property-label">Estado:</span>
+                    <span class="property-value">{{ $estado_propiedad ?? '' }}</span>
+                </div>
+                @if(!empty($hipotecado))
+                <div class="property-data">
+                    <span class="property-label">Hipotecada:</span>
+                    <span class="property-value">{{ $hipotecado }}</span>
+                </div>
+                @endif
                 <div class="date-box">
                     <span class="date-value">{{ $day ?? '__' }}</span> de 
                     <span class="date-value">{{ $month ?? '__________' }}</span> del 

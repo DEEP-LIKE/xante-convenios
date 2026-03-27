@@ -8,6 +8,7 @@ use App\Models\Agreement;
 use App\Models\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class HubspotSyncService
 {

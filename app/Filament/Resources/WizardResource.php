@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class WizardResource extends Resource
 {
@@ -56,7 +57,13 @@ class WizardResource extends Resource
 
                         return 'Pendiente';
                     })
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('wizard_data->holder_name', 'like', "%{$search}%")
+                            ->orWhere('wizard_data->name', 'like', "%{$search}%")
+                            ->orWhereHas('client', function (Builder $q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%");
+                            });
+                    })
                     ->sortable(),
 
                 TextColumn::make('xante_id')
@@ -96,7 +103,12 @@ class WizardResource extends Resource
 
                         return $hasXanteId ? 'primary' : 'gray';
                     })
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('wizard_data->xante_id', 'like', "%{$search}%")
+                            ->orWhereHas('client', function (Builder $q) use ($search) {
+                                $q->where('xante_id', 'like', "%{$search}%");
+                            });
+                    })
                     ->sortable(),
 
                 TextColumn::make('current_wizard')

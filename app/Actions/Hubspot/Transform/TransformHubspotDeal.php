@@ -114,6 +114,15 @@ class TransformHubspotDeal
             $clientData['niveles'] = $dealProps['niveles_casa'];
         }
 
+        // Estatus y monto del convenio
+        if (! empty($dealProps['estatus_de_convenio'])) {
+            $clientData['hubspot_status'] = $dealProps['estatus_de_convenio'];
+        }
+
+        if (! empty($dealProps['amount'])) {
+            $clientData['hubspot_amount'] = $dealProps['amount'];
+        }
+
         return $clientData;
     }
 }

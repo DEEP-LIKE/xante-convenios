@@ -278,6 +278,12 @@
                 <span class="value">{{ strtoupper($comunidad ?? 'REAL ________') }}</span>, 
                 <span class="value">{{ strtoupper($domicilio_convenio ?? '') }}</span>.
             </div>
+            <div class="client-location">
+                <span class="label">TIPO:</span>
+                <span class="value">{{ $tipo_vivienda ?? '' }}</span>
+                <span class="label" style="margin-left: 20px;">UBICACIÓN:</span>
+                <span class="value">{{ $municipio_propiedad ?? '' }}, {{ $estado_propiedad ?? '' }}</span>
+            </div>
         </div>
 
         {{-- DOCUMENTACIÓN TITULAR --}}

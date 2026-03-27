@@ -364,6 +364,11 @@ class PdfGenerationService
             'property_block' => $wizardData['manzana'] ?? $wizardData['block'] ?? '',
             'property_stage' => $wizardData['etapa'] ?? $wizardData['stage'] ?? '',
 
+            // Datos de hipoteca y características
+            'hipotecado' => $wizardData['hipotecado'] ?? $agreement->hipotecado ?? '',
+            'tipo_hipoteca' => $wizardData['tipo_hipoteca'] ?? $agreement->tipo_hipoteca ?? '',
+            'niveles' => $wizardData['niveles'] ?? $agreement->niveles ?? '',
+
             // Estados y ubicaciones
             'property_state' => $wizardData['estado_propiedad'] ?? $wizardData['estado'] ?? '',
             'property_municipality' => $wizardData['municipio_propiedad'] ?? $wizardData['municipio'] ?? '',

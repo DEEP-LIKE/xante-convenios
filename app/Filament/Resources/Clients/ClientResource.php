@@ -279,6 +279,50 @@ class ClientResource extends Resource
                             ->content(fn ($record) => $record->state ?? 'N/A'),
                     ]),
 
+                Section::make('Datos de la Propiedad')
+                    ->columns(4)
+                    ->columnSpanFull()
+                    ->schema([
+                        Placeholder::make('domicilio_convenio')
+                            ->label('Domicilio Vivienda')
+                            ->content(fn ($record) => $record->domicilio_convenio ?? 'N/A'),
+                        Placeholder::make('comunidad')
+                            ->label('Comunidad / Desarrollo')
+                            ->content(fn ($record) => $record->comunidad ?? 'N/A'),
+                        Placeholder::make('tipo_vivienda')
+                            ->label('Tipo de Vivienda')
+                            ->content(fn ($record) => $record->tipo_vivienda ?? 'N/A'),
+                        Placeholder::make('prototipo')
+                            ->label('Prototipo')
+                            ->content(fn ($record) => $record->prototipo ?? 'N/A'),
+                        Placeholder::make('hipotecado')
+                            ->label('¿Hipotecada?')
+                            ->content(fn ($record) => $record->hipotecado ?? 'N/A'),
+                        Placeholder::make('tipo_hipoteca')
+                            ->label('Tipo de Hipoteca')
+                            ->content(fn ($record) => $record->tipo_hipoteca ?? 'N/A')
+                            ->visible(fn ($record) => !empty($record->hipotecado) && strtolower($record->hipotecado) === 'sí'),
+                        Placeholder::make('niveles')
+                            ->label('Niveles de la Casa')
+                            ->content(fn ($record) => $record->niveles ?? 'N/A'),
+                        Placeholder::make('lote')
+                            ->label('Lote')
+                            ->content(fn ($record) => $record->lote ?? 'N/A'),
+                        Placeholder::make('manzana')
+                            ->label('Manzana')
+                            ->content(fn ($record) => $record->manzana ?? 'N/A'),
+                        Placeholder::make('etapa')
+                            ->label('Etapa')
+                            ->content(fn ($record) => $record->etapa ?? 'N/A'),
+                        Placeholder::make('municipio_propiedad')
+                            ->label('Municipio (Propiedad)')
+                            ->content(fn ($record) => $record->municipio_propiedad ?? 'N/A'),
+                        Placeholder::make('estado_propiedad')
+                            ->label('Estado (Propiedad)')
+                            ->content(fn ($record) => $record->estado_propiedad ?? 'N/A'),
+                    ])
+                    ->visible(fn ($record) => !empty($record->domicilio_convenio) || !empty($record->comunidad) || !empty($record->tipo_vivienda) || !empty($record->municipio_propiedad)),
+
                 Section::make('Información del Cónyuge')
                     ->columns(3)
                     ->schema([

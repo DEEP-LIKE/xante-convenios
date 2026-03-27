@@ -32,11 +32,38 @@ class UpdateClientFromHubspot
         ?string $dealCreatedAt = null,
         array $contactProps = []
     ): Client {
-        // Verificar si debemos actualizar (protección contra race conditions)
+        $hubspotId = $contactProps['hs_object_id'] ?? null;
+
+        // Verificar si debemos actualizar datos personales (protección contra race conditions)
         if (! $this->shouldUpdate($client, $contactProps)) {
-            // Solo actualizar IDs críticos
-            $hubspotId = $contactProps['hs_object_id'] ?? null;
-            $this->updateCriticalIds($client, $hubspotId, $dealId);
+            // AUNQUE no actualicemos datos personales, SIEMPRE actualizamos los campos que son EXCLUSIVOS de HubSpot
+            // o que están vacíos en local pero vienen con datos en HubSpot
+            $updates = [];
+            
+            // IDs
+            if (! $client->hubspot_id && $hubspotId) $updates['hubspot_id'] = $hubspotId;
+            if (! $client->hubspot_deal_id) $updates['hubspot_deal_id'] = $dealId;
+            
+            // Estatus y Monto (Nuevos mapeos corregidos)
+            if (($client->hubspot_status === 'N/A' || empty($client->hubspot_status)) && !empty($dealData['hubspot_status'])) {
+                $updates['hubspot_status'] = $dealData['hubspot_status'];
+            }
+            if (empty($client->hubspot_amount) && !empty($dealData['hubspot_amount'])) {
+                $updates['hubspot_amount'] = $dealData['hubspot_amount'];
+            }
+
+            // Datos de propiedad (si están vacíos en local pero vienen en el Deal)
+            foreach (['domicilio_convenio', 'comunidad', 'tipo_vivienda', 'municipio_propiedad', 'estado_propiedad'] as $field) {
+                if (empty($client->$field) && !empty($dealData[$field])) {
+                    $updates[$field] = $dealData[$field];
+                }
+            }
+
+            if (!empty($updates)) {
+                $updates['hubspot_synced_at'] = now();
+                $client->update($updates);
+                Log::info("Campos de HubSpot actualizados forzosamente para cliente {$client->id} (aunque datos locales eran más recientes)");
+            }
 
             return $client;
         }
