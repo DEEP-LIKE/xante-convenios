@@ -346,7 +346,8 @@ class CreateAgreementWizard extends Page implements HasForms, HasInfolists
     protected function loadCalculatorDefaults(): void
     {
         $defaults = $this->calculatorService->getDefaultConfiguration();
-        $this->data = array_merge($defaults, $this->data);
+        // Los datos del wizard ($this->data) tienen prioridad sobre los defaults
+        $this->data = array_merge($defaults, $this->data ?? []);
     }
 
     /**

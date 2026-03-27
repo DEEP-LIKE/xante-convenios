@@ -243,15 +243,19 @@ class StepFourSchema
                                     ->numeric()
                                     ->suffix('%')
                                     ->step(0.01)
-                                    ->default(function () {
-                                        $config = ConfigurationCalculator::where('key', 'comision_sin_iva_default')->first();
-
-                                        return $config ? $config->value : 6.50;
+                                    ->afterStateHydrated(function ($component, $state) {
+                                        // Usar el valor guardado en wizard_data, o el default de config si no existe
+                                        $value = $state;
+                                        if (empty($value) || $value == 0) {
+                                            $config = ConfigurationCalculator::where('key', 'comision_sin_iva_default')->first();
+                                            $value = $config ? $config->value : 6.50;
+                                        }
+                                        $component->state($value);
                                     })
                                     ->disabled()
                                     ->dehydrated()
                                     ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText('Valor fijo desde configuración'),
+                                    ->helperText('Valor guardado del convenio'),
                                 TextInput::make('comision_iva_incluido')
                                     ->label('% Comisión TOTAL (IVA incluido)')
                                     ->numeric()
