@@ -31,7 +31,7 @@ if [ ! -f /var/www/html/.env ]; then
 fi
 
 # 4. Verificar conexión a DB (Informativo)
-if sudo -u www-data php /var/www/html/artisan db:show --quiet > /dev/null 2>&1; then
+if su -s /bin/bash www-data -c "php /var/www/html/artisan db:show --quiet" > /dev/null 2>&1; then
     echo "✅ Conexión a la base de datos establecida."
 else
     echo "⚠️  ADVERTENCIA: No se pudo conectar a la base de datos."
@@ -40,8 +40,8 @@ fi
 # 5. Forzar la generación de caché de configuración al arrancar
 # Esto es vital para que Laravel reconozca el .env que montamos en el deploy
 echo "📦 Generando caché de configuración fresca..."
-sudo -u www-data php /var/www/html/artisan config:clear
-sudo -u www-data php /var/www/html/artisan optimize
+su -s /bin/bash www-data -c "php /var/www/html/artisan config:clear"
+su -s /bin/bash www-data -c "php /var/www/html/artisan optimize"
 
 
 # 6. Ejecutar Supervisor en primer plano
