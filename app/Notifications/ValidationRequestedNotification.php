@@ -39,10 +39,26 @@ class ValidationRequestedNotification extends Notification implements ShouldQueu
             default => 'Usuario',
         };
 
-        return (new MailMessage)
+        $isUnder3Years = false;
+        $fechaPropiedad = $validation->agreement->wizard_data['fecha_propiedad'] ?? null;
+        if ($fechaPropiedad) {
+            $isUnder3Years = \Carbon\Carbon::parse($fechaPropiedad)->diffInYears(now()) < 3;
+        }
+
+        $mail = (new MailMessage)
             ->subject('Nueva Validación Pendiente - Convenio #'.$validation->agreement_id)
             ->greeting('¡Hola '.$roleLabel.'!')
-            ->line('Hay una nueva calculadora pendiente de validación.')
+            ->line('Hay una nueva calculadora pendiente de validación.');
+            
+        if ($isUnder3Years) {
+            $mail->line(new \Illuminate\Support\HtmlString('
+                <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-left: 5px solid #ffeeba; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
+                    <strong>ALERTA:</strong> La propiedad tiene menos de 3 años de escrituración. Por favor tener especial atención en esta parte.
+                </div>
+            '));
+        }
+
+        return $mail
             ->line('**Ejecutivo:** '.$validation->requestedBy->name)
             ->line('**Convenio ID:** #'.$validation->agreement_id)
             ->line('**Revisión:** #'.$validation->revision_number)

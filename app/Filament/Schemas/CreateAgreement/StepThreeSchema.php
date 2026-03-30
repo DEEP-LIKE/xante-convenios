@@ -139,11 +139,7 @@ class StepThreeSchema
                                     ->native(false)
                                     ->displayFormat('d/m/Y')
                                     ->suffixIcon(Heroicon::Calendar)
-                                    ->required()
-                                    ->maxDate(Carbon::today()->subYears(3))
-                                    ->validationMessages([
-                                        'max' => 'La propiedad debe tener una antigüedad mínima de 3 años.',
-                                    ]),
+                                    ->required(),
                             ]),
                     ])
                     ->collapsible(),

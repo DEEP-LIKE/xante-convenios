@@ -187,17 +187,8 @@ class DocumentsReadyMail extends Mailable
                 }
             }
 
-            // Adjuntar imagen de oferta desde public/images/oferta.jpg
-            $ofertaImagePath = public_path('images/oferta.jpg');
-            if (file_exists($ofertaImagePath)) {
-                $attachments[] = Attachment::fromPath($ofertaImagePath)
-                    ->as('Oferta_Especial_Xante.jpg')
-                    ->withMime('image/jpeg');
-                
-                \Log::debug('Oferta image attached', ['path' => $ofertaImagePath]);
-            } else {
-                \Log::warning('Oferta image not found', ['path' => $ofertaImagePath]);
-            }
+            // Adjuntar imagen de oferta desde public/images/oferta.jpg (Eliminado por solicitud)
+
 
             \Log::info('DocumentsReadyMail: Attachment process completed', [
                 'agreement_id' => $this->agreement->id,

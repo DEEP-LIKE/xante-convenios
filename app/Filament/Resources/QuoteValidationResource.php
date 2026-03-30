@@ -89,6 +89,32 @@ class QuoteValidationResource extends Resource
                     ->visible(fn ($record) => $record?->status === 'awaiting_management_authorization')
                     ->columnSpanFull(),
 
+                \Filament\Schemas\Components\Section::make()
+                    ->schema([
+                        \Filament\Forms\Components\Placeholder::make('less_than_3_years_alert')
+                            ->hiddenLabel()
+                            ->content(fn ($record) => new \Illuminate\Support\HtmlString('
+                                <div style="background-color: #fffbeb; color: #92400e; padding: 1rem; border-radius: 0.5rem; border: 1px solid #fcd34d;" role="alert">
+                                    <div style="display: flex; align-items: center;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 1.5rem; height: 1.5rem; margin-right: 0.5rem;">
+                                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <span style="font-weight: bold; font-size: 1.1em;">Atención: Propiedad Menor a 3 Años</span>
+                                    </div>
+                                    <div style="margin-left: 2rem; margin-top: 0.25rem;">
+                                        La fecha de escrituración indica que la propiedad tiene menos de 3 años. Tener especial atención.
+                                    </div>
+                                </div>
+                            '))
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(function ($record) {
+                        $fechaPropiedad = $record?->agreement?->wizard_data['fecha_propiedad'] ?? null;
+                        if (!$fechaPropiedad) return false;
+                        return \Carbon\Carbon::parse($fechaPropiedad)->diffInYears(now()) < 3;
+                    })
+                    ->columnSpanFull(),
+
                 \Filament\Forms\Components\Placeholder::make('property_summary')
                     ->hiddenLabel()
                     ->content(function ($record) {
@@ -340,6 +366,20 @@ class QuoteValidationResource extends Resource
                     ->label('Ejecutivo')
                     ->searchable()
                     ->sortable(),
+
+                \Filament\Tables\Columns\TextColumn::make('antiguedad')
+                    ->label('Alerta Propiedad')
+                    ->getStateUsing(function ($record) {
+                        $fechaPropiedad = $record?->agreement?->wizard_data['fecha_propiedad'] ?? null;
+                        if (!$fechaPropiedad) return null;
+                        $years = \Carbon\Carbon::parse($fechaPropiedad)->diffInYears(now());
+                        if ($years < 3) {
+                             return 'Menor a 3 años';
+                        }
+                        return null;
+                    })
+                    ->badge()
+                    ->color('warning'),
 
                 \Filament\Tables\Columns\TextColumn::make('revision_number')
                     ->label('Revisión')
