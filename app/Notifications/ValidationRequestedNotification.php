@@ -51,11 +51,7 @@ class ValidationRequestedNotification extends Notification implements ShouldQueu
             ->line('Hay una nueva calculadora pendiente de validación.');
             
         if ($isUnder3Years) {
-            $mail->line(new \Illuminate\Support\HtmlString('
-                <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-left: 5px solid #ffeeba; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;">
-                    <strong>ALERTA:</strong> La propiedad tiene menos de 3 años de escrituración. Por favor tener especial atención en esta parte.
-                </div>
-            '));
+            $mail->line(new \Illuminate\Support\HtmlString('<div style="background-color: #fff3cd; color: #856404; padding: 15px; border-left: 5px solid #ffeeba; border-radius: 4px; margin-top: 15px; margin-bottom: 15px;"><strong>ALERTA:</strong> La propiedad tiene menos de 3 años de escrituración. Por favor tener especial atención en esta parte.</div>'));
         }
 
         return $mail
