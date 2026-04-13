@@ -62,35 +62,70 @@ Matriz de cuentas bancarias por estado y municipio. El sistema permite seleccion
 - **PDF**: Barryvdh/laravel-dompdf
 - **Integración**: HubSpot API
 
-## 🔧 Instalación y Despliegue
+## 🔧 Guía de Inicio Rápido (Local)
 
-### Configuración Inicial
+Sigue estos pasos para echar a andar el proyecto en tu entorno local:
+
+### 1. Preparación del Proyecto
 
 ```bash
 # Clonar repositorio
 git clone [repository-url]
 cd xante
 
-# Instalar dependencias
+# Instalar dependencias de PHP y PHP
 composer install
 npm install
 
-# Configurar environment
+# Configurar archivo de entorno
 cp .env.example .env
 php artisan key:generate
+```
 
-# Ejecutar migraciones y seeders
+### 2. Base de Datos y Datos Iniciales
+
+Asegúrate de configurar las credenciales de tu base de datos en el archivo `.env` antes de continuar.
+
+```bash
+# Ejecutar migraciones y seeders (Llenará las tablas con tipos de crédito, estados y usuarios de prueba)
 php artisan migrate:fresh --seed
 ```
 
-### Script de Despliegue (Docker)
+### 3. Servidores de Desarrollo
 
-El proyecto incluye un script `deploy.sh` para despliegues automatizados en servidores con Docker.
+Necesitarás tres terminales para correr el entorno completo:
 
 ```bash
+# Terminal 1: Ejecutar servidor de Vite para los assets
+npm run dev
+
+# Terminal 2: Ejecutar el servidor de Laravel
+php artisan serve
+
+# Terminal 3: Procesamiento de colas (Importante para correos y HubSpot)
+php artisan queue:work
+```
+
+### 4. Configuración de HubSpot (Importante)
+
+Para que la sincronización funcione, debes configurar tu `HUBSPOT_TOKEN` en el archivo `.env`. Puedes probar la conexión con:
+
+```bash
+php artisan hubspot:suite test
+```
+
+---
+
+## 🚀 Despliegue en Servidor (Docker)
+
+El proyecto incluye un script `deploy.sh` para despliegues automatizados.
+
+```bash
+chmod +x deploy.sh
 ./deploy.sh
 ```
 
+---
 ## 🔐 Usuarios de Prueba
 
 | Usuario | Email | Contraseña | Rol |
@@ -101,7 +136,7 @@ El proyecto incluye un script `deploy.sh` para despliegues automatizados en serv
 
 ## 🔄 Estado del Proyecto
 
-**Última actualización**: 29/12/2025
+**Última actualización**: 13/04/2026
 
 - ✅ Sistema de roles y permisos completo.
 - ✅ Flujo de Dos Wizards (Calculadora + Documentación).

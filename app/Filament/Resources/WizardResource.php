@@ -331,6 +331,7 @@ class WizardResource extends Resource
                     ->url('/admin/convenios/crear'),
             ])
             ->defaultSort('created_at', 'desc')
+            ->searchPlaceholder('Buscar convenios activos...')
             ->poll('30s') // Auto-refresh cada 30 segundos
             ->striped();
     }

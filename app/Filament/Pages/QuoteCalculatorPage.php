@@ -512,6 +512,16 @@ class QuoteCalculatorPage extends Page implements HasForms
                 $dataToSave = array_merge($dataToSave, $this->calculationResults);
             }
 
+            // Extraer valores financieros para las columnas físicas de la tabla.
+            // Fix SQL-1364: la tabla proposals tiene columnas NOT NULL en producción
+            // (valor_convenio, comision_total, ganancia_final) que deben alimentarse
+            // explícitamente además del JSON 'data'.
+            $valorConvenio = (float) str_replace([',', '$'], '', $dataToSave['valor_convenio'] ?? 0);
+            $comisionTotal = (float) str_replace([',', '$'], '', $dataToSave['comision_total_pagar']
+                ?? $dataToSave['comision_total']
+                ?? 0);
+            $gananciaFinal = (float) str_replace([',', '$'], '', $dataToSave['ganancia_final'] ?? 0);
+
             // Crear o actualizar propuesta
             $proposal = Proposal::updateOrCreate(
                 [
@@ -519,14 +529,18 @@ class QuoteCalculatorPage extends Page implements HasForms
                     'linked' => true,
                 ],
                 [
-                    'client_id' => $this->selectedClientId,
-                    'data' => $dataToSave,
-                    'created_by' => Auth::id(),
+                    'client_id'      => $this->selectedClientId,
+                    'data'           => $dataToSave,
+                    'created_by'     => Auth::id(),
+                    // Columnas físicas sincronizadas para evitar error SQL 1364 NOT NULL
+                    'valor_convenio' => $valorConvenio,
+                    'comision_total' => $comisionTotal,
+                    'ganancia_final' => $gananciaFinal,
                 ]
             );
 
             Notification::make()
-                ->title('✅ Propuesta Enlazada')
+                ->title('Propuesta Enlazada')
                 ->body("La propuesta ha sido enlazada exitosamente al cliente {$this->selectedClientIdxante}")
                 ->success()
                 ->duration(5000)

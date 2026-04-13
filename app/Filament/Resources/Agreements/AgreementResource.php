@@ -658,7 +658,7 @@ class AgreementResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('client_xante_id')
+                Tables\Columns\TextColumn::make('client.xante_id')
                     ->label('ID Xante')
                     ->searchable()
                     ->sortable(),

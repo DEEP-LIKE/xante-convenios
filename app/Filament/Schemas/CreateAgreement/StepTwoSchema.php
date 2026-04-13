@@ -134,8 +134,15 @@ class StepTwoSchema
                                     ->maxLength(100),
                                 TextInput::make('holder_email')
                                     ->label('Correo electrónico')
-                                    ->disabled()
+                                    // DECISIÓN: Campo habilitado para edición.
+                                    // Al modificarse aquí, el valor se propaga mediante:
+                                    //   1. wizard_data['holder_email'] → usado por SendDocumentsAction/DocumentEmailService
+                                    //      para enviar los documentos del convenio.
+                                    //   2. UpdateClientFromWizardAction → actualiza client->email en la BD local.
+                                    //   3. SyncClientToHubspotAction → si el cliente tiene hubspot_id,
+                                    //      el cambio se sincroniza de vuelta a HubSpot (campo 'email' del Deal/Contact).
                                     ->email()
+                                    ->helperText('Al actualizar este correo se sincronizará con el perfil del cliente y con HubSpot.')
                                     ->required(),
                                 TextInput::make('holder_office_phone')
                                     ->label('Tel. oficina')

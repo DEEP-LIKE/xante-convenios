@@ -321,7 +321,13 @@ class ClientResource extends Resource
                             ->label('Estado (Propiedad)')
                             ->content(fn ($record) => $record->estado_propiedad ?? 'N/A'),
                     ])
-                    ->visible(fn ($record) => !empty($record->domicilio_convenio) || !empty($record->comunidad) || !empty($record->tipo_vivienda) || !empty($record->municipio_propiedad)),
+                    ->visible(fn ($record) => !empty($record->domicilio_convenio)
+                        || !empty($record->comunidad)
+                        || !empty($record->tipo_vivienda)
+                        || !empty($record->municipio_propiedad)
+                        || !empty($record->hipotecado)     // Campo que llega de HubSpot (hipotecada)
+                        || !empty($record->tipo_hipoteca)  // Campo que llega de HubSpot (tipo_de_hipoteca)
+                        || !empty($record->estado_propiedad)), // Campo que llega de HubSpot (state)
 
                 Section::make('Información del Cónyuge')
                     ->columns(3)
