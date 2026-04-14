@@ -457,8 +457,8 @@ class AgreementResource extends Resource
                             ->dehydrated(false),
                         Forms\Components\TextInput::make('holder_email')
                             ->label('Correo electrónico')
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->email()
+                            ->required(),
                         Forms\Components\TextInput::make('holder_phone')
                             ->label('Núm. Celular')
                             ->disabled()
