@@ -75,6 +75,9 @@ class FixProposalData extends Command
             'valor_convenio' => $calculations['valor_convenio'] ?? 0,
             'comision_total' => $calculations['comision_total_pagar'] ?? 0,
             'ganancia_final' => $calculations['ganancia_final'] ?? 0,
+            'porcentaje_comision' => $calculations['parametros_utilizados']['porcentaje_comision_sin_iva'] ?? 5,
+            'porcentaje_iva' => $calculations['parametros_utilizados']['base_iva_percentage'] ?? 16,
+            'numero_parcialidades' => 1,
         ]);
 
         $this->line("  ✅ Cliente: {$client->name} (ID: {$client->xante_id})");

@@ -521,6 +521,10 @@ class QuoteCalculatorPage extends Page implements HasForms
                 ?? $dataToSave['comision_total']
                 ?? 0);
             $gananciaFinal = (float) str_replace([',', '$'], '', $dataToSave['ganancia_final'] ?? 0);
+            
+            // Parámetros de cálculo para columnas físicas (evitar SQL 1364)
+            $porcentajeComision = (float) ($dataToSave['porcentaje_comision_sin_iva'] ?? 0);
+            $porcentajeIva = (float) ($dataToSave['base_iva_percentage'] ?? 16);
 
             // Crear o actualizar propuesta
             $proposal = Proposal::updateOrCreate(
@@ -533,9 +537,12 @@ class QuoteCalculatorPage extends Page implements HasForms
                     'data'           => $dataToSave,
                     'created_by'     => Auth::id(),
                     // Columnas físicas sincronizadas para evitar error SQL 1364 NOT NULL
-                    'valor_convenio' => $valorConvenio,
-                    'comision_total' => $comisionTotal,
-                    'ganancia_final' => $gananciaFinal,
+                    'valor_convenio'      => $valorConvenio,
+                    'comision_total'      => $comisionTotal,
+                    'ganancia_final'      => $gananciaFinal,
+                    'porcentaje_comision' => $porcentajeComision,
+                    'porcentaje_iva'      => $porcentajeIva,
+                    'numero_parcialidades' => 1, // Valor por defecto para evitar SQL 1364 si fuera necesario
                 ]
             );
 
