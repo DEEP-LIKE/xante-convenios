@@ -16,6 +16,12 @@ class Proposal extends Model
         'data',
         'linked',
         'created_by',
+        'valor_convenio',
+        'comision_total',
+        'ganancia_final',
+        'porcentaje_comision',
+        'porcentaje_iva',
+        'numero_parcialidades',
     ];
 
     protected $casts = [

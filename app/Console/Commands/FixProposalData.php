@@ -72,6 +72,9 @@ class FixProposalData extends Command
             'client_id' => $client->id,
             'data' => $calculations, // Usar valores numéricos directamente
             'created_by' => 1,
+            'valor_convenio' => $calculations['valor_convenio'] ?? 0,
+            'comision_total' => $calculations['comision_total_pagar'] ?? 0,
+            'ganancia_final' => $calculations['ganancia_final'] ?? 0,
         ]);
 
         $this->line("  ✅ Cliente: {$client->name} (ID: {$client->xante_id})");
