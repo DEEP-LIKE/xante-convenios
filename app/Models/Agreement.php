@@ -127,6 +127,17 @@ class Agreement extends Model
         'final_profit',
     ];
 
+    protected static function booted(): void
+    {
+        static::updated(function (Agreement $agreement) {
+            if ($agreement->isDirty('holder_email') && $agreement->client_id) {
+                $agreement->client->update([
+                    'email' => $agreement->holder_email,
+                ]);
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
