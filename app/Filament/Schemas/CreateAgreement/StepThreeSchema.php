@@ -31,7 +31,7 @@ class StepThreeSchema
                                     ->maxLength(255)
                                     ->required(),
                                 TextInput::make('comunidad')
-                                    ->label('Comunidad')
+                                    ->label('Nombre del desarrollo')
                                     ->maxLength(255)
                                     ->required(),
                                 TextInput::make('tipo_vivienda')

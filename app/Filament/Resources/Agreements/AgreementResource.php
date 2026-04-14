@@ -134,7 +134,7 @@ class AgreementResource extends Resource
                                         ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('comunidad')
-                                        ->label('Comunidad')
+                                        ->label('Nombre del desarrollo')
                                         ->columnSpan(2),
 
                                     Forms\Components\Select::make('tipo_vivienda')
