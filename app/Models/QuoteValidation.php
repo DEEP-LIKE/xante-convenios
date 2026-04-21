@@ -341,18 +341,18 @@ class QuoteValidation extends Model
     }
 
     /**
-     * Verifica si hay cambios en los valores comparado con el snapshot original
+     * Verifica si hay cambios manuales en el % de comisión comparado con la configuración global
      */
     public function hasValueChanges(float $currentPrice, float $currentCommission): bool
     {
-        $snapshot = $this->calculator_snapshot;
-
-        // Sanitizar valores del snapshot (pueden venir con formato de miles/moneda)
-        $originalPrice = (float) str_replace([',', '$', ' '], '', $snapshot['valor_convenio'] ?? 0);
-        $originalCommission = (float) str_replace([',', '$', ' '], '', $snapshot['porcentaje_comision_sin_iva'] ?? 0);
+        $calculatorService = app(\App\Services\AgreementCalculatorService::class);
+        $defaults = $calculatorService->getDefaultConfiguration();
+        
+        // La comisión por defecto del sistema
+        $defaultCommission = (float) ($defaults['porcentaje_comision_sin_iva'] ?? 6.50);
 
         // Comparar con tolerancia de 0.01 para evitar problemas de precisión de punto flotante
-        $commissionChanged = abs($currentCommission - $originalCommission) > 0.01;
+        $commissionChanged = abs($currentCommission - $defaultCommission) > 0.01;
 
         // Según requerimiento, solo los cambios de comisión requieren el desvío de autorización de gerencia
         // El valor de convenio y gastos pueden ser aprobados directamente por el coordinador

@@ -109,6 +109,51 @@ class ProposalPreloadService
     }
 
     /**
+     * Fuerza la sobrescritura de los datos actuales en el formulario referenciado (Wizard)
+     * usando la última propuesta enlazada (Calculadora independiente).
+     */
+    public function forcePreload(int $clientId, callable $set, callable $get, $livewire): void
+    {
+        $proposalInfo = $this->hasExistingProposal($clientId);
+
+        if (! $proposalInfo || empty($proposalInfo['data'])) {
+            Notification::make()
+                ->title('Sin actualización')
+                ->body('No se encontró información reciente en la Calculadora. Guarde un cálculo primero.')
+                ->warning()
+                ->send();
+            return;
+        }
+
+        // Cargar los campos calculadores básicos
+        $fields = [
+            'valor_convenio',
+            'porcentaje_comision_sin_iva',
+            'isr',
+            'cancelacion_hipoteca',
+            'monto_credito'
+        ];
+
+        foreach ($fields as $field) {
+            if (isset($proposalInfo['data'][$field])) {
+                $set($field, $proposalInfo['data'][$field]);
+            }
+        }
+
+        // Recalcular
+        if (method_exists($livewire, 'recalculateAllFinancials')) {
+            $livewire->recalculateAllFinancials($set, $get);
+        }
+
+        Notification::make()
+            ->title('🔄 Datos Actualizados')
+            ->body('Los valores del convenio se han actualizado usando el último cálculo independiente.')
+            ->success()
+            ->duration(5000)
+            ->send();
+    }
+
+    /**
      * Obtiene información formateada de la propuesta para mostrar en UI
      */
     public function getProposalDisplayInfo(?array $proposalInfo): ?array

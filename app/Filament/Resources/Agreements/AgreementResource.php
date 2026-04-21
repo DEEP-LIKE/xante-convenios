@@ -62,13 +62,14 @@ class AgreementResource extends Resource
     protected static function recalculateAll(callable $set, callable $get): void
     {
         $valorConvenio = (float) $get('valor_convenio') ?? 0;
-        $porcentajeComisionSinIva = (float) $get('porcentaje_comision_sin_iva') ?? 0;
-        $isr = (float) $get('isr') ?? 0;
-        $cancelacionHipoteca = (float) $get('cancelacion_hipoteca') ?? 0;
-        $montoCredito = (float) $get('monto_credito') ?? 0;
+        
+        if ($valorConvenio <= 0) {
+            return;
+        }
 
-        // 1. Precio Promoción = Valor Convenio * Multiplicador
-        // Intentar obtener multiplicador del estado (Priorizar estado de la propiedad)
+        $calculatorService = app(\App\Services\AgreementCalculatorService::class);
+
+        // 1. Intentar obtener multiplicador del estado (Priorizar estado de la propiedad)
         $multiplicador = 1.0;
         $stateName = $get('estado_propiedad') ?? $get('holder_state');
         if ($stateName) {
@@ -78,36 +79,29 @@ class AgreementResource extends Resource
             }
         }
 
-        $precioPromocion = $valorConvenio * $multiplicador;
-        $set('precio_promocion', round($precioPromocion, 0));
+        // 2. Preparar parámetros usando el servicio centralizado
+        $parameters = [
+            'porcentaje_comision_sin_iva' => (float) $get('porcentaje_comision_sin_iva') ?? 0,
+            'precio_promocion_multiplicador' => $multiplicador,
+            'isr' => (float) $get('isr') ?? 0,
+            'cancelacion_hipoteca' => (float) $get('cancelacion_hipoteca') ?? 0,
+            'monto_credito' => (float) $get('monto_credito') ?? 0,
+        ];
 
-        // 2. Monto Comisión (Sin IVA) = % Comisión (Sin IVA) * Valor Convenio / 100
-        $montoComisionSinIva = ($porcentajeComisionSinIva * $valorConvenio) / 100;
-        $set('monto_comision_sin_iva', round($montoComisionSinIva, 2));
+        // 3. Calcular
+        $calculations = $calculatorService->calculateAllFinancials($valorConvenio, $parameters);
 
-        // 3. Comisión total por pagar = Monto Comisión (Sin IVA) * IVA Multiplier
-        $ivaPercentage = (float) ConfigurationCalculator::get('iva_valor', 16.00);
-        $ivaMultiplier = 1 + ($ivaPercentage / 100);
-        $comisionTotalPagar = $montoComisionSinIva * $ivaMultiplier;
-        $set('comision_total_pagar', round($comisionTotalPagar, 2));
+        // 4. Asignar resultados calculados
+        $set('precio_promocion', $calculations['precio_promocion']);
+        $set('monto_comision_sin_iva', $calculations['monto_comision_sin_iva']);
+        $set('comision_total_pagar', $calculations['comision_total_pagar']);
+        $set('comision_iva_incluido', $calculations['comision_iva_incluido']);
+        $set('total_gastos_fi', $calculations['total_gastos_fi_venta']); // Clave en Wizard es total_gastos_fi_venta, en panel de control era total_gastos_fi
+        $set('ganancia_final', $calculations['ganancia_final']);
 
-        // 4. Comisión IVA Incluido = (Comisión Total / Valor Convenio) * 100
-        if ($valorConvenio > 0) {
-            $comisionIvaIncluido = ($comisionTotalPagar / $valorConvenio) * 100;
-            $set('comision_iva_incluido', round($comisionIvaIncluido, 2));
-        }
-
-        // 5. Total Gastos FI (Venta) = ISR + Cancelación de hipoteca
-        $totalGastosFi = $isr + $cancelacionHipoteca;
-        $set('total_gastos_fi', round($totalGastosFi, 2));
-
-        // 6. Ganancia Final = Precio Promoción - ISR - Cancelación - Comisión total - Monto de crédito
-        $gananciaFinal = $precioPromocion - $isr - $cancelacionHipoteca - $comisionTotalPagar - $montoCredito;
-        $set('ganancia_final', round($gananciaFinal, 2));
-
-        // 7. Campos espejo
-        $set('valor_compraventa', $valorConvenio);
-        $set('comision_total', round($comisionTotalPagar, 2));
+        // 5. Campos espejo
+        $set('valor_compraventa', $calculations['valor_compraventa']);
+        $set('comision_total', $calculations['comision_total_pagar']);
     }
 
     /**

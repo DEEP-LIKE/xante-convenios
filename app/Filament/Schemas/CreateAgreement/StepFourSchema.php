@@ -205,6 +205,24 @@ class StepFourSchema
                 // Campo Principal: Valor Convenio
                 Section::make('VALOR PRINCIPAL DEL CONVENIO')
                     ->description('Campo principal que rige todos los cálculos financieros')
+                    ->headerActions([
+                        \Filament\Actions\Action::make('sync_calculator')
+                            ->label('Actualizar desde Calculadora')
+                            ->icon('heroicon-o-arrow-path')
+                            ->color('info')
+                            ->action(function (callable $set, callable $get, $livewire) {
+                                $clientId = $get('client_id');
+                                if ($clientId) {
+                                    app(\App\Services\ProposalPreloadService::class)->forcePreload($clientId, $set, $get, $livewire);
+                                } else {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Error')
+                                        ->body('Debe seleccionar un cliente antes de actualizar.')
+                                        ->danger()
+                                        ->send();
+                                }
+                            })
+                    ])
                     ->schema([
                         Grid::make(1)
                             ->schema([
@@ -243,6 +261,12 @@ class StepFourSchema
                                     ->numeric()
                                     ->suffix('%')
                                     ->step(0.01)
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) use ($page) {
+                                        if ($get('valor_convenio') && $get('valor_convenio') > 0) {
+                                            $page->recalculateAllFinancials($set, $get);
+                                        }
+                                    })
                                     ->afterStateHydrated(function ($component, $state) {
                                         // Usar el valor guardado en wizard_data, o el default de config si no existe
                                         $value = $state;
@@ -252,10 +276,8 @@ class StepFourSchema
                                         }
                                         $component->state($value);
                                     })
-                                    ->disabled()
                                     ->dehydrated()
-                                    ->extraAttributes(['class' => 'bg-gray-50'])
-                                    ->helperText('Valor guardado del convenio'),
+                                    ->helperText('Modificable. Si cambia, requerirá autorización.'),
                                 TextInput::make('comision_iva_incluido')
                                     ->label('% Comisión TOTAL (IVA incluido)')
                                     ->numeric()

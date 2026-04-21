@@ -357,10 +357,16 @@ class QuoteValidationResource extends Resource
                     ->label('ID')
                     ->sortable(),
 
-                \Filament\Tables\Columns\TextColumn::make('agreement_id')
-                    ->label('Convenio')
+                \Filament\Tables\Columns\TextColumn::make('agreement.client.name')
+                    ->label('Cliente')
+                    ->description(fn (QuoteValidation $record): string => 'XanteID: ' . ($record->agreement->client->xante_id ?? 'N/A'))
                     ->sortable()
-                    ->searchable(),
+                    ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search): \Illuminate\Database\Eloquent\Builder {
+                        return $query->whereHas('agreement.client', function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                              ->orWhere('xante_id', 'like', "%{$search}%");
+                        });
+                    }),
 
                 \Filament\Tables\Columns\TextColumn::make('requestedBy.name')
                     ->label('Ejecutivo')

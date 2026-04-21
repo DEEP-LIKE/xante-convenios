@@ -434,10 +434,35 @@ class QuoteCalculatorPage extends Page implements HasForms
     }
 
     /**
-     * Intenta cargar una propuesta existente por IDxante
+     * Intenta cargar una propuesta o convenio existente por IDxante
      */
     protected function tryLoadExistingProposal(string $idxante): void
     {
+        // 1. Primero intentar buscar un convenio existente para este cliente
+        $agreement = \App\Models\Agreement::whereHas('client', function ($q) use ($idxante) {
+            $q->where('xante_id', $idxante);
+        })->latest()->first();
+
+        if ($agreement && ! empty($agreement->wizard_data)) {
+            // Cargar los datos del convenio (incluyendo estado_propiedad, comisiones, etc)
+            $this->data = array_merge($this->data, $agreement->wizard_data);
+            $this->form->fill($this->data);
+
+            if (! empty($this->data['valor_convenio'])) {
+                $this->recalculateAllFinancials();
+            }
+
+            Notification::make()
+                ->title('Valores de Convenio cargados')
+                ->body('Este cliente tiene un convenio en curso. Se han cargado sus valores actuales.')
+                ->info()
+                ->duration(5000)
+                ->send();
+            
+            return;
+        }
+
+        // 2. Si no hay convenio, buscar propuesta enlazada anterior
         $proposal = Proposal::where('idxante', $idxante)
             ->where('linked', true)
             ->latest()

@@ -101,6 +101,21 @@ class StepThreeSchema
                                     ->searchable()
                                     ->required()
                                     ->live()
+                                    ->afterStateHydrated(function (\Filament\Forms\Components\Select $component, $state) {
+                                        if (is_string($state) && !empty($state)) {
+                                            $activeStates = \App\Models\StateCommissionRate::where('is_active', true)->pluck('state_name')->toArray();
+                                            $cleanString = function($str) {
+                                                return strtolower(preg_replace('/[^a-zA-Z0-9]/', '', \Illuminate\Support\Str::ascii($str)));
+                                            };
+                                            $cleanInput = $cleanString($state);
+                                            foreach ($activeStates as $activeState) {
+                                                if ($cleanString($activeState) === $cleanInput) {
+                                                    $component->state($activeState);
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    })
                                     ->afterStateUpdated(function ($state, callable $set) {
                                         if ($state) {
                                             $rate = app(\App\Services\AgreementCalculatorService::class)->getLatestRateForState($state);
@@ -139,7 +154,8 @@ class StepThreeSchema
                                     ->native(false)
                                     ->displayFormat('d/m/Y')
                                     ->suffixIcon(Heroicon::Calendar)
-                                    ->required(),
+                                    ->required()
+                                    ->live(),
                             ]),
                     ])
                     ->collapsible(),
