@@ -182,8 +182,8 @@
 
             <div class="contact-info">
                 <h3>Información de Contacto</h3>
-                <p><strong>Email:</strong> info@xante.mx</p>
-                <p><strong>Teléfono:</strong> +52 (55) 1234-5678</p>
+                <p><strong>Email:</strong> convenios@xante.mx</p>
+                <p><strong>Teléfono:</strong> +52 (55) 7931-8910</p>
                 <p><strong>Horario de Atención:</strong> Lunes a Viernes, 9:00 AM - 6:00 PM</p>
             </div>
 

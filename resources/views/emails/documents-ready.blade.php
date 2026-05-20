@@ -250,10 +250,10 @@
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-            <a href="mailto:info@xante.mx?subject=Consulta sobre Convenio {{ $agreement->id }}" class="btn">
+            <a href="mailto:convenios@xante.mx?subject=Consulta sobre Convenio {{ $agreement->id }}" class="btn">
                 Contactar a XANTE
             </a>
-            <a href="tel:+525512345678" class="btn" style="background: #28a745;">
+            <a href="tel:+525579318910" class="btn" style="background: #28a745;">
                 Llamar Ahora
             </a>
         </div>
@@ -272,7 +272,7 @@
     <div class="footer">
         <p><strong>XANTE.MX</strong> - Su socio de confianza en bienes raíces</p>
         <div class="contact-info">
-            <p>📧 Email: info@xante.mx | 📞 Teléfono: +52 (55) 1234-5678</p>
+            <p>📧 Email: convenios@xante.mx | 📞 Teléfono: +52 (55) 7931-8910</p>
             <p>🌐 Sitio web: www.xante.mx</p>
             <p style="font-size: 12px; color: #999; margin-top: 15px;">
                 Este correo fue generado automáticamente. Por favor, no responda a esta dirección.

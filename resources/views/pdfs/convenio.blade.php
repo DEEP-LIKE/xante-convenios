@@ -271,7 +271,7 @@
 
     <div class="footer">
         <p>Este documento fue generado automáticamente por el sistema XANTE.MX el {{ now()->format('d/m/Y H:i:s') }}</p>
-        <p>Para cualquier consulta, contacte a: info@xante.mx | Tel: +52 (55) 1234-5678</p>
+        <p>Para cualquier consulta, contacte a: convenios@xante.mx | Tel: +52 (55) 7931-8910</p>
     </div>
 </body>
 </html>
