@@ -240,6 +240,26 @@ class StepTwoSchema
                                     ->afterStateUpdated(function ($state) use ($page) {
                                         $page->handleDocumentStateChange('holder_bank_statement', 'titular', $state);
                                     }),
+
+                                FileUpload::make('holder_carta_compromiso')
+                                    ->label('9. Carta Compromiso de Entrega de Documentación (Firmada)')
+                                    ->required()
+                                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                                    ->maxSize(10240)
+                                    ->directory('client_documents/'.$page->agreement->id.'/titular')
+                                    ->disk('s3')
+                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->getUploadedFileNameForStorageUsing(function ($file) {
+                                        $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+
+                                        return 'carta_compromiso_'.now()->format('Y-m-d_H-i-s').'.'.$extension;
+                                    })
+                                    ->visibility('private')
+                                    ->previewable(false)
+                                    ->getUploadedFileUsing($getUploadedFileMetadata)
+                                    ->afterStateUpdated(function ($state) use ($page) {
+                                        $page->handleDocumentStateChange('holder_carta_compromiso', 'titular', $state);
+                                    }),
                             ])
                             ->collapsible(),
 

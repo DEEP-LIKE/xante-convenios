@@ -96,6 +96,7 @@ class GeneratedDocument extends Model
             'datos_generales' => 'Datos Generales - Fase I',
             'checklist_expediente' => 'Checklist de Expediente Básico',
             'condiciones_comercializacion' => 'Condiciones para Comercialización',
+            'carta_compromiso' => 'Carta Compromiso',
             default => $this->document_type,
         };
     }

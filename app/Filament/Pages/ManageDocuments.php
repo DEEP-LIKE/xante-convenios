@@ -69,6 +69,8 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
     public array $holder_bank_statement = [];
 
+    public array $holder_carta_compromiso = [];
+
     public array $property_notarial_instrument = [];
 
     public array $property_tax_receipt = [];

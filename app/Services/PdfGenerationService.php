@@ -29,12 +29,13 @@ class PdfGenerationService
 
         $documents = [];
 
-        // Plantillas Blade que se generan dinámicamente (4 documentos)
+        // Plantillas Blade que se generan dinámicamente (5 documentos)
         $templates = [
             'acuerdo_promocion' => 'Acuerdo de Promoción Inmobiliaria',
             'datos_generales' => 'Datos Generales - Fase I',
             'checklist_expediente' => 'Checklist de Expediente Básico',
             'condiciones_comercializacion' => 'Condiciones para Comercialización',
+            'carta_compromiso' => 'Carta Compromiso',
         ];
 
         // Documentos originales que se copian tal cual (2 documentos)
@@ -760,13 +761,14 @@ class PdfGenerationService
      */
     public function verifyDocumentsGenerated(Agreement $agreement): bool
     {
-        // Lista completa de los 6 documentos esperados
+        // Lista completa de los 7 documentos esperados
         $expectedTypes = [
-            // 4 plantillas Blade
+            // 5 plantillas Blade
             'acuerdo_promocion',
             'datos_generales',
             'checklist_expediente',
             'condiciones_comercializacion',
+            'carta_compromiso',
             // 2 documentos originales
             'aviso_privacidad',
             'euc_venta_convenio',

@@ -347,6 +347,13 @@
                         <span class="{{ $isChecked('titular_estado_cuenta_bancario') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
                     </td>
                 </tr>
+                <tr>
+                    <td class="doc-number">9</td>
+                    <td class="doc-name">Carta Compromiso de Entrega de Documentación (Firmada)</td>
+                    <td class="doc-checkbox">
+                        <span class="{{ $isChecked('titular_carta_compromiso') ? 'checkbox-checked' : 'checkbox-square' }}"></span>
+                    </td>
+                </tr>
             </table>
         </div>
 

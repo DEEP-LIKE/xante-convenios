@@ -99,6 +99,7 @@ class ClientDocument extends Model
             'titular_acta_nacimiento' => 'Acta Nacimiento',
             'titular_acta_matrimonio' => 'Acta Matrimonio (Si aplica)',
             'titular_estado_cuenta' => 'Carátula Estado de Cuenta Bancario',
+            'titular_carta_compromiso' => 'Carta Compromiso (Firmada)',
 
             // Documentación Propiedad
             'propiedad_instrumento_notarial' => 'Instrumento Notarial',
@@ -187,6 +188,7 @@ class ClientDocument extends Model
             'titular_acta_nacimiento' => 'Acta Nacimiento',
             'titular_acta_matrimonio' => 'Acta Matrimonio (Si aplica)', // Opcional
             'titular_estado_cuenta' => 'Carátula Estado de Cuenta Bancario',
+            'titular_carta_compromiso' => 'Carta Compromiso (Firmada)',
 
             // Documentación Propiedad
             'propiedad_instrumento_notarial' => 'Instrumento Notarial',
