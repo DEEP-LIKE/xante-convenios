@@ -124,7 +124,7 @@ class AgreementResource extends Resource
                             Grid::make(4)
                                 ->schema([
                                     Forms\Components\TextInput::make('domicilio_convenio')
-                                        ->label('Domicilio Viv. Convenio')
+                                        ->label('Domicilio Viv. Convenio (con numero Exterior e Interior)')
                                         ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('comunidad')

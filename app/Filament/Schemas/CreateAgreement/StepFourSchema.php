@@ -148,7 +148,7 @@ class StepFourSchema
                         Grid::make(2)
                             ->schema([
                                 TextInput::make('domicilio_convenio')
-                                    ->label('Domicilio Viv. Convenio')
+                                    ->label('Domicilio Viv. Convenio (con numero Exterior e Interior)')
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->extraAttributes(['class' => 'bg-gray-50']),

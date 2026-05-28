@@ -27,7 +27,7 @@ class StepThreeSchema
                         Grid::make(2)
                             ->schema([
                                 TextInput::make('domicilio_convenio')
-                                    ->label('Domicilio Viv. Convenio')
+                                    ->label('Domicilio Viv. Convenio (con numero Exterior e Interior)')
                                     ->maxLength(255)
                                     ->required(),
                                 TextInput::make('comunidad')
