@@ -251,8 +251,8 @@
         <div class="paragraph">
             Por medio de la presente, quien suscribe
             <span class="blank">{{ strtoupper($holder_name ?? '') }}</span>,
-            en mi carácter de propietario titular y/o vendedor del inmueble ubicado en la
-            <span class="bold">PRIVADA <span class="blank">{{ strtoupper($property_community ?? '') }}</span></span>,
+            en mi carácter de propietario titular y/o vendedor del inmueble ubicado en
+            <span class="blank">{{ strtoupper($domicilio_convenio ?? '') }}</span>,
             del <span class="bold">CONJUNTO URBANO
             <span class="blank">{{ strtoupper($property_full_community ?? '') }}</span>,
             ETAPA <span class="blank-short">{{ $property_stage ?? '' }}</span></span>.
