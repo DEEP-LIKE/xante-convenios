@@ -248,14 +248,11 @@
             <span class="bold">{{ $year ?? '2026' }}.</span>
         </div>
 
-        {{-- PÁRRAFO 1: IDENTIFICACIÓN DEL FIRMANTE E INMUEBLE --}}
         <div class="paragraph">
             Por medio de la presente, quien suscribe
             <span class="blank">{{ strtoupper($holder_name ?? '') }}</span>,
             en mi carácter de propietario titular y/o vendedor del inmueble ubicado en la
             <span class="bold">PRIVADA <span class="blank">{{ strtoupper($property_community ?? '') }}</span></span>,
-            con el <span class="bold">NÚMERO INTERIOR OFICIAL
-            <span class="blank-short">{{ $property_interior_number ?? '' }}</span></span>,
             del <span class="bold">CONJUNTO URBANO
             <span class="blank">{{ strtoupper($property_full_community ?? '') }}</span>,
             ETAPA <span class="blank-short">{{ $property_stage ?? '' }}</span></span>.
@@ -267,7 +264,6 @@
             indispensable la revisión y coteja de mi documentación.
         </div>
 
-        {{-- PÁRRAFO 2: COMPROMISO DE ENVÍO --}}
         <div class="paragraph">
             En virtud de lo anterior, me comprometo a enviar a la empresa
             <span class="bold">XANTE &amp; VI, S.A.P.I de C.V.</span>,
@@ -277,26 +273,21 @@
             únicamente formatos PDF enviados vía correo.
         </div>
 
-        {{-- PÁRRAFO 3: RESPONSABILIDAD POR INCUMPLIMIENTO --}}
         <div class="paragraph">
             Reconozco que el incumplimiento en la entrega de dicha documentación dentro del plazo
             establecido podrá retrasar o impedir la culminación del proceso de venta, sin que ello sea
             imputable a <span class="bold">XANTE</span>.
         </div>
 
-        {{-- PÁRRAFO 4: AUTENTICIDAD Y AUTORIZACIÓN --}}
         <div class="paragraph">
             Asimismo, declaro que la información y documentos proporcionados son auténticos y
             vigentes, y autorizo a <span class="bold">XANTE</span> a utilizarlos exclusivamente para los
             fines relacionados con la formalización de la operación de compraventa.
         </div>
 
-        {{-- PÁRRAFO 5: CIERRE --}}
         <div class="paragraph">
             Para constancia, firmo la presente carta compromiso en la fecha y lugar indicados.
         </div>
-
-        {{-- FOOTER PÁGINA 1 --}}
         <div class="page-footer">
             <div class="footer-company">
                 <strong>XANTE &amp; VI, S.A.P.I. de C.V.</strong><br>
@@ -307,11 +298,9 @@
 
     </div>
 
-    {{-- PÁGINA 2: FIRMA Y DATOS DE CONTACTO --}}
     <div style="page-break-before: always;"></div>
     <div class="page-container">
 
-        {{-- LOGO + LÍNEA VERDE --}}
         <div class="page-header">
             <div class="logo-container">
                 <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
@@ -319,7 +308,6 @@
         </div>
         <hr class="header-divider">
 
-        {{-- BLOQUE DE FIRMA --}}
         <div class="signature-section">
             <div style="margin-bottom: 8px; font-size: 11pt; font-weight: bold;">Atentamente</div>
 
@@ -332,7 +320,6 @@
             </div>
         </div>
 
-        {{-- DATOS DE CONTACTO --}}
         <div class="contact-section">
             <div class="contact-title">Datos de contacto</div>
 
@@ -346,8 +333,6 @@
                 <span class="contact-field-value">{{ $holder_email ?? '' }}</span>
             </div>
         </div>
-
-        {{-- FOOTER PÁGINA 2 --}}
         <div class="page-footer" style="position: absolute; bottom: 40px; left: 40px; right: 40px;">
             <div class="footer-table">
                 <div class="footer-left">
