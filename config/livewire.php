@@ -26,6 +26,7 @@ return [
             'jpg', 'jpeg', 'mpga', 'webp', 'pdf',
         ],
         'max_upload_time' => 5, // minutes
+        'rules' => 'file|max:204800', // <-- Agregamos regla para permitir temporales de hasta 200MB
     ],
 
 ];
