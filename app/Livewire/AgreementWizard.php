@@ -728,7 +728,7 @@ class AgreementWizard extends Component
     public function processUpload()
     {
         $this->validate([
-            'stepData.upload_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'stepData.upload_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:204800',
         ]);
 
         try {

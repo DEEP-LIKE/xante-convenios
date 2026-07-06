@@ -79,11 +79,11 @@ class StepTwoSchema
                                     ->label('1. INE (A color, tamaño original, no fotos)')
                                     ->required()
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
                                     ->placeholder('Arrastra tu archivo aquí o haz clic para seleccionar')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -100,11 +100,10 @@ class StepTwoSchema
                                     ->label('2. CURP (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -121,11 +120,10 @@ class StepTwoSchema
                                     ->label('3. Constancia de Situación Fiscal (Mes corriente, completa)')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -142,11 +140,10 @@ class StepTwoSchema
                                     ->label('4. Comprobante de Domicilio Vivienda (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -163,11 +160,10 @@ class StepTwoSchema
                                     ->label('5. Comprobante de Domicilio Titular (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -184,11 +180,10 @@ class StepTwoSchema
                                     ->label('6. Acta Nacimiento')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -204,11 +199,10 @@ class StepTwoSchema
                                 FileUpload::make('holder_marriage_certificate')
                                     ->label('7. Acta Matrimonio (Si aplica)')
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -225,10 +219,10 @@ class StepTwoSchema
                                     ->label('8. Carátula Estado de Cuenta Bancario con Datos Fiscales (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -245,10 +239,10 @@ class StepTwoSchema
                                     ->label('9. Carta Compromiso de Entrega de Documentación (Firmada)')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/titular')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -273,10 +267,10 @@ class StepTwoSchema
                                     ->label('1. Instrumento Notarial con Antecedentes Registrales (Datos Registrales y Traslado de Dominio) Escaneada, visible')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -293,10 +287,10 @@ class StepTwoSchema
                                     ->label('2. Recibo predial (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -313,10 +307,10 @@ class StepTwoSchema
                                     ->label('3. Recibo de Agua (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 
@@ -333,10 +327,10 @@ class StepTwoSchema
                                     ->label('4. Recibo CFE con datos fiscales (Mes corriente)')
                                     ->required()
                                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
-                                    ->maxSize(10240)
+                                    ->maxSize(204800)
                                     ->directory('client_documents/'.$page->agreement->id.'/propiedad')
                                     ->disk('s3')
-                                    ->helperText('Límite: 10MB. Formatos: PDF, JPG, PNG.')
+                                    ->helperText('Límite: 200MB. Formatos: PDF, JPG, PNG.')
                                     ->getUploadedFileNameForStorageUsing(function ($file) {
                                         $extension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
 

@@ -372,7 +372,7 @@
                                wire:model="stepData.upload_file"
                                accept=".pdf,.jpg,.jpeg,.png,.gif"
                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <p class="text-xs text-gray-500 mt-1">PDF, JPG, PNG (máx. 10MB)</p>
+                        <p class="text-xs text-gray-500 mt-1">PDF, JPG, PNG (máx. 200MB)</p>
                     </div>
                 </div>
                 
