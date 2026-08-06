@@ -81,7 +81,7 @@ class DocumentEmailService
             }
 
             $clientEmail = $this->getClientEmail($agreement);
-            $advisorEmail = $this->getValidCcEmail(auth()->user()?->email);
+            $ccRecipients = $this->getCcRecipients(auth()->user()?->email);
             $advisorName = auth()->user()->name ?? 'Asesor';
 
             // Obtener documentos del cliente
@@ -98,13 +98,13 @@ class DocumentEmailService
             \Log::info('Sending confirmation email', [
                 'agreement_id' => $agreement->id,
                 'client_email' => $clientEmail,
-                'advisor_email' => $advisorEmail,
+                'cc_recipients' => $ccRecipients,
                 'documents_count' => $clientDocuments->count(),
             ]);
 
             // Enviar correo
             Mail::to($clientEmail)
-                ->cc($advisorEmail)
+                ->cc($ccRecipients)
                 ->send(new \App\Mail\DocumentsReceivedConfirmationMail($agreement, $clientDocuments));
 
             \Log::info('Confirmation email sent successfully', [
@@ -130,12 +130,14 @@ class DocumentEmailService
         }
     }
 
-    private function getValidCcEmail(?string $advisorEmail): string
+    private function getCcRecipients(?string $advisorEmail): array
     {
-        if (! $advisorEmail || str_ends_with(strtolower($advisorEmail), '@xante.com') || ! filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
-            return 'convenios@xante.mx';
+        $recipients = ['convenios@xante.mx'];
+
+        if ($advisorEmail && ! str_ends_with(strtolower($advisorEmail), '@xante.com') && filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
+            $recipients[] = $advisorEmail;
         }
 
-        return $advisorEmail;
+        return array_values(array_unique($recipients));
     }
 }

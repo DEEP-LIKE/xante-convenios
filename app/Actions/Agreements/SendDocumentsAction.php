@@ -48,12 +48,12 @@ class SendDocumentsAction
 
         // El envío se realiza en una transacción para asegurar consistencia
         try {
-            $ccEmail = $this->getValidCcEmail($advisor->email);
+            $ccRecipients = $this->getCcRecipients($advisor->email);
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($agreement, $clientEmail, $ccEmail, $documentsWithFiles) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($agreement, $clientEmail, $ccRecipients, $documentsWithFiles) {
                 // 1. Enviar el correo primero
                 Mail::to($clientEmail)
-                    ->cc($ccEmail)
+                    ->cc($ccRecipients)
                     ->send(new DocumentsReadyMail($agreement));
 
                 // 2. Actualizar estado del convenio SOLO tras envío exitoso
@@ -65,7 +65,7 @@ class SendDocumentsAction
                 Log::info('Documents sent and status updated successfully', [
                     'agreement_id' => $agreement->id,
                     'documents_count' => $documentsWithFiles->count(),
-                    'cc_email' => $ccEmail,
+                    'cc_recipients' => $ccRecipients,
                 ]);
             });
         } catch (\Exception $e) {
@@ -91,12 +91,14 @@ class SendDocumentsAction
         return $holderEmail ?? 'No disponible';
     }
 
-    private function getValidCcEmail(?string $advisorEmail): string
+    private function getCcRecipients(?string $advisorEmail): array
     {
-        if (! $advisorEmail || str_ends_with(strtolower($advisorEmail), '@xante.com') || ! filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
-            return 'convenios@xante.mx';
+        $recipients = ['convenios@xante.mx'];
+
+        if ($advisorEmail && ! str_ends_with(strtolower($advisorEmail), '@xante.com') && filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
+            $recipients[] = $advisorEmail;
         }
 
-        return $advisorEmail;
+        return array_values(array_unique($recipients));
     }
 }

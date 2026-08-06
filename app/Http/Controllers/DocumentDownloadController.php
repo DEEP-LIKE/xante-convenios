@@ -67,16 +67,16 @@ class DocumentDownloadController extends Controller
 
             // Obtener email del asesor (usuario autenticado)
             $rawAdvisorEmail = auth()->user()?->email;
-            $advisorEmail = $this->getValidCcEmail($rawAdvisorEmail);
+            $ccRecipients = $this->getCcRecipients($rawAdvisorEmail);
             $advisorName = auth()->user()->name ?? 'Asesor';
 
-            // Enviar el correo al cliente con copia al asesor
+            // Enviar el correo al cliente con copia al asesor y convenios
             Mail::to($clientEmail)
-                ->cc($advisorEmail)
+                ->cc($ccRecipients)
                 ->send(new DocumentsReadyMail($agreement));
 
             // Redirigir de vuelta con mensaje de éxito
-            return redirect()->back()->with('success', "Documentos enviados exitosamente a {$clientEmail} y al asesor {$advisorName} ({$advisorEmail}). Ambos recibirán {$documentsWithFiles->count()} archivos PDF adjuntos.");
+            return redirect()->back()->with('success', "Documentos enviados exitosamente a {$clientEmail} y en copia a " . implode(', ', $ccRecipients) . ". Se adjuntaron {$documentsWithFiles->count()} archivos PDF.");
 
         } catch (\Exception $e) {
             // Log del error
@@ -90,12 +90,14 @@ class DocumentDownloadController extends Controller
         }
     }
 
-    private function getValidCcEmail(?string $advisorEmail): string
+    private function getCcRecipients(?string $advisorEmail): array
     {
-        if (! $advisorEmail || str_ends_with(strtolower($advisorEmail), '@xante.com') || ! filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
-            return 'convenios@xante.mx';
+        $recipients = ['convenios@xante.mx'];
+
+        if ($advisorEmail && ! str_ends_with(strtolower($advisorEmail), '@xante.com') && filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
+            $recipients[] = $advisorEmail;
         }
 
-        return $advisorEmail;
+        return array_values(array_unique($recipients));
     }
 }
