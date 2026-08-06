@@ -81,7 +81,7 @@ class DocumentEmailService
             }
 
             $clientEmail = $this->getClientEmail($agreement);
-            $advisorEmail = auth()->user()->email;
+            $advisorEmail = $this->getValidCcEmail(auth()->user()?->email);
             $advisorName = auth()->user()->name ?? 'Asesor';
 
             // Obtener documentos del cliente
@@ -128,5 +128,14 @@ class DocumentEmailService
 
             throw $e;
         }
+    }
+
+    private function getValidCcEmail(?string $advisorEmail): string
+    {
+        if (! $advisorEmail || str_ends_with(strtolower($advisorEmail), '@xante.com') || ! filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
+            return 'convenios@xante.mx';
+        }
+
+        return $advisorEmail;
     }
 }

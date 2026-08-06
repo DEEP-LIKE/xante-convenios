@@ -66,7 +66,8 @@ class DocumentDownloadController extends Controller
             ]);
 
             // Obtener email del asesor (usuario autenticado)
-            $advisorEmail = auth()->user()->email;
+            $rawAdvisorEmail = auth()->user()?->email;
+            $advisorEmail = $this->getValidCcEmail($rawAdvisorEmail);
             $advisorName = auth()->user()->name ?? 'Asesor';
 
             // Enviar el correo al cliente con copia al asesor
@@ -87,5 +88,14 @@ class DocumentDownloadController extends Controller
 
             return redirect()->back()->with('error', 'Ocurrió un error al enviar los documentos. Por favor, inténtelo nuevamente.');
         }
+    }
+
+    private function getValidCcEmail(?string $advisorEmail): string
+    {
+        if (! $advisorEmail || str_ends_with(strtolower($advisorEmail), '@xante.com') || ! filter_var($advisorEmail, FILTER_VALIDATE_EMAIL)) {
+            return 'convenios@xante.mx';
+        }
+
+        return $advisorEmail;
     }
 }
