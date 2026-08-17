@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\Agreement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -44,6 +45,8 @@ class DocumentsReadyMail extends Mailable
         $clientName = $wizardData['holder_name'] ?? 'Cliente';
 
         return new Envelope(
+            from: new Address('convenios@xante.mx', 'Xante Convenios'),
+            replyTo: [new Address('convenios@xante.mx', 'Xante Convenios')],
             subject: "Documentos de su Convenio Inmobiliario - {$clientName}",
         );
     }

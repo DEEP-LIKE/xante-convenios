@@ -6,6 +6,7 @@ use App\Models\Agreement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -33,6 +34,8 @@ class DocumentsReceivedConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: new Address('convenios@xante.mx', 'Xante Convenios'),
+            replyTo: [new Address('convenios@xante.mx', 'Xante Convenios')],
             subject: '🎉 Convenio Completado - Documentos Recibidos Satisfactoriamente',
         );
     }

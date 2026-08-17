@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\Agreement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -22,6 +23,8 @@ class AgreementMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: new Address('convenios@xante.mx', 'Xante Convenios'),
+            replyTo: [new Address('convenios@xante.mx', 'Xante Convenios')],
             subject: 'Convenio de Compraventa - '.$this->agreement->client->name,
         );
     }
