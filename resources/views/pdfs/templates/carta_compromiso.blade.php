@@ -91,26 +91,8 @@
         .paragraph {
             text-align: justify;
             margin-bottom: 20px;
-            line-height: 1.7;
-        }
-
-        /* ── BLANCOS INLINE ── */
-        .blank {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 200px;
-        }
-
-        .blank-short {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 60px;
-        }
-
-        .blank-medium {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 120px;
+            line-height: 1.8;
+            font-size: 11pt;
         }
 
         /* ── BOLD / UPPERCASE helpers ── */
@@ -150,6 +132,7 @@
             font-weight: bold;
             font-size: 11pt;
             margin-bottom: 12px;
+            color: #5B2D8E;
         }
 
         .contact-field {
@@ -160,11 +143,11 @@
         .contact-field-label {
             font-weight: bold;
             display: inline-block;
-            min-width: 80px;
+            min-width: 90px;
         }
 
         .contact-field-value {
-            border-bottom: 1px solid #000;
+            font-weight: bold;
             display: inline-block;
             min-width: 250px;
         }
@@ -243,25 +226,20 @@
 
         {{-- FECHA --}}
         <div class="date-line">
-            Fecha: <span class="date-blank">{{ $day ?? '____' }}</span> de
-            <span class="date-blank-long">{{ $month ?? '_______________' }}</span> de
-            <span class="bold">{{ $year ?? '2026' }}.</span>
+            Fecha: <span class="bold">{{ $day ?? now()->format('d') }} de {{ $month ?? 'enero' }} de {{ $year ?? now()->format('Y') }}.</span>
         </div>
 
         <div class="paragraph">
             Por medio de la presente, quien suscribe
-            <span class="blank">{{ strtoupper($holder_name ?? '') }}</span>,
+            <span class="bold">{{ strtoupper($holder_name ?? '_________________________') }}</span>,
             en mi carácter de propietario titular y/o vendedor del inmueble ubicado en
-            <span class="blank bold">{{ strtoupper($domicilio_convenio ?? '') }}</span>,
-            del <span class="bold">CONJUNTO URBANO
-            <span class="blank">{{ strtoupper($property_full_community ?? '') }}</span>,
-            ETAPA <span class="blank-short">{{ $property_stage ?? '' }}</span></span>.
-            En el <span class="bold">MUNICIPIO DE
-            <span class="blank-medium">{{ strtoupper($property_municipality ?? '') }}</span></span>,
-            en el <span class="bold">ESTADO DE
-            <span class="blank-medium">{{ strtoupper($property_state ?? '') }}</span></span>.
+            <span class="bold">{{ strtoupper($domicilio_convenio ?? '_________________________') }}</span>,
+            del <span class="bold">CONJUNTO URBANO {{ strtoupper($property_full_community ?? '_________________________') }}</span>@if(!empty(trim($property_stage ?? ''))),
+            <span class="bold">ETAPA {{ $property_stage }}</span>@endif.
+            En el <span class="bold">MUNICIPIO DE {{ strtoupper($property_municipality ?? '_________________________') }}</span>,
+            en el <span class="bold">ESTADO DE {{ strtoupper($property_state ?? '_________________________') }}</span>.
             Manifiesto mi conocimiento que para la correcta culminación del proceso de compraventa es
-            indispensable la revisión y coteja de mi documentación.
+            indispensable la revisión y cotejo de mi documentación.
         </div>
 
         <div class="paragraph">

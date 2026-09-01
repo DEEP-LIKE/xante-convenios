@@ -29,19 +29,17 @@ class PdfGenerationService
 
         $documents = [];
 
-        // Plantillas Blade que se generan dinámicamente (5 documentos)
+        // Plantillas Blade que se generan dinámicamente (4 documentos)
         $templates = [
             'acuerdo_promocion' => 'Acuerdo de Promoción Inmobiliaria',
-            'datos_generales' => 'Datos Generales - Fase I',
-            'checklist_expediente' => 'Checklist de Expediente Básico',
             'condiciones_comercializacion' => 'Condiciones para Comercialización',
             'carta_compromiso' => 'Carta Compromiso',
+            'checklist_completo' => 'Checklist Completo',
         ];
 
-        // Documentos originales que se copian tal cual (2 documentos)
+        // Documentos originales que se copian tal cual (1 documento)
         $originalDocuments = [
             'aviso_privacidad' => 'Aviso de Privacidad',
-            'euc_venta_convenio' => 'EUC Venta Convenio',
         ];
 
         // Generar documentos desde plantillas Blade
@@ -383,7 +381,11 @@ class PdfGenerationService
 
             // Datos financieros
             'valor_convenio' => $valorConvenio,
-            'precio_promocion' => $precioPromocion,
+            'valor_convenio_letras' => $this->numberToWords($valorConvenio),
+            'precio_promocion' => $valorConvenio, // Precio Comercial Base (sin gastos de escrituración)
+            'precio_promocion_letras' => $this->numberToWords($valorConvenio),
+            'precio_comercial' => $valorConvenio,
+            'precio_comercial_letras' => $this->numberToWords($valorConvenio),
             'valor_compraventa' => floatval(str_replace(',', '', $wizardData['valor_compraventa'] ?? 0)),
             'monto_comision_sin_iva' => $montoComisionSinIva,
             'comision_total_pagar' => floatval(str_replace(',', '', $wizardData['comision_total_pagar'] ?? 0)),
@@ -396,7 +398,6 @@ class PdfGenerationService
             // Porcentajes y textos de comisión
             'porcentaje_comision' => (string) (float) $porcentajeComision,
             'porcentaje_comision_letras' => $this->percentageToWords($porcentajeComision),
-            'precio_promocion_letras' => $this->numberToWords($precioPromocion),
 
             // Fechas
             'fecha_actual' => now()->format('d/m/Y'),
@@ -866,17 +867,15 @@ class PdfGenerationService
      */
     public function verifyDocumentsGenerated(Agreement $agreement): bool
     {
-        // Lista completa de los 7 documentos esperados
+        // Lista de los 5 documentos esperados
         $expectedTypes = [
-            // 5 plantillas Blade
+            // 4 plantillas Blade
             'acuerdo_promocion',
-            'datos_generales',
-            'checklist_expediente',
             'condiciones_comercializacion',
             'carta_compromiso',
-            // 2 documentos originales
+            'checklist_completo',
+            // 1 documento original
             'aviso_privacidad',
-            'euc_venta_convenio',
         ];
         $generatedTypes = $agreement->generatedDocuments()->pluck('document_type')->toArray();
 
@@ -918,7 +917,9 @@ class PdfGenerationService
             ]);
 
             // Verificar que la vista existe
-            $viewPath = 'pdfs.templates.checklist_expediente';
+            $viewPath = view()->exists('pdfs.templates.checklist_completo')
+                ? 'pdfs.templates.checklist_completo'
+                : 'pdfs.templates.checklist_expediente';
             if (! view()->exists($viewPath)) {
                 throw new \Exception("La plantilla Blade no existe: {$viewPath}");
             }

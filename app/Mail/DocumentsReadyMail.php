@@ -43,30 +43,30 @@ class DocumentsReadyMail extends Mailable
     {
         $wizardData = $this->agreement->wizard_data ?? [];
         $clientName = $wizardData['holder_name'] ?? 'Cliente';
+        $location = $wizardData['domicilio_convenio'] ?? $wizardData['property_address'] ?? $wizardData['comunidad'] ?? '';
+        $subjectSuffix = $location ? " - {$location}" : '';
 
         return new Envelope(
             from: new Address('convenios@xante.mx', 'Xante Convenios'),
             replyTo: [new Address('convenios@xante.mx', 'Xante Convenios')],
-            subject: "Documentos de su Convenio Inmobiliario - {$clientName}",
+            subject: "Documentos de su Convenio Inmobiliario – {$clientName}{$subjectSuffix}",
         );
     }
 
     public function content(): Content
     {
+        $wizardData = $this->agreement->wizard_data ?? [];
+        $valorBase = $wizardData['valor_convenio'] ?? $this->agreement->agreement_value ?? 0;
+        $valorConvenioNumeric = (float) str_replace([',', '$', ' ', 'MXN'], '', (string) $valorBase);
+
         return new Content(
             view: 'emails.documents-ready',
             with: [
                 'agreement' => $this->agreement,
-                'clientName' => $this->agreement->wizard_data['holder_name'] ?? 'Cliente',
-                'propertyAddress' => $this->agreement->wizard_data['domicilio_convenio'] ?? 'N/A',
-                'valorConvenio' => number_format(
-                    $this->agreement->current_financials['agreement_value'] ?? 0,
-                    2
-                ),
-                'gananciaFinal' => number_format(
-                    $this->agreement->current_financials['final_profit'] ?? 0,
-                    2
-                ),
+                'clientName' => $wizardData['holder_name'] ?? 'Cliente',
+                'propertyAddress' => $wizardData['domicilio_convenio'] ?? $wizardData['property_address'] ?? 'Propiedad',
+                'valorConvenio' => number_format($valorConvenioNumeric, 2),
+                'fechaGeneracion' => now()->format('d/m/Y'),
             ]
         );
     }

@@ -15,7 +15,11 @@ class MailableEnvelopeTest extends TestCase
     public function test_documents_ready_mail_envelope_has_convenios_from_and_reply_to(): void
     {
         $agreement = new Agreement();
-        $agreement->wizard_data = ['holder_name' => 'Juan Perez'];
+        $agreement->wizard_data = [
+            'holder_name' => 'Juan Perez',
+            'domicilio_convenio' => 'Privada Real Castilla',
+            'valor_convenio' => '1,200,000.00',
+        ];
 
         $mail = new DocumentsReadyMail($agreement);
         $envelope = $mail->envelope();
@@ -26,6 +30,12 @@ class MailableEnvelopeTest extends TestCase
         $this->assertEquals('convenios@xante.mx', $envelope->replyTo[0]->address);
         $this->assertEquals('Xante Convenios', $envelope->replyTo[0]->name);
         $this->assertStringContainsString('Juan Perez', $envelope->subject);
+        $this->assertStringContainsString('Privada Real Castilla', $envelope->subject);
+
+        $content = $mail->content();
+        $this->assertEquals('Juan Perez', $content->with['clientName']);
+        $this->assertEquals('Privada Real Castilla', $content->with['propertyAddress']);
+        $this->assertEquals('1,200,000.00', $content->with['valorConvenio']);
     }
 
     public function test_documents_received_confirmation_mail_envelope_has_convenios_from_and_reply_to(): void
