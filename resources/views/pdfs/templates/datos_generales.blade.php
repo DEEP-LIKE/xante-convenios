@@ -349,8 +349,8 @@
                     <div class="contact-field">
                         <span class="contact-label">Mantenimiento desarrollo ($)</span>
                         <span class="contact-value">
-                            @if(isset($ac_quota) && $ac_quota)
-                                ${{ number_format($ac_quota, 2) }}
+                            @if(isset($ac_quota) && $ac_quota !== '')
+                                ${{ number_format((float) str_replace(['$', ','], '', (string) $ac_quota), 2) }}
                             @endif
                         </span>
                     </div>
@@ -368,8 +368,8 @@
                     <div class="contact-field">
                         <span class="contact-label">Mantenimiento privada ($)</span>
                         <span class="contact-value">
-                            @if(isset($private_president_quota) && $private_president_quota)
-                                ${{ number_format($private_president_quota, 2) }}
+                            @if(isset($private_president_quota) && $private_president_quota !== '')
+                                ${{ number_format((float) str_replace(['$', ','], '', (string) $private_president_quota), 2) }}
                             @endif
                         </span>
                     </div>

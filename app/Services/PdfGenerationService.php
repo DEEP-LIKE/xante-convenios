@@ -284,10 +284,17 @@ class PdfGenerationService
     {
         $wizardData = $agreement->wizard_data ?? [];
 
-        // Calcular porcentaje de comisión desde los datos financieros
         $valorConvenio = floatval(str_replace(',', '', $wizardData['valor_convenio'] ?? 0));
         $montoComisionSinIva = floatval(str_replace(',', '', $wizardData['monto_comision_sin_iva'] ?? 0));
-        $porcentajeComision = $valorConvenio > 0 ? ($montoComisionSinIva / $valorConvenio) * 100 : 6.5;
+        $precioPromocion = round(floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? 0)), 2);
+
+        // Calcular porcentaje de comisión desde los datos financieros de forma segura y sanitizada
+        $rawCommission = $wizardData['porcentaje_comision_sin_iva'] ?? null;
+        if ($rawCommission !== null && $rawCommission !== '' && is_numeric(str_replace(',', '.', (string) $rawCommission))) {
+            $porcentajeComision = round(floatval(str_replace(',', '.', (string) $rawCommission)), 2);
+        } else {
+            $porcentajeComision = $valorConvenio > 0 ? round(($montoComisionSinIva / $valorConvenio) * 100, 2) : 6.5;
+        }
 
         // Nombres de meses en español
         $monthNames = [
@@ -376,7 +383,7 @@ class PdfGenerationService
 
             // Datos financieros
             'valor_convenio' => $valorConvenio,
-            'precio_promocion' => floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? 0)),
+            'precio_promocion' => $precioPromocion,
             'valor_compraventa' => floatval(str_replace(',', '', $wizardData['valor_compraventa'] ?? 0)),
             'monto_comision_sin_iva' => $montoComisionSinIva,
             'comision_total_pagar' => floatval(str_replace(',', '', $wizardData['comision_total_pagar'] ?? 0)),
@@ -387,9 +394,9 @@ class PdfGenerationService
             'tipo_credito' => $wizardData['tipo_credito'] ?? '',
 
             // Porcentajes y textos de comisión
-            'porcentaje_comision' => number_format($porcentajeComision, 1),
-            'porcentaje_comision_letras' => $this->numberToWords($porcentajeComision),
-            'precio_promocion_letras' => $this->numberToWords(floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? 0))),
+            'porcentaje_comision' => (string) (float) $porcentajeComision,
+            'porcentaje_comision_letras' => $this->percentageToWords($porcentajeComision),
+            'precio_promocion_letras' => $this->numberToWords($precioPromocion),
 
             // Fechas
             'fecha_actual' => now()->format('d/m/Y'),
@@ -698,51 +705,149 @@ class PdfGenerationService
     }
 
     /**
-     * Convierte números a palabras (implementación básica)
+     * Convierte un porcentaje a palabras en español (ej. 3.5 -> "tres punto cinco por ciento", 5 -> "cinco por ciento")
      */
-    private function numberToWords(float $number): string
+    public function percentageToWords(float $percentage): string
+    {
+        $percentage = round($percentage, 2);
+
+        if ($percentage <= 0) {
+            return 'cero por ciento';
+        }
+
+        $integerPart = (int) floor($percentage);
+        $decimalPart = (int) round(($percentage - $integerPart) * 100);
+
+        $integerWords = $this->spelloutInteger($integerPart);
+
+        if ($decimalPart === 0) {
+            return "{$integerWords} por ciento";
+        }
+
+        // Si el decimal termina en 0 (ej: 50 -> 0.5), convertimos solo un dígito decimal ("cinco")
+        if ($decimalPart % 10 === 0) {
+            $singleDecimal = (int) ($decimalPart / 10);
+            $decimalWords = $this->spelloutInteger($singleDecimal);
+
+            return "{$integerWords} punto {$decimalWords} por ciento";
+        }
+
+        // Si tiene dos dígitos decimales (ej: 25 -> "veinticinco" o 05 -> "cero cinco")
+        if ($decimalPart < 10) {
+            $decimalWords = 'cero '.$this->spelloutInteger($decimalPart);
+        } else {
+            $decimalWords = $this->spelloutInteger($decimalPart);
+        }
+
+        return "{$integerWords} punto {$decimalWords} por ciento";
+    }
+
+    /**
+     * Convierte un número (monto monetario o entero) a palabras en español
+     */
+    public function numberToWords(float $number): string
+    {
+        $rounded = round($number, 2);
+        $integer = (int) round($rounded);
+
+        return $this->spelloutInteger($integer);
+    }
+
+    /**
+     * Convierte un entero a palabras en español usando NumberFormatter con fallback
+     */
+    public function spelloutInteger(int $number): string
     {
         try {
             if (class_exists('\NumberFormatter')) {
                 $formatter = new \NumberFormatter('es', \NumberFormatter::SPELLOUT);
                 $words = $formatter->format($number);
-
-                // Reemplazar "coma" por "punto" para decimales (6.5 = "seis punto cinco" no "seis coma cinco")
-                $words = str_replace(' coma ', ' punto ', $words);
-
-                return $words;
+                if ($words !== false && ! empty($words)) {
+                    return trim($words);
+                }
             }
         } catch (\Exception $e) {
             Log::warning('NumberFormatter no disponible: '.$e->getMessage());
         }
 
-        // Fallback: implementación básica para números comunes
-        $number = round($number, 1);
+        return $this->fallbackSpellout($number);
+    }
 
-        if ($number == 6.5) {
-            return 'seis punto cinco';
-        }
-        if ($number == 7.0) {
-            return 'siete';
-        }
-        if ($number == 7.5) {
-            return 'siete punto cinco';
-        }
-        if ($number == 8.0) {
-            return 'ocho';
-        }
-        if ($number == 8.5) {
-            return 'ocho punto cinco';
-        }
-        if ($number == 9.0) {
-            return 'nueve';
-        }
-        if ($number == 9.5) {
-            return 'nueve punto cinco';
+    /**
+     * Fallback manual para deletrear enteros en español si NumberFormatter no estuviera disponible
+     */
+    private function fallbackSpellout(int $number): string
+    {
+        if ($number === 0) {
+            return 'cero';
         }
 
-        // Para otros números, usar formato simple
-        return str_replace('.', ' punto ', number_format($number, 1, '.', ''));
+        if ($number < 0) {
+            return 'menos '.$this->fallbackSpellout(abs($number));
+        }
+
+        $units = [
+            1 => 'un', 2 => 'dos', 3 => 'tres', 4 => 'cuatro', 5 => 'cinco',
+            6 => 'seis', 7 => 'siete', 8 => 'ocho', 9 => 'nueve', 10 => 'diez',
+            11 => 'once', 12 => 'doce', 13 => 'trece', 14 => 'catorce', 15 => 'quince',
+            16 => 'dieciséis', 17 => 'diecisiete', 18 => 'dieciocho', 19 => 'diecinueve',
+            20 => 'veinte', 21 => 'veintiún', 22 => 'veintidós', 23 => 'veintitrés',
+            24 => 'veinticuatro', 25 => 'veinticinco', 26 => 'veintiséis', 27 => 'veintisiete',
+            28 => 'veintiocho', 29 => 'veintinueve',
+        ];
+
+        $tens = [
+            30 => 'treinta', 40 => 'cuarenta', 50 => 'cincuenta',
+            60 => 'sesenta', 70 => 'setenta', 80 => 'ochenta', 90 => 'noventa',
+        ];
+
+        $hundreds = [
+            100 => 'cien', 200 => 'doscientos', 300 => 'trescientos',
+            400 => 'cuatrocientos', 500 => 'quinientos', 600 => 'seiscientos',
+            700 => 'setecientos', 800 => 'ochocientos', 900 => 'novecientos',
+        ];
+
+        if (isset($units[$number])) {
+            return $units[$number];
+        }
+
+        if ($number < 100) {
+            $ten = (int) (floor($number / 10) * 10);
+            $unit = $number % 10;
+
+            return $unit > 0 ? "{$tens[$ten]} y {$units[$unit]}" : $tens[$ten];
+        }
+
+        if ($number < 1000) {
+            if ($number === 100) {
+                return 'cien';
+            }
+            if ($number < 200) {
+                return 'ciento '.$this->fallbackSpellout($number - 100);
+            }
+            $hundred = (int) (floor($number / 100) * 100);
+            $rest = $number % 100;
+
+            return $rest > 0 ? "{$hundreds[$hundred]} ".$this->fallbackSpellout($rest) : $hundreds[$hundred];
+        }
+
+        if ($number < 1000000) {
+            $thousands = (int) floor($number / 1000);
+            $rest = $number % 1000;
+            $thousandsStr = $thousands === 1 ? 'mil' : $this->fallbackSpellout($thousands).' mil';
+
+            return $rest > 0 ? "{$thousandsStr} ".$this->fallbackSpellout($rest) : $thousandsStr;
+        }
+
+        if ($number < 1000000000) {
+            $millions = (int) floor($number / 1000000);
+            $rest = $number % 1000000;
+            $millionsStr = $millions === 1 ? 'un millón' : $this->fallbackSpellout($millions).' millones';
+
+            return $rest > 0 ? "{$millionsStr} ".$this->fallbackSpellout($rest) : $millionsStr;
+        }
+
+        return (string) $number;
     }
 
     /**

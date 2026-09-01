@@ -247,8 +247,8 @@
 
         <div class="paragraph">
             Por medio de esta carta el vendedor(es) <span class="bold">{{ strtoupper($holder_name ?? '_________________________') }}</span> autoriza a XANTE, de manera no exclusiva, a realizar la promoción y
-            publicidad que considere necesaria para lograr la venta del inmueble (en adelante el "Inmueble") CON EL
-            NÚMERO INTERIOR "<span class="bold">{{ $property_interior_number ?? '__' }}</span>", PERTENECIENTE AL RÉGIMEN DE PROPIEDAD EN
+            publicidad que considere necesaria para lograr la venta del inmueble (en adelante el "Inmueble")@if(!empty(trim($property_interior_number ?? '')) && $property_interior_number !== '__') CON EL
+            NÚMERO INTERIOR "<span class="bold">{{ $property_interior_number }}</span>",@endif PERTENECIENTE AL RÉGIMEN DE PROPIEDAD EN
             CONDOMINIO DENOMINADO "<span class="bold">{{ strtoupper($property_community ?? 'PRIVADA _________') }}</span>",
         </div>
 
@@ -275,7 +275,7 @@
 
         <div class="paragraph">
             El VENDEDOR(ES) expresamente reconoce que la comisión que cubrirá a XANTE por la promoción
-            inmobiliaria será la cantidad equivalente al <span class="bold">{{ $porcentaje_comision ?? '6.5' }}% {{ $porcentaje_comision_letras ?? 'seis punto cinco por ciento' }}</span> más el impuesto al valor
+            inmobiliaria será la cantidad equivalente al <span class="bold">{{ $porcentaje_comision ?? '6.5' }}% ({{ $porcentaje_comision_letras ?? 'seis punto cinco por ciento' }})</span> más el impuesto al valor
             agregado (IVA) sobre el precio por la venta del Inmueble. El cálculo del IVA es sobre el monto de la comisión.
         </div>
 
