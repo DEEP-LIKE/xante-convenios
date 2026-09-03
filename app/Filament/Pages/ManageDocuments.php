@@ -768,8 +768,12 @@ class ManageDocuments extends Page implements HasActions, HasForms
             $templateData['isUpdated'] = true; // Indica que es la versión actualizada
 
             // Generar el PDF
+            $viewName = view()->exists('pdfs.templates.checklist_completo')
+                ? 'pdfs.templates.checklist_completo'
+                : 'pdfs.templates.checklist_expediente';
+
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
-                'pdfs.templates.checklist_expediente',
+                $viewName,
                 $templateData
             );
 

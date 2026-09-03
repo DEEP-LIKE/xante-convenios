@@ -187,7 +187,7 @@ class PdfGenerationService
             $data = $this->prepareTemplateData($agreement);
 
             // Para el checklist, agregar variables específicas
-            if ($type === 'checklist_expediente') {
+            if (in_array($type, ['checklist_expediente', 'checklist_completo'])) {
                 $data['uploadedDocuments'] = []; // Lista vacía inicialmente
                 $data['isUpdated'] = false; // Paso 1: nada marcado
             }
@@ -430,6 +430,10 @@ class PdfGenerationService
             // Nuevas variables estructuradas para 3 secciones
             'participants' => $this->getParticipants($agreement, $wizardData),
             'signers' => $this->getSigners($agreement, $wizardData),
+
+            // Variables para checklist
+            'uploadedDocuments' => [],
+            'isUpdated' => false,
         ];
     }
 

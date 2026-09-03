@@ -235,9 +235,11 @@
         
         {{-- Función helper para verificar si documento está cargado --}}
         @php
-            $isChecked = function($documentType) use ($uploadedDocuments, $isUpdated) {
-                if (!isset($isUpdated) || !$isUpdated) return false;
-                return in_array($documentType, $uploadedDocuments ?? []);
+            $uploadedDocs = $uploadedDocuments ?? [];
+            $updated = $isUpdated ?? false;
+            $isChecked = function($documentType) use ($uploadedDocs, $updated) {
+                if (!$updated) return false;
+                return in_array($documentType, $uploadedDocs);
             };
         @endphp
         
