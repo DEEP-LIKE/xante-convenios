@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 2.5cm 3.5cm;
+            margin: 1.5cm 2cm 1.2cm 2cm;
         }
 
         * {
@@ -19,23 +19,20 @@
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            padding: 40px;
-            font-size: 11pt;
-            line-height: 1.6;
-            color: #000;
+            font-size: 9.5pt;
+            line-height: 1.45;
+            color: #111;
         }
 
         .page-container {
             width: 100%;
-            max-width: 21.59cm;
-            margin: 0 auto;
         }
 
         /* ── HEADER ── */
         .page-header {
             display: table;
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         .logo-container {
@@ -46,169 +43,139 @@
         }
 
         .logo {
-            width: 110px;
+            width: 100px;
             height: auto;
         }
 
-        /* Línea decorativa verde (imita el estilo visual de Xante) */
         .header-divider {
             border: none;
-            border-top: 3px solid #7DC142;
-            margin: 6px 0 20px 0;
+            border-top: 2.5px solid #7DC142;
+            margin: 4px 0 16px 0;
         }
 
         /* ── TÍTULO PRINCIPAL ── */
         .main-title {
-            font-size: 13pt;
+            font-size: 11.5pt;
             font-weight: bold;
             text-align: center;
             text-transform: uppercase;
-            margin-bottom: 30px;
+            margin-bottom: 12px;
             letter-spacing: 0.5px;
         }
 
         /* ── FECHA ── */
         .date-line {
             text-align: right;
-            font-size: 11pt;
+            font-size: 9.5pt;
             font-weight: bold;
-            margin-bottom: 30px;
-        }
-
-        .date-blank {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 30px;
-        }
-
-        .date-blank-long {
-            border-bottom: 1px solid #000;
-            display: inline-block;
-            min-width: 120px;
+            margin-bottom: 14px;
         }
 
         /* ── PÁRRAFOS ── */
         .paragraph {
             text-align: justify;
-            margin-bottom: 20px;
-            line-height: 1.8;
-            font-size: 11pt;
+            margin-bottom: 10px;
+            line-height: 1.45;
+            font-size: 9.5pt;
         }
 
-        /* ── BOLD / UPPERCASE helpers ── */
+        /* ── HELPERS ── */
         .bold {
             font-weight: bold;
         }
 
-        .upper {
-            text-transform: uppercase;
-        }
-
         /* ── SECCIÓN DE FIRMA ── */
         .signature-section {
-            margin-top: 50px;
-            page-break-inside: avoid;
+            margin-top: 22px;
+            text-align: center;
+        }
+
+        .signature-intro {
+            font-size: 10pt;
+            font-weight: bold;
+            text-align: left;
+            margin-bottom: 8px;
         }
 
         .signature-line {
-            border-top: 2px solid #000;
-            width: 60%;
-            margin: 50px auto 10px auto;
+            border-top: 1.5px solid #000;
+            width: 280px;
+            margin: 38px auto 6px auto;
         }
 
         .signature-label {
             text-align: center;
-            font-size: 10pt;
+            font-size: 9pt;
             font-weight: bold;
-            line-height: 1.5;
+            line-height: 1.35;
+        }
+
+        .signature-name {
+            font-weight: bold;
+            font-size: 9.5pt;
+            color: #000;
+            margin-top: 2px;
         }
 
         /* ── DATOS DE CONTACTO ── */
         .contact-section {
-            margin-top: 30px;
+            margin-top: 16px;
+            padding-top: 10px;
+            border-top: 1px dotted #ccc;
+            font-size: 9pt;
         }
 
         .contact-title {
             font-weight: bold;
-            font-size: 11pt;
-            margin-bottom: 12px;
+            font-size: 9.5pt;
+            margin-bottom: 5px;
             color: #5B2D8E;
+            text-align: left;
         }
 
-        .contact-field {
-            margin-bottom: 12px;
-            font-size: 11pt;
+        .contact-table {
+            width: 100%;
+            display: table;
         }
 
-        .contact-field-label {
+        .contact-col {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+
+        .contact-label {
             font-weight: bold;
-            display: inline-block;
-            min-width: 90px;
+            color: #333;
         }
 
-        .contact-field-value {
+        .contact-value {
             font-weight: bold;
-            display: inline-block;
-            min-width: 250px;
+            color: #000;
         }
 
         /* ── FOOTER ── */
         .page-footer {
-            margin-top: 40px;
-            border-top: 1px solid #ccc;
-            padding-top: 8px;
-        }
-
-        .footer-table {
-            display: table;
-            width: 100%;
-        }
-
-        .footer-left {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: left;
-        }
-
-        .footer-right {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: right;
-        }
-
-        .footer-logo-text {
-            font-size: 14pt;
-            font-weight: bold;
-            color: #5B2D8E;
-        }
-
-        .footer-logo-text span {
-            color: #7DC142;
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 6px;
         }
 
         .footer-company {
             font-size: 7.5pt;
-            color: #333;
-            line-height: 1.4;
+            color: #444;
+            line-height: 1.3;
             text-align: center;
         }
 
-        .footer-social {
-            font-size: 8pt;
-            color: #333;
-            text-align: right;
-        }
-
-        /* ── BARRA INFERIOR VERDE ── */
         .footer-bar {
             background-color: #7DC142;
-            height: 8px;
-            margin-top: 10px;
+            height: 6px;
+            margin-top: 6px;
         }
     </style>
 </head>
 <body>
-    {{-- PÁGINA 1 --}}
     <div class="page-container">
 
         {{-- LOGO + LÍNEA VERDE --}}
@@ -266,63 +233,40 @@
         <div class="paragraph">
             Para constancia, firmo la presente carta compromiso en la fecha y lugar indicados.
         </div>
-        <div class="page-footer">
-            <div class="footer-company">
-                <strong>XANTE &amp; VI, S.A.P.I. de C.V.</strong><br>
-                Avenida Vía Real, Local 1, Mz 16 Lt 1, Col. Real del Sol. Ojo de Agua, Tecámac, 55767, Estado de México.
-            </div>
-        </div>
-        <div class="footer-bar"></div>
 
-    </div>
-
-    <div style="page-break-before: always;"></div>
-    <div class="page-container">
-
-        <div class="page-header">
-            <div class="logo-container">
-                <img src="{{ $logo_path }}" alt="Xante Logo" class="logo">
-            </div>
-        </div>
-        <hr class="header-divider">
-
+        {{-- SECCIÓN DE FIRMA --}}
         <div class="signature-section">
-            <div style="margin-bottom: 8px; font-size: 11pt; font-weight: bold;">Atentamente</div>
+            <div class="signature-intro">Atentamente</div>
 
             <div class="signature-line"></div>
 
             <div class="signature-label">
                 Nombre del propietario titular<br>
                 Firma<br>
-                <span style="font-weight: normal; font-size: 10pt;">{{ strtoupper($holder_name ?? '') }}</span>
+                <div class="signature-name">{{ strtoupper($holder_name ?? '') }}</div>
             </div>
         </div>
 
+        {{-- DATOS DE CONTACTO --}}
         <div class="contact-section">
             <div class="contact-title">Datos de contacto</div>
-
-            <div class="contact-field">
-                <span class="contact-field-label">Teléfono:</span>
-                <span class="contact-field-value">{{ $holder_phone ?? '' }}</span>
-            </div>
-
-            <div class="contact-field">
-                <span class="contact-field-label">Correo:</span>
-                <span class="contact-field-value">{{ $holder_email ?? '' }}</span>
+            <div class="contact-table">
+                <div class="contact-col">
+                    <span class="contact-label">Teléfono:</span>
+                    <span class="contact-value">{{ $holder_phone ?? 'N/A' }}</span>
+                </div>
+                <div class="contact-col">
+                    <span class="contact-label">Correo:</span>
+                    <span class="contact-value">{{ $holder_email ?? 'N/A' }}</span>
+                </div>
             </div>
         </div>
-        <div class="page-footer" style="position: absolute; bottom: 40px; left: 40px; right: 40px;">
-            <div class="footer-table">
-                <div class="footer-left">
-                    <div class="footer-logo-text"><span>Xante</span>.mx</div>
-                </div>
-                <div class="footer-right">
-                    <div class="footer-company">
-                        <strong>XANTE &amp; VI, S.A.P.I. de C.V.</strong><br>
-                        Avenida Vía Real, Local 1, Mz 16 Lt 1, Col. Real del Sol.<br>
-                        Ojo de Agua, Tecámac, 55767, Estado de México.
-                    </div>
-                </div>
+
+        {{-- FOOTER --}}
+        <div class="page-footer">
+            <div class="footer-company">
+                <strong>XANTE &amp; VI, S.A.P.I. de C.V.</strong><br>
+                Avenida Vía Real, Local 1, Mz 16 Lt 1, Col. Real del Sol. Ojo de Agua, Tecámac, 55767, Estado de México.
             </div>
             <div class="footer-bar"></div>
         </div>

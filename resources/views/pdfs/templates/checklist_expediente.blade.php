@@ -86,27 +86,31 @@
         
         /* CLIENTE INFO BOX */
         .client-box {
-            margin: 25px 0;
+            margin: 10px 0 15px 0;
             padding: 8px 12px;
             border: 2px solid #000;
             background-color: #f5f5f5;
         }
         
-        .client-box .label {
+        .client-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .client-table td {
+            padding: 2px 0;
+            vertical-align: middle;
+            font-size: 9.5pt;
+        }
+
+        .client-table .label {
             font-weight: bold;
-            display: inline-block;
-            min-width: 80px;
-            margin-top: 10px;
+            white-space: nowrap;
+            width: 85px;
         }
         
-        .client-box .value {
-            text-decoration: underline;
-            display: inline-block;
-            margin-top: -20px;
-        }
-        
-        .client-location {
-            margin-top: 5px;
+        .client-table .value {
+            font-weight: bold;
         }
         
         /* SECCIONES DE DOCUMENTACIÓN */
@@ -273,19 +277,22 @@
 
         {{-- INFORMACIÓN DEL CLIENTE --}}
         <div class="client-box">
-            <div>
-                <span class="label">CLIENTE:</span>
-                <span class="value">{{ strtoupper($holder_name ?? '____________________') }}</span>
-           
-                <span class="value">{{ strtoupper($comunidad ?? 'REAL ________') }}</span>, 
-                <span class="value">{{ strtoupper($domicilio_convenio ?? '') }}</span>.
-            </div>
-            <div class="client-location">
-                <span class="label">TIPO:</span>
-                <span class="value">{{ $tipo_vivienda ?? '' }}</span>
-                <span class="label" style="margin-left: 20px;">UBICACIÓN:</span>
-                <span class="value">{{ $municipio_propiedad ?? '' }}, {{ $estado_propiedad ?? '' }}</span>
-            </div>
+            <table class="client-table">
+                <tr>
+                    <td class="label">CLIENTE:</td>
+                    <td class="value" colspan="3">{{ strtoupper($holder_name ?? '____________________') }}</td>
+                </tr>
+                <tr>
+                    <td class="label">INMUEBLE:</td>
+                    <td class="value" colspan="3">{{ strtoupper($comunidad ?? 'REAL ________') }}, {{ strtoupper($domicilio_convenio ?? '') }}</td>
+                </tr>
+                <tr>
+                    <td class="label">TIPO:</td>
+                    <td class="value" style="width: 100px;">{{ $tipo_vivienda ?? '' }}</td>
+                    <td class="label" style="width: 85px; text-align: right; padding-right: 8px;">UBICACIÓN:</td>
+                    <td class="value">{{ $municipio_propiedad ?? '' }}, {{ $estado_propiedad ?? '' }}</td>
+                </tr>
+            </table>
         </div>
 
         {{-- DOCUMENTACIÓN TITULAR --}}

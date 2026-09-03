@@ -97,7 +97,7 @@
         }
         
         .seller-name {
-            text-decoration: underline;
+            font-weight: bold;
         }
         
         /* PÁRRAFOS */
@@ -235,9 +235,9 @@
 
         <div class="date-location">
             Estado de <span class="bold">{{ $property_state ?? '_________' }}</span> a 
-            <span class="bold underline">{{ $day ?? '__' }}</span> de 
-            <span class="bold underline">{{ $month ?? '__________' }}</span> de 
-            <span class="bold underline">{{ $year ?? '2025' }}</span>
+            <span class="bold">{{ $day ?? '__' }}</span> de 
+            <span class="bold">{{ $month ?? '__________' }}</span> de 
+            <span class="bold">{{ $year ?? '2025' }}</span>
         </div>
 
         <div class="subtitle">

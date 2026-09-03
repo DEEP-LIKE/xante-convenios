@@ -65,7 +65,7 @@
             font-size: 13pt;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             color: #5B2D8E;
             line-height: 1.3;
         }
@@ -73,8 +73,8 @@
         /* SALUDO */
         .greeting {
             text-align: justify;
-            margin-bottom: 15px;
-            line-height: 1.6;
+            margin-bottom: 10px;
+            line-height: 1.5;
         }
         
         .greeting-name {
@@ -90,27 +90,34 @@
         
         /* CLIENTE INFO BOX */
         .client-box {
-            margin: 20px 0;
-            padding: 12px 16px;
-            border: 1px solid #5B2D8E;
+            margin: 10px 0 15px 0;
+            padding: 8px 14px;
+            border: 1.5px solid #5B2D8E;
             background-color: #f8f4fb;
             border-radius: 6px;
         }
         
-        .client-box .label {
+        .client-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .client-table td {
+            padding: 2px 0;
+            vertical-align: middle;
+            font-size: 9.5pt;
+        }
+
+        .client-table .label {
             font-weight: bold;
             color: #5B2D8E;
-            display: inline-block;
-            min-width: 80px;
+            white-space: nowrap;
+            width: 85px;
         }
         
-        .client-box .value {
+        .client-table .value {
             font-weight: bold;
             color: #000;
-        }
-        
-        .client-location {
-            margin-top: 8px;
         }
         
         /* SECCIONES DE DOCUMENTACIÓN */
@@ -266,20 +273,22 @@
 
         {{-- INFORMACIÓN DEL CLIENTE --}}
         <div class="client-box">
-            <div>
-                <span class="label">CLIENTE:</span>
-                <span class="value">{{ strtoupper($holder_name ?? '____________________') }}</span>
-            </div>
-            <div style="margin-top: 6px;">
-                <span class="label">INMUEBLE:</span>
-                <span class="value">{{ strtoupper($domicilio_convenio ?? '') }} {{ strtoupper($property_full_community ?? '') }}</span>
-            </div>
-            <div class="client-location">
-                <span class="label">UBICACIÓN:</span>
-                <span class="value">{{ strtoupper($property_municipality ?? '') }}, {{ strtoupper($property_state ?? '') }}</span>
-                <span class="label" style="margin-left: 20px;">TIPO:</span>
-                <span class="value">{{ strtoupper($tipo_vivienda ?? '') }}</span>
-            </div>
+            <table class="client-table">
+                <tr>
+                    <td class="label">CLIENTE:</td>
+                    <td class="value" colspan="3">{{ strtoupper($holder_name ?? '____________________') }}</td>
+                </tr>
+                <tr>
+                    <td class="label">INMUEBLE:</td>
+                    <td class="value" colspan="3">{{ strtoupper($domicilio_convenio ?? '') }} {{ strtoupper($property_full_community ?? '') }}</td>
+                </tr>
+                <tr>
+                    <td class="label">UBICACIÓN:</td>
+                    <td class="value">{{ strtoupper($property_municipality ?? '') }}, {{ strtoupper($property_state ?? '') }}</td>
+                    <td class="label" style="width: 50px; text-align: right; padding-right: 8px;">TIPO:</td>
+                    <td class="value" style="width: 70px;">{{ strtoupper($tipo_vivienda ?? '') }}</td>
+                </tr>
+            </table>
         </div>
 
         {{-- DOCUMENTACIÓN TITULAR --}}
