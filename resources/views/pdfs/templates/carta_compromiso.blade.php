@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 2cm 2.8cm 2.4cm 2.8cm;
+            margin: 2.5cm 3.5cm;
         }
 
         * {
@@ -19,13 +19,16 @@
 
         body {
             font-family: Arial, Helvetica, sans-serif;
+            padding: 40px;
             font-size: 10pt;
-            line-height: 1.5;
+            line-height: 1.4;
             color: #111;
         }
 
         .page-container {
             width: 100%;
+            max-width: 21.59cm;
+            margin: 0 auto;
         }
 
         /* ── HEADER ── */
@@ -154,13 +157,9 @@
             color: #000;
         }
 
-        /* ── FOOTER FIJO AL FINAL DE LA HOJA ── */
+        /* ── FOOTER AL FINAL DE LA HOJA ── */
         .page-footer {
-            position: fixed;
-            bottom: -1.4cm;
-            left: 0;
-            right: 0;
-            height: 1.2cm;
+            margin-top: 25px;
             border-top: 1px solid #ddd;
             padding-top: 6px;
         }
