@@ -8,7 +8,7 @@
     <style>
         @page {
             size: letter;
-            margin: 1.5cm 2cm 1.2cm 2cm;
+            margin: 2cm 2.8cm 2.4cm 2.8cm;
         }
 
         * {
@@ -19,8 +19,8 @@
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 9.5pt;
-            line-height: 1.45;
+            font-size: 10pt;
+            line-height: 1.5;
             color: #111;
         }
 
@@ -32,7 +32,7 @@
         .page-header {
             display: table;
             width: 100%;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .logo-container {
@@ -43,7 +43,7 @@
         }
 
         .logo {
-            width: 100px;
+            width: 105px;
             height: auto;
         }
 
@@ -59,24 +59,24 @@
             font-weight: bold;
             text-align: center;
             text-transform: uppercase;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             letter-spacing: 0.5px;
         }
 
         /* ── FECHA ── */
         .date-line {
             text-align: right;
-            font-size: 9.5pt;
+            font-size: 10pt;
             font-weight: bold;
-            margin-bottom: 14px;
+            margin-bottom: 18px;
         }
 
         /* ── PÁRRAFOS ── */
         .paragraph {
             text-align: justify;
-            margin-bottom: 10px;
-            line-height: 1.45;
-            font-size: 9.5pt;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-size: 10pt;
         }
 
         /* ── HELPERS ── */
@@ -86,7 +86,7 @@
 
         /* ── SECCIÓN DE FIRMA ── */
         .signature-section {
-            margin-top: 22px;
+            margin-top: 30px;
             text-align: center;
         }
 
@@ -94,13 +94,13 @@
             font-size: 10pt;
             font-weight: bold;
             text-align: left;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .signature-line {
             border-top: 1.5px solid #000;
             width: 280px;
-            margin: 38px auto 6px auto;
+            margin: 42px auto 6px auto;
         }
 
         .signature-label {
@@ -112,23 +112,23 @@
 
         .signature-name {
             font-weight: bold;
-            font-size: 9.5pt;
+            font-size: 10pt;
             color: #000;
             margin-top: 2px;
         }
 
         /* ── DATOS DE CONTACTO ── */
         .contact-section {
-            margin-top: 16px;
-            padding-top: 10px;
+            margin-top: 22px;
+            padding-top: 8px;
             border-top: 1px dotted #ccc;
-            font-size: 9pt;
+            font-size: 9.5pt;
         }
 
         .contact-title {
             font-weight: bold;
             font-size: 9.5pt;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
             color: #5B2D8E;
             text-align: left;
         }
@@ -154,9 +154,13 @@
             color: #000;
         }
 
-        /* ── FOOTER ── */
+        /* ── FOOTER FIJO AL FINAL DE LA HOJA ── */
         .page-footer {
-            margin-top: 20px;
+            position: fixed;
+            bottom: -1.4cm;
+            left: 0;
+            right: 0;
+            height: 1.2cm;
             border-top: 1px solid #ddd;
             padding-top: 6px;
         }
