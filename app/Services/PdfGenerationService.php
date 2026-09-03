@@ -15,6 +15,9 @@ class PdfGenerationService
      */
     public function generateAllDocuments(Agreement $agreement): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
+
         // IMPORTANTE: Limpiar documentos existentes antes de generar nuevos
         // Solo elimina las referencias en BD, no los archivos físicos
         if ($agreement->generatedDocuments()->count() > 0) {
@@ -182,6 +185,9 @@ class PdfGenerationService
      */
     private function generateSingleDocument(Agreement $agreement, string $type, string $name): GeneratedDocument
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
+
         try {
             // Preparar datos para la plantilla
             $data = $this->prepareTemplateData($agreement);
