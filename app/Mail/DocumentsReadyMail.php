@@ -102,8 +102,8 @@ class DocumentsReadyMail extends Mailable
                 }
 
                 try {
-                    // Verificar tamaño del archivo en S3
-                    $fileSize = \Storage::disk('s3')->size($document->file_path);
+                    // Verificar tamaño del archivo (usar de BD si existe para evitar llamada extra a S3)
+                    $fileSize = $document->file_size ?: \Storage::disk('s3')->size($document->file_path);
                     
                     \Log::debug('Document file size checked', [
                         'document_id' => $document->id,

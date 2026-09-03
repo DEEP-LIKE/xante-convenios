@@ -19,6 +19,8 @@ class SendDocumentsAction
      */
     public function execute(Agreement $agreement, User $advisor): int
     {
+        @set_time_limit(300);
+
         // Validar que existen documentos generados
         if ($agreement->generatedDocuments->isEmpty()) {
             throw new \Exception('No hay documentos generados para enviar. Por favor, genere los documentos primero.');
@@ -46,30 +48,27 @@ class SendDocumentsAction
 
         \Log::debug('Documents found for sending', ['count' => $documentsWithFiles->count()]);
 
-        // El envío se realiza en una transacción para asegurar consistencia
         try {
             $ccRecipients = $this->getCcRecipients($advisor->email);
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($agreement, $clientEmail, $ccRecipients, $documentsWithFiles) {
-                // 1. Enviar el correo primero
-                Mail::to($clientEmail)
-                    ->cc($ccRecipients)
-                    ->send(new DocumentsReadyMail($agreement));
+            // 1. Enviar el correo con los archivos adjuntos
+            Mail::to($clientEmail)
+                ->cc($ccRecipients)
+                ->send(new DocumentsReadyMail($agreement));
 
-                // 2. Actualizar estado del convenio SOLO tras envío exitoso
-                $agreement->update([
-                    'status' => 'documents_sent',
-                    'documents_sent_at' => now(),
-                ]);
+            // 2. Actualizar estado del convenio SOLO tras envío exitoso
+            $agreement->update([
+                'status' => 'documents_sent',
+                'documents_sent_at' => now(),
+            ]);
 
-                Log::info('Documents sent and status updated successfully', [
-                    'agreement_id' => $agreement->id,
-                    'documents_count' => $documentsWithFiles->count(),
-                    'cc_recipients' => $ccRecipients,
-                ]);
-            });
+            Log::info('Documents sent and status updated successfully', [
+                'agreement_id' => $agreement->id,
+                'documents_count' => $documentsWithFiles->count(),
+                'cc_recipients' => $ccRecipients,
+            ]);
         } catch (\Exception $e) {
-            Log::error('Error in SendDocumentsAction transaction', [
+            Log::error('Error in SendDocumentsAction', [
                 'agreement_id' => $agreement->id,
                 'error' => $e->getMessage()
             ]);

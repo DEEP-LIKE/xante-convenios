@@ -204,6 +204,8 @@ class ManageDocuments extends Page implements HasActions, HasForms
                         ->completedIcon('heroicon-o-check-circle')
                         ->schema($this->getStepOneSchema())
                         ->afterValidation(function () {
+                            @set_time_limit(300);
+
                             \Log::debug('Step 1 afterValidation triggered', [
                                 'agreement_id' => $this->agreement->id,
                                 'status' => $this->agreement->status,
