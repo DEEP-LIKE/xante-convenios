@@ -97,6 +97,9 @@ class PreloadClientDataAction
                 ->body('Se han precargado los valores de la cotización previa del cliente.')
                 ->info()
                 ->send();
+        } elseif (! empty($client->hubspot_amount)) {
+            // Si no hay propuesta previa, inicializar con el Precio Comercial traído de HubSpot
+            $set('valor_convenio', $client->hubspot_amount);
         }
 
         Notification::make()

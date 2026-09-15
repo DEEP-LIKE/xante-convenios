@@ -587,7 +587,7 @@ class HubspotSyncService
                     'Authorization' => "Bearer {$this->token}",
                 ])
                 ->get($this->baseUrl."/crm/v3/objects/deals/{$dealId}", [
-                    'properties' => 'dealname,amount,estatus_de_convenio,dealstage,hs_lastmodifieddate',
+                    'properties' => 'dealname,amount,precio_comercial,estatus_de_convenio,dealstage,hs_lastmodifieddate',
                 ]);
 
             if ($response->successful()) {

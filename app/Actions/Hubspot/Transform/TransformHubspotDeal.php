@@ -119,8 +119,11 @@ class TransformHubspotDeal
             $clientData['hubspot_status'] = $dealProps['estatus_de_convenio'];
         }
 
-        if (! empty($dealProps['amount'])) {
-            $clientData['hubspot_amount'] = $dealProps['amount'];
+        // Monto del convenio: Priorizar Precio Comercial (sin gastos de escrituración)
+        if (! empty($dealProps['precio_comercial'])) {
+            $clientData['hubspot_amount'] = (float) $dealProps['precio_comercial'];
+        } elseif (! empty($dealProps['amount'])) {
+            $clientData['hubspot_amount'] = (float) $dealProps['amount'];
         }
 
         return $clientData;

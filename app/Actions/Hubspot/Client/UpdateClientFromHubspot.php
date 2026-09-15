@@ -48,7 +48,7 @@ class UpdateClientFromHubspot
             if (($client->hubspot_status === 'N/A' || empty($client->hubspot_status)) && !empty($dealData['hubspot_status'])) {
                 $updates['hubspot_status'] = $dealData['hubspot_status'];
             }
-            if (empty($client->hubspot_amount) && !empty($dealData['hubspot_amount'])) {
+            if (!empty($dealData['hubspot_amount']) && $client->hubspot_amount != $dealData['hubspot_amount']) {
                 $updates['hubspot_amount'] = $dealData['hubspot_amount'];
             }
 

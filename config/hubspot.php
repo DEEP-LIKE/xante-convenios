@@ -48,6 +48,8 @@ return [
             // Propiedades básicas del deal
             'dealname',
             'amount',
+            'precio_comercial',
+            'nombre_inmueble',
             'dealstage',
             'closedate',
             'createdate',
