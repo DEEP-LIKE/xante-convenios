@@ -142,7 +142,7 @@ class ManageDocuments extends Page implements HasActions, HasForms
                     }
                     $this->dispatch('open-recalculation-modal');
                 })
-                ->visible(fn () => $this->agreement !== null),
+                ->visible(fn () => $this->agreement !== null && $this->currentStep > 1),
         ];
     }
 
@@ -428,6 +428,8 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
     public function handleStepChange($newStep, $oldStep)
     {
+        $this->currentStep = (int) $newStep;
+
         \Log::info('Step change detected', [
             'old_step' => $oldStep,
             'new_step' => $newStep,
