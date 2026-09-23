@@ -43,6 +43,13 @@ class AgreementRecalculationModal extends Component
         'motivo' => 'required|string|min:10',
     ];
 
+    protected $messages = [
+        'motivo.required' => 'El motivo del recálculo es obligatorio.',
+        'motivo.min' => 'El motivo del recálculo debe contener al menos 10 caracteres.',
+        'valor_convenio.required' => 'El valor de convenio es obligatorio.',
+        'valor_convenio.numeric' => 'El valor de convenio debe ser un número válido.',
+    ];
+
     public function mount($agreementId)
     {
         $this->agreementId = $agreementId;
@@ -181,6 +188,13 @@ class AgreementRecalculationModal extends Component
             $this->validate();
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Illuminate\Support\Facades\Log::error('Validación de recálculo falló', ['errors' => $e->errors()]);
+            $firstError = collect($e->errors())->flatten()->first();
+            Notification::make()
+                ->title('⚠️ Faltan datos obligatorios')
+                ->body($firstError ?: 'Por favor completa todos los campos requeridos, incluyendo el motivo (mínimo 10 caracteres).')
+                ->danger()
+                ->duration(6000)
+                ->send();
             throw $e;
         }
 
