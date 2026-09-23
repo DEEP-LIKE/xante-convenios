@@ -165,6 +165,15 @@ class QuoteValidation extends Model
                 'final_profit' => $updates['ganancia_final'],
             ]);
 
+            // Regenerar documentos PDF si ya existen o estamos en Wizard 2
+            if ($this->agreement->generatedDocuments()->count() > 0 || $this->agreement->current_wizard >= 2) {
+                try {
+                    app(\App\Services\PdfGenerationService::class)->generateAllDocuments($this->agreement->fresh());
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Error regenerando PDFs tras aprobación de validación: ' . $e->getMessage());
+                }
+            }
+
             // Crear registro en el historial de recálculos
             \App\Models\AgreementRecalculation::create([
                 'agreement_id' => $this->agreement_id,

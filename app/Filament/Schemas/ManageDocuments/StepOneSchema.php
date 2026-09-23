@@ -45,6 +45,34 @@ class StepOneSchema
                         ]),
                 ]),
 
+            Section::make('Condiciones Financieras y Recálculo de Precio')
+                ->description('Precio comercial base y opción para recalcular importes antes del envío de documentos')
+                ->icon('heroicon-o-calculator')
+                ->iconColor('primary')
+                ->schema([
+                    Grid::make(2)
+                        ->schema([
+                            Placeholder::make('commercial_price_display')
+                                ->label('Precio Comercial (Convenio)')
+                                ->content(fn () => '$' . number_format($page->agreement->agreement_value ?? 0, 2) . ' MXN'),
+
+                            Placeholder::make('action_recalculate_step1')
+                                ->label('Modificar Valores')
+                                ->content(function() use ($page) {
+                                    $agreement = $page->agreement;
+                                    $isPending = $agreement->hasPendingValidation() || $agreement->hasPendingAuthorization();
+                                    
+                                    return view('components.action-button', [
+                                        'icon' => $isPending ? 'heroicon-o-clock' : 'heroicon-o-calculator',
+                                        'label' => $isPending ? 'Esperando validación' : 'Recalcular Precio',
+                                        'sublabel' => $isPending ? 'Pendiente de aprobación' : 'Actualizar precio o financieros',
+                                        'alpine_action' => $isPending ? "window.location.href = '/admin/quote-authorizations'" : "\$dispatch('open-recalculation-modal')",
+                                        'color' => $isPending ? 'warning' : 'primary',
+                                    ]);
+                                }),
+                        ]),
+                ]),
+
             Section::make('Documentos Disponibles')
                 ->description('Documentos PDF generados para este convenio')
                 ->icon('heroicon-o-document-text')

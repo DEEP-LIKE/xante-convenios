@@ -57,13 +57,25 @@ class StepTwoSchema
                 ->icon('heroicon-o-clipboard-document-list')
                 ->iconColor('info')
                 ->headerActions([
-                Action::make('downloadUpdatedChecklist')
-                    ->label('Descargar Lista Actualizada')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->action(function () use ($page) {
-                        return $page->downloadUpdatedChecklistAction();
-                    }),
+                    Action::make('recalculatePriceStep2')
+                        ->label(fn () => ($page->agreement->hasPendingValidation() || $page->agreement->hasPendingAuthorization()) ? 'Esperando Validación' : 'Recalcular Precio')
+                        ->icon(fn () => ($page->agreement->hasPendingValidation() || $page->agreement->hasPendingAuthorization()) ? 'heroicon-o-clock' : 'heroicon-o-calculator')
+                        ->color(fn () => ($page->agreement->hasPendingValidation() || $page->agreement->hasPendingAuthorization()) ? 'warning' : 'primary')
+                        ->action(function () use ($page) {
+                            $agreement = $page->agreement;
+                            if ($agreement->hasPendingValidation() || $agreement->hasPendingAuthorization()) {
+                                return redirect('/admin/quote-authorizations');
+                            }
+                            $page->dispatch('open-recalculation-modal');
+                        }),
+
+                    Action::make('downloadUpdatedChecklist')
+                        ->label('Descargar Lista Actualizada')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(function () use ($page) {
+                            return $page->downloadUpdatedChecklistAction();
+                        }),
                 ])
                 ->schema([
                     Grid::make(1)

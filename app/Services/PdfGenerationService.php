@@ -99,13 +99,21 @@ class PdfGenerationService
             }
         }
 
-        // Actualizar estado del convenio
+        // Actualizar estado del convenio sin degradar etapas ya avanzadas
+        $status = in_array($agreement->status, ['documents_sent', 'awaiting_client_docs', 'documents_complete', 'completed']) 
+            ? $agreement->status 
+            : 'documents_generated';
+
+        $wizard2Step = ($agreement->wizard2_current_step && $agreement->wizard2_current_step > 1)
+            ? $agreement->wizard2_current_step 
+            : 1;
+
         $agreement->update([
-            'status' => 'documents_generated',
+            'status' => $status,
             'documents_generated_at' => now(),
             'can_return_to_wizard1' => false, // CRÍTICO: No se puede regresar
             'current_wizard' => 2,
-            'wizard2_current_step' => 1,
+            'wizard2_current_step' => $wizard2Step,
         ]);
 
         Log::info("Todos los documentos generados para Agreement #{$agreement->id}", [
@@ -288,9 +296,9 @@ class PdfGenerationService
     {
         $wizardData = $agreement->wizard_data ?? [];
 
-        $valorConvenio = floatval(str_replace(',', '', $wizardData['valor_convenio'] ?? 0));
+        $valorConvenio = floatval(str_replace(',', '', $wizardData['valor_convenio'] ?? $agreement->agreement_value ?? 0));
         $montoComisionSinIva = floatval(str_replace(',', '', $wizardData['monto_comision_sin_iva'] ?? 0));
-        $precioPromocion = round(floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? 0)), 2);
+        $precioPromocion = round(floatval(str_replace(',', '', $wizardData['precio_promocion'] ?? $agreement->proposal_value ?? 0)), 2);
 
         // Calcular porcentaje de comisión desde los datos financieros de forma segura y sanitizada
         $rawCommission = $wizardData['porcentaje_comision_sin_iva'] ?? null;

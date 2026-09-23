@@ -120,6 +120,33 @@ class ManageDocuments extends Page implements HasActions, HasForms
 
 
     // ========================================
+    // HEADER ACTIONS
+    // ========================================
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('recalculatePrice')
+                ->label(fn () => ($this->agreement?->hasPendingValidation() || $this->agreement?->hasPendingAuthorization()) 
+                    ? 'Esperando Validación' 
+                    : 'Recalcular Precio')
+                ->icon(fn () => ($this->agreement?->hasPendingValidation() || $this->agreement?->hasPendingAuthorization()) 
+                    ? 'heroicon-o-clock' 
+                    : 'heroicon-o-calculator')
+                ->color(fn () => ($this->agreement?->hasPendingValidation() || $this->agreement?->hasPendingAuthorization()) 
+                    ? 'warning' 
+                    : 'primary')
+                ->action(function () {
+                    if ($this->agreement?->hasPendingValidation() || $this->agreement?->hasPendingAuthorization()) {
+                        return redirect('/admin/quote-authorizations');
+                    }
+                    $this->dispatch('open-recalculation-modal');
+                })
+                ->visible(fn () => $this->agreement !== null),
+        ];
+    }
+
+    // ========================================
     // LIFECYCLE METHODS
     // ========================================
 

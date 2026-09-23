@@ -231,11 +231,31 @@ class AgreementRecalculationModal extends Component
 
     protected function performDirectSave()
     {
-        $calculationData = [
+        $calculatorService = app(AgreementCalculatorService::class);
+        $ivaPercentage = (float) (\App\Models\ConfigurationCalculator::where('key', 'iva_valor')->value('value') ?? 16.00);
+        $ivaMultiplier = 1 + ($ivaPercentage / 100);
+        $multiplicadorPrecioPromocion = 1 + ($this->state_commission_percentage / 100);
+
+        $parameters = [
+            'porcentaje_comision_sin_iva' => (float) $this->porcentaje_comision_sin_iva,
+            'base_iva_percentage' => $ivaPercentage,
+            'iva_multiplier' => $ivaMultiplier,
+            'precio_promocion_multiplicador' => $multiplicadorPrecioPromocion,
+            'isr' => (float) $this->isr,
+            'cancelacion_hipoteca' => (float) $this->cancelacion_hipoteca,
+            'monto_credito' => (float) $this->monto_credito,
+        ];
+
+        $calculations = $calculatorService->calculateAllFinancials($this->valor_convenio, $parameters);
+
+        $calculationData = array_merge([
             'valor_convenio' => $this->valor_convenio,
+            'valor_compraventa' => $this->valor_convenio,
             'precio_promocion' => $this->precio_promocion,
             'comision_total_pagar' => $this->commission_total,
+            'commission_total' => $this->commission_total,
             'ganancia_final' => $this->final_profit,
+            'final_profit' => $this->final_profit,
             'state_commission_percentage' => $this->state_commission_percentage,
             'porcentaje_comision_sin_iva' => $this->porcentaje_comision_sin_iva,
             'isr' => $this->isr,
@@ -245,7 +265,7 @@ class AgreementRecalculationModal extends Component
             'comision_iva_incluido' => $this->comision_iva_incluido,
             'total_gastos_fi_venta' => $this->total_gastos_fi_venta,
             'estado_propiedad' => $this->estado_propiedad,
-        ];
+        ], $calculations);
 
         AgreementRecalculation::create([
             'agreement_id' => $this->agreementId,
@@ -260,16 +280,29 @@ class AgreementRecalculationModal extends Component
             'motivo' => $this->motivo,
         ]);
 
-        // Sincronizar columnas en el modelo Agreement para que el "Cálculo Original" bubble y accesores funcionen bien
+        $currentWizardData = $this->agreement->wizard_data ?? [];
+        $updatedWizardData = array_merge($currentWizardData, $calculationData);
+
+        // Sincronizar columnas y wizard_data en el modelo Agreement
         $this->agreement->update([
             'agreement_value' => $this->valor_convenio,
             'proposal_value' => $this->precio_promocion,
             'commission_total' => $this->commission_total,
             'final_profit' => $this->final_profit,
+            'wizard_data' => $updatedWizardData,
         ]);
 
+        // Regenerar documentos PDF si ya existen o estamos en Wizard 2
+        if ($this->agreement->generatedDocuments()->count() > 0 || $this->agreement->current_wizard >= 2) {
+            try {
+                app(\App\Services\PdfGenerationService::class)->generateAllDocuments($this->agreement->fresh());
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error regenerando PDFs tras recálculo directo: ' . $e->getMessage());
+            }
+        }
+
         Notification::make()
-            ->title('✓ Recálculo guardado exitosamente')
+            ->title('✓ Recálculo guardado y documentos actualizados')
             ->success()
             ->send();
 
@@ -288,7 +321,8 @@ class AgreementRecalculationModal extends Component
 
         $this->dispatch('close-modal', id: 'recalculation-modal');
         $this->dispatch('recalculation-saved');
-        $this->redirect(request()->header('Referer'));
+        $referer = request()->header('Referer');
+        $this->redirect($referer ?: url("/admin/manage-documents/{$this->agreementId}"));
     }
 
     protected function requestApproval(
