@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------
 # STAGE 1: COMPOSER DEPENDENCIES (PHP)
 # ----------------------------------------------------------------------
-FROM php:8.3-cli-alpine AS vendor-builder
+FROM php:8.3.36-cli-alpine AS vendor-builder
 
 WORKDIR /app
 
@@ -42,7 +42,7 @@ RUN npm run build
 # ----------------------------------------------------------------------
 # STAGE 3: PRODUCTION IMAGE (PHP-FPM + NGINX)
 # ----------------------------------------------------------------------
-FROM php:8.3-fpm
+FROM php:8.3.36-fpm
 
 WORKDIR /var/www/html
 
